@@ -1,4 +1,4 @@
-# Hive Smart Contracts [![Build Status](https://app.travis-ci.com/github/hive-engine/hivesmartcontracts)](https://app.travis-ci.com/github/hive-engine/hivesmartcontracts)
+# Hive Smart Contracts [![Build Status](https://app.travis-ci.com/hive-engine/hivesmartcontracts.svg?branch=main)](https://app.travis-ci.com/github/hive-engine/hivesmartcontracts)
 
  ## 1.  What is it?
 
