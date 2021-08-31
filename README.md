@@ -1,4 +1,4 @@
-# Hive Smart Contracts [![Build Status](https://travis-ci.org/harpagon210/steemsmartcontracts.svg?branch=master)](https://travis-ci.org/harpagon210/steemsmartcontracts)[![Coverage Status](https://coveralls.io/repos/github/harpagon210/steemsmartcontracts/badge.svg?branch=master)](https://coveralls.io/github/harpagon210/steemsmartcontracts?branch=master)
+# Hive Smart Contracts [![Build Status](https://app.travis-ci.com/github/hive-engine/hivesmartcontracts)](https://app.travis-ci.com/github/hive-engine/hivesmartcontracts)
 
  ## 1.  What is it?
 
@@ -17,7 +17,7 @@ This is actually pretty easy, you basically need a Hive account and that's it. T
 
 ## 4. Setup a Hive Smart Contracts node
 
-see wiki: https://github.com/hive-engine/steemsmartcontracts-wiki
+see wiki: https://github.com/hive-engine/hivesmartcontracts-wiki
 
 In addition, the following is needed to use transaction framework for MongoDB:
 - Run MongoDB in replicated mode. This is as simple as changing the mongo config to add replication config:
@@ -63,4 +63,4 @@ Edit config.json to match block number of backup.
 
 ## 6. Usage/docs
 
-* see wiki: https://github.com/hive-engine/steemsmartcontracts-wiki
+* see wiki: https://github.com/hive-engine/hivesmartcontracts-wiki
