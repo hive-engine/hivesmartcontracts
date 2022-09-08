@@ -50,7 +50,7 @@ async function setUpRewardPool(configOverride = {}) {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "TKN", "precision": 8, "maxSupply": "1000000000" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'enableStaking', '{ "symbol": "TKN", "unstakingCooldown": 7, "numberTransactions": 1, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'enableDelegation', '{ "symbol": "TKN", "undelegationCooldown": 7, "isSignedWithActiveKey": true }'));
-      const config = { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 14, "downvoteRegenerationDays": 14, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": ["scottest"], ...configOverride };
+      const config = { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 14, "downvoteRegenerationDays": 14, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": ["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, ...configOverride };
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', `{ "symbol": "TKN", "config": ${JSON.stringify(config)}, "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'issue', '{ "symbol": "TKN", "quantity": "1000", "to": "harpagon", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'stake', '{ "symbol": "TKN", "quantity": "10", "to": "voter1", "isSignedWithActiveKey": true }'));
@@ -134,8 +134,36 @@ async function forwardPostMaintenanceAndAssertIssue(timestamp, tokens) {
   await fixture.database.update({ contract: 'tokens', table: 'contractsBalances', record: tokensContractBalance });
 }
 
+async function assertPool(pool) {
+  const { _id } = pool;
+  const res = await fixture.database.findOne({
+      contract: 'comments',
+      table: 'rewardPools',
+      query: {
+        _id,
+      }
+    });
+  assert.ok(res, `Pool ${_id} not found.`);
+
+  let error = false;
+  Object.keys(pool).forEach(k => {
+    if (k !== 'config' && res[k] !== pool[k]) {
+      error = true;
+      console.log(`Pool ${_id} has ${k} ${res[k]}, expected ${pool[k]}`);
+    }
+  });
+  Object.keys(pool.config).forEach(k => {
+    if (k !== 'config' && JSON.stringify(res.config[k]) !== JSON.stringify(pool.config[k])) {
+      error = true;
+      console.log(`Pool ${_id} has config ${k} ${res.config[k]}, expected ${pool.config[k]}`);
+    }
+  });
+
+  assert(!error, 'Mismatch fields in pool');
+}
+
 async function runBeneficiaryTest(options) {
-  await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1"});
+  await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1", appTaxConfig: options.appTaxConfig});
 
   let transactions;
   let refBlockNumber;
@@ -143,7 +171,7 @@ async function runBeneficiaryTest(options) {
 
   transactions = [];
   refBlockNumber = fixture.getNextRefBlockNumber();
-  transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+  transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', JSON.stringify({ "author": "author1", "permlink": "test1", "jsonMetadata": { "tags": ["scottest"], "app": (options.appTaxExempt ? "neoxiancity/v1.1" : "hive.blog/v1.0") }})));
   transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'commentOptions', '{ "author": "author1", "permlink": "test1", "maxAcceptedPayout": "1000000.000 HBD", "beneficiaries": [{"account": "bene1", "weight": 5000}, {"account": "bene2", "weight": 1}]}'));
   transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
   if (options.muteAll) {
@@ -171,12 +199,11 @@ async function runBeneficiaryTest(options) {
   assert.equal(JSON.stringify(mutedVote), '{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter2"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"0","curationWeight":"0","timestamp":1527811200000,"voter":"voter2"}');
 
   let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
-  assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000","beneficiaries":[{"account":"bene1","weight":5000},{"account":"bene2","weight":1}],"declinePayout":false}');
+  assert.equal(JSON.stringify(post), JSON.stringify({"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000","app":(options.appTaxExempt ? "neoxiancity" : "hive.blog"),"beneficiaries":[{"account":"bene1","weight":5000},{"account":"bene2","weight":1}],"declinePayout":false}));
 
   // catch up post maintenance
   await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
-  rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-  assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"}');
+  await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"});
 
   // forward clock past payout time
   transactions = [];
@@ -202,32 +229,90 @@ async function runBeneficiaryTest(options) {
       }
       return JSON.stringify(rewardLog);
   };
-  assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), addMute({"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"37792.92115529"}}));
-  assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene1')), addMute({"contract":"comments","event":"beneficiaryReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"bene1","quantity":"37800.48125153"}}));
-  assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene2')), '{"contract":"comments","event":"beneficiaryReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"bene2","quantity":"7.56009625"}}');
+  const hasAppTax = options.appTaxConfig && !options.appTaxExempt;
+  let expectedReward = {
+    "author1": "37792.92115529",
+    "bene1": "37800.48125153",
+    "bene2": "7.56009625",
+    "voter1": "75600.96250306",
+  };
+  if (hasAppTax && options.appTaxConfig.percent === 50) {
+    expectedReward = {
+      "author1": "18896.46057765",
+      "bene1": "18900.24062577",
+      "bene2": "3.78004812",
+      "appTax": "37800.48125153",
+    };
+  } else if (hasAppTax && options.appTaxConfig.percent === 100) {
+    expectedReward = {
+      "author1": "0.00000000",
+      "bene1": "0.00000000",
+      "bene2": "0.00000000",
+      "appTax": "75600.96250307",
+    };
+  }
+  assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), addMute({"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":expectedReward["author1"]}}));
+  assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene1')), addMute({"contract":"comments","event":"beneficiaryReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"bene1","quantity":expectedReward["bene1"]}}));
+  assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene2')), JSON.stringify({"contract":"comments","event":"beneficiaryReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"bene2","quantity":expectedReward["bene2"]}}));
   assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter1')), addMute({"contract":"comments","event":"curationReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"voter1","quantity":"75600.96250306"}}));
   assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter2'), undefined);
+  if (hasAppTax) {
+    assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'appTax' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'neoxianburn')), JSON.stringify({"contract":"comments","event":"appTax","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"neoxianburn","quantity": expectedReward["appTax"]}}));
+  }
 
   post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
   assert.equal(post, null);
 
-  const balanceForMute = (bal) => {
+  const balanceForOptions = (bal) => {
+      if (hasAppTax && options.appTaxConfig.percent === 50) {
+          if (bal.account === 'author1') {
+              bal.balance = "9448.23028883";
+              bal.stake = "9448.23028882";
+          } else if (bal.account === 'bene1') {
+              bal.balance = "9450.12031289";
+              bal.stake = "9450.12031288";
+          } else if (bal.account === 'bene2') {
+              bal.balance = "1.89002406";
+              bal.stake = "1.89002406";
+          } else if (bal.account === 'neoxianburn') {
+              bal.balance = "37800.48125153";
+              bal.stake = 0;
+          }
+      } else if (hasAppTax && options.appTaxConfig.percent === 100) {
+          if (bal.account === 'author1') {
+              bal.balance = null;
+              bal.stake = null;
+          } else if (bal.account === 'bene1') {
+              bal.balance = null;
+              bal.stake = null;
+          } else if (bal.account === 'bene2') {
+              bal.balance = null;
+              bal.stake = null;
+          } else if (bal.account === 'neoxianburn') {
+              bal.balance = "75600.96250307";
+              bal.stake = 0;
+          }
+      }
       if (options.muteAll) {
           if (bal.account === 'voter1') {
               bal.balance = '0';
               bal.stake = '10.00000000';
-          } else {
+          } else if (bal.account !== 'bene2') {
               bal.balance = null;
               bal.stake = null;
           }
       }
+
       return bal;
   }
-  await tableAsserts.assertUserBalances(balanceForMute({account: "author1", symbol: "TKN", balance: "18896.46057765", stake: "18896.46057764"}));
-  await tableAsserts.assertUserBalances(balanceForMute({account: "bene1", symbol: "TKN", balance: "18900.24062577", stake: "18900.24062576"}));
-  await tableAsserts.assertUserBalances({account: "bene2", symbol: "TKN", balance: "3.78004813", stake: "3.78004812"});
-  await tableAsserts.assertUserBalances(balanceForMute({account: "voter1", symbol: "TKN", balance: "37800.48125153", stake: "37810.48125153"}));
+  await tableAsserts.assertUserBalances(balanceForOptions({account: "author1", symbol: "TKN", balance: "18896.46057765", stake: "18896.46057764"}));
+  await tableAsserts.assertUserBalances(balanceForOptions({account: "bene1", symbol: "TKN", balance: "18900.24062577", stake: "18900.24062576"}));
+  await tableAsserts.assertUserBalances(balanceForOptions({account: "bene2", symbol: "TKN", balance: "3.78004813", stake: "3.78004812"}));
+  await tableAsserts.assertUserBalances(balanceForOptions({account: "voter1", symbol: "TKN", balance: "37800.48125153", stake: "37810.48125153"}));
   await tableAsserts.assertUserBalances({account: "voter2", symbol: "TKN", balance: '0', stake: '10.00000000'});
+  if (hasAppTax) {
+    await tableAsserts.assertUserBalances(balanceForOptions({account: "neoxianburn", symbol: "TKN", balance: "37800.48125153", stake: 0}));
+  }
 }
 
 describe('comments', function () {
@@ -304,7 +389,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags":["scottest"]}, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false}, "isSignedWithActiveKey": true }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -331,7 +416,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'createRewardPool', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags":["scottest"]}, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'createRewardPool', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false}, "isSignedWithActiveKey": true }`));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -382,54 +467,64 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": false }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "NOTKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "NOTKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": "badconfig", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "none", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "0", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2.1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.001", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": 1.01, "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "none", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.4", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "1.1", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.602", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": 0.6, "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": "7", "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 0, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 31, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": 1.5, "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0.000000001", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": "5", "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 0, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 31, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": "5", "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 0, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 31, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": "50", "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": -1, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 101, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": "200", "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 0, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 10001, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": "2000" }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 0 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 10001 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "none", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "0", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2.1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.001", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": 1.01, "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "none", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.4", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "1.1", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.602", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": 0.6, "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": "7", "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 0, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 31, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": 1.5, "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0.000000001", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": "5", "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 0, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 31, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": "5", "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 0, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 31, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": "50", "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": -1, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 101, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": "200", "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 0, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 10001, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": "2000","tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 0,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 10001,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "satoshi", "quantity": "1000", "isSignedWithActiveKey": true }`));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "NOSTAKE", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": "invalid" }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [1] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["1", "2", "3", "4", "5", "6"] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": "3", "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 2, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 100000, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "NOSTAKE", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": "invalid", "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [1], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["1", "2", "3", "4", "5", "6"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": "3", "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 2, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 100000, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": 0, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": 1 }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": "invalid" }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": { "app": "", "percent": 50, "beneficiary": "neoxianburn" } }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": { "app": "neoxiancity", "percent": -1, "beneficiary": "neoxianburn" } }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": { "app": "neoxiancity", "percent": 50, "beneficiary": "" } }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": "invalid" }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": [] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": [1, 2] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": ["a", "b", "c", "d", "e", "f"] }, "isSignedWithActiveKey": true }'));
       // This one should succeed, triggering double reward pool creation issue
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "TKN", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000,"tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -487,8 +582,18 @@ describe('comments', function () {
       assertError(txs[42], 'rewardIntervalSeconds should be an integer between 3 and 86400, and divisible by 3');
       assertError(txs[43], 'rewardIntervalSeconds should be an integer between 3 and 86400, and divisible by 3');
       assertError(txs[44], 'rewardIntervalSeconds should be an integer between 3 and 86400, and divisible by 3');
-      // 45 successfully creates token, testing for token dupe pools
-      assertError(txs[46], 'cannot create multiple reward pools per token');
+      assertError(txs[45], 'disableDownvote should be boolean');
+      assertError(txs[46], 'ignoreDeclinePayout should be boolean');
+      assertError(txs[47], 'appTaxConfig invalid');
+      assertError(txs[48], 'appTaxConfig app invalid');
+      assertError(txs[49], 'appTaxConfig percent should be an integer between 1 and 100');
+      assertError(txs[50], 'appTaxConfig beneficiary invalid');
+      assertError(txs[51], 'excludeTags should be a non-empty array of strings of length at most 5');
+      assertError(txs[52], 'excludeTags should be a non-empty array of strings of length at most 5');
+      assertError(txs[53], 'excludeTags should be a non-empty array of strings of length at most 5');
+      assertError(txs[54], 'excludeTags should be a non-empty array of strings of length at most 5');
+      // 55 successfully creates token, testing for token dupe pools
+      assertError(txs[56], 'cannot create multiple reward pools per token');
 
       resolve();
     })
@@ -508,7 +613,7 @@ describe('comments', function () {
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'createRewardPool', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags":["scottest"]}, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'createRewardPool', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false}, "isSignedWithActiveKey": true }`));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -525,7 +630,7 @@ describe('comments', function () {
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'updateParams', '{ "updateFee": "100" }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.01", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.51", "curationRewardPercentage": 51, "cashoutWindowDays": 8, "rewardPerInterval": "1.6", "rewardIntervalSeconds": 3, "voteRegenerationDays": 6, "downvoteRegenerationDays": 6, "stakedRewardPercentage": 51, "votePowerConsumption": 201, "downvotePowerConsumption": 2001, "tags": ["scottest2"]}, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.01", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.51", "curationRewardPercentage": 51, "cashoutWindowDays": 8, "rewardPerInterval": "1.6", "rewardIntervalSeconds": 3, "voteRegenerationDays": 6, "downvoteRegenerationDays": 6, "stakedRewardPercentage": 51, "votePowerConsumption": 201, "downvotePowerConsumption": 2001, "tags": ["scottest2"], "disableDownvote": true, "ignoreDeclinePayout": true, "appTaxConfig": {"app": "neoxian", "percent": 50, "beneficiary": "neoxianburn"}, "excludeTags": ["exclude"]}, "isSignedWithActiveKey": true }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -538,8 +643,7 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.01","curationRewardCurve":"power","curationRewardCurveParameter":"0.51","curationRewardPercentage":51,"cashoutWindowDays":8,"rewardPerInterval":"1.6","rewardIntervalSeconds":3,"voteRegenerationDays":6,"downvoteRegenerationDays":6,"stakedRewardPercentage":51,"votePowerConsumption":201,"downvotePowerConsumption":2001,"tags":["scottest2"]},"pendingClaims":"0","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.01","curationRewardCurve":"power","curationRewardCurveParameter":"0.51","curationRewardPercentage":51,"cashoutWindowDays":8,"rewardPerInterval":"1.6","rewardIntervalSeconds":3,"voteRegenerationDays":6,"downvoteRegenerationDays":6,"stakedRewardPercentage":51,"votePowerConsumption":201,"downvotePowerConsumption":2001,"tags":["scottest2"], "disableDownvote": true, "ignoreDeclinePayout": true, "appTaxConfig": {"app": "neoxian", "percent": 50, "beneficiary": "neoxianburn"}, "excludeTags":["exclude"]},"pendingClaims":"0","active":true});
 
       // check fee
       await tableAsserts.assertUserBalances({account: "harpagon", symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, balance: "800.00000000", stake: "0"});
@@ -555,7 +659,7 @@ describe('comments', function () {
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'updateRewardPool', '{ "rewardPoolId": 2, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.01", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.51", "curationRewardPercentage": 51, "cashoutWindowDays": 8, "rewardPerInterval": "1.6", "rewardIntervalSeconds": 3, "voteRegenerationDays": 6, "downvoteRegenerationDays": 6, "stakedRewardPercentage": 51, "votePowerConsumption": 201, "downvotePowerConsumption": 2001, "tags": ["scottest2"]}, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'updateRewardPool', '{ "rewardPoolId": 2, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.01", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.51", "curationRewardPercentage": 51, "cashoutWindowDays": 8, "rewardPerInterval": "1.6", "rewardIntervalSeconds": 3, "voteRegenerationDays": 6, "downvoteRegenerationDays": 6, "stakedRewardPercentage": 51, "votePowerConsumption": 201, "downvotePowerConsumption": 2001, "tags": ["scottest2"], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": null, "excludeTags": null}, "isSignedWithActiveKey": true }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -568,8 +672,7 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 2}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":2,"symbol":"BEE","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.01","curationRewardCurve":"power","curationRewardCurveParameter":"0.51","curationRewardPercentage":51,"cashoutWindowDays":8,"rewardPerInterval":"1.6","rewardIntervalSeconds":3,"voteRegenerationDays":6,"downvoteRegenerationDays":6,"stakedRewardPercentage":51,"votePowerConsumption":201,"downvotePowerConsumption":2001,"tags":["scottest2"]},"pendingClaims":"0","active":true}');
+      await assertPool({"_id":2,"symbol":"BEE","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.01","curationRewardCurve":"power","curationRewardCurveParameter":"0.51","curationRewardPercentage":51,"cashoutWindowDays":8,"rewardPerInterval":"1.6","rewardIntervalSeconds":3,"voteRegenerationDays":6,"downvoteRegenerationDays":6,"stakedRewardPercentage":51,"votePowerConsumption":201,"downvotePowerConsumption":2001,"tags":["scottest2"],"disableDownvote":false,"ignoreDeclinePayout":false,"appTaxConfig":null,"excludeTags":null},"pendingClaims":"0","active":true});
 
       // check no fee
       await tableAsserts.assertUserBalances({account: CONSTANTS.HIVE_ENGINE_ACCOUNT, symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, balance: hiveEngineBeeBalance.balance, stake: "0"});
@@ -590,50 +693,60 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": false }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": "badconfig", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "none", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "0", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2.1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.001", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": 1.01, "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "none", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.4", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "1.1", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.602", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": 0.6, "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": "7", "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 0, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 31, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": 1.5, "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0.000000001", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": "5", "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 0, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 31, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": "5", "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 0, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 31, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": "50", "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": -1, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 101, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": "200", "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 0, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 10001, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": "2000", "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 0, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 10001, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000 }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": "invalid" }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ 1 ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1", "2", "3", "4", "5", "6" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": "3", "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 2, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 100000, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "none", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "0", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2.1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1.001", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": 1.01, "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "none", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.4", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "1.1", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.602", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": 0.6, "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": "7", "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 0, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 31, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": 1.5, "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0.000000001", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "0", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": "5", "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 0, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 31, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": "5", "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 0, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 31, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": "50", "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": -1, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 101, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": "200", "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 0, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 10001, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": "2000", "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 0, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 10001, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": "invalid", "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ 1 ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1", "2", "3", "4", "5", "6" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": "3", "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 2, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 100000, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "1" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "satoshi", "quantity": "100", "isSignedWithActiveKey": true }`));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 2, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 2, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": 0, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": 1 }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": "invalid" }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": {"app": "", "percent": 50, "beneficiary": "neoxianburn" } }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": {"app": "neoxiancity", "percent": 0, "beneficiary": "neoxianburn" } }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "appTaxConfig": {"app": "neoxiancity", "percent": 50, "beneficiary": "" } }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": "invalid" }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": [] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": [1, 2] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'updateRewardPool', '{ "rewardPoolId": 1, "config": { "postRewardCurve": "power", "postRewardCurveParameter": "1", "curationRewardCurve": "power", "curationRewardCurveParameter": "0.5", "curationRewardPercentage": 50, "cashoutWindowDays": 7, "rewardPerInterval": "1.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 200, "downvotePowerConsumption": 2000, "tags": [ "scottest" ], "disableDownvote": false, "ignoreDeclinePayout": false, "excludeTags": ["a", "b", "c", "d", "e", "f"] }, "isSignedWithActiveKey": true }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -690,9 +803,18 @@ describe('comments', function () {
       // 41 issues tokens to cover update fee
       assertError(txs[42], 'must be issuer of token');
       assertError(txs[43], 'reward pool not found');
+      assertError(txs[44], 'disableDownvote should be boolean');
+      assertError(txs[45], 'ignoreDeclinePayout should be boolean');
+      assertError(txs[46], 'appTaxConfig invalid');
+      assertError(txs[47], 'appTaxConfig app invalid');
+      assertError(txs[48], 'appTaxConfig percent should be an integer between 1 and 100');
+      assertError(txs[49], 'appTaxConfig beneficiary invalid');
+      assertError(txs[50], 'excludeTags should be a non-empty array of strings of length at most 5');
+      assertError(txs[51], 'excludeTags should be a non-empty array of strings of length at most 5');
+      assertError(txs[52], 'excludeTags should be a non-empty array of strings of length at most 5');
+      assertError(txs[53], 'excludeTags should be a non-empty array of strings of length at most 5');
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"disableDownvote":false,"ignoreDeclinePayout":false},"pendingClaims":"0","active":true});
 
       resolve();
     })
@@ -710,12 +832,11 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": true, "isSignedWithActiveKey": false }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 2, "account": "author", "mute": true, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "-invalid", "mute": true, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": "invalid", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'nobody', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": "true", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 2, "account": "author", "mute": true, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "-invalid", "mute": true, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": "invalid", "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'nobody', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": "true", "isSignedWithActiveKey": false }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -728,12 +849,11 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
-      assertError(txs[0], 'operation must be signed with your active key');
-      assertError(txs[1], 'reward pool not found');
-      assertError(txs[2], 'invalid account');
+      assertError(txs[0], 'reward pool not found');
+      assertError(txs[1], 'invalid account');
+      assertError(txs[2], 'mute must be a boolean');
       assertError(txs[3], 'mute must be a boolean');
-      assertError(txs[4], 'mute must be a boolean');
-      assertError(txs[5], 'must be issuer of token');
+      assertError(txs[4], 'must be issuer of token');
 
       resolve();
     })
@@ -751,7 +871,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": true, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setMute', '{ "rewardPoolId": 1, "account": "author", "mute": true, "isSignedWithActiveKey": false }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -766,6 +886,125 @@ describe('comments', function () {
 
       const vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'author', rewardPoolId: 1}});
       assert(vp.mute);
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('should not setPostMute', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
+
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setPostMute', '{ "rewardPoolId": 2, "authorperm": "@author/test", "mute": true, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setPostMute', '{ "rewardPoolId": 1, "authorperm": {}, "mute": true, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setPostMute', '{ "rewardPoolId": 1, "authorperm": "@author/test", "mute": true, "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author", "permlink": "test", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setPostMute', '{ "rewardPoolId": 1, "authorperm": "@author/test", "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setPostMute', '{ "rewardPoolId": 1, "authorperm": "@author/test", "mute": "true", "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'nobody', 'comments', 'setPostMute', '{ "rewardPoolId": 1, "authorperm": "@author/test", "mute": true, "isSignedWithActiveKey": false }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      let res = await fixture.database.getLatestBlockInfo();
+      let txs = res.transactions;
+      assertError(txs[0], 'reward pool not found');
+      assertError(txs[1], 'authorperm must be a string');
+      assertError(txs[2], 'post not found');
+      // tx 3 adds post
+      assertError(txs[4], 'mute must be a boolean');
+      assertError(txs[5], 'mute must be a boolean');
+      assertError(txs[6], 'must be issuer of token');
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('does not pay for muted post', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1"});
+
+      let transactions;
+      let refBlockNumber;
+      let block;
+
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setPostMute', '{ "rewardPoolId": 1, "authorperm": "@author1/test1", "mute": true, "isSignedWithActiveKey": false }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+      let res = await fixture.database.getLatestBlockInfo();
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events[0]), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
+      let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000","mute":true}');
+
+      // catch up post maintenance
+      await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"});
+
+      // forward clock past payout time
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      // this transaction pays out with maintenance op
+      transactions.push(maintenanceOp(refBlockNumber));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-08T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      res = await fixture.database.getLatestBlockInfo();
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"0"}}');
+      assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene1'), undefined);
+      assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene2'), undefined);
+      assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter1'), undefined);
+
+      await tableAsserts.assertUserBalances({account: "author1", symbol: "TKN", balance: 0, stake: 0});
+      await tableAsserts.assertUserBalances({account: "bene1", symbol: "TKN", balance: 0, stake: 0});
+      await tableAsserts.assertUserBalances({account: "bene2", symbol: "TKN", balance: 0, stake: 0});
+      await tableAsserts.assertUserBalances({account: "voter1", symbol: "TKN", balance: "0", stake: "10.00000000"});
+
+      post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(post, null);
+
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -818,7 +1057,8 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author", "permlink": "test", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -835,9 +1075,8 @@ describe('comments', function () {
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      const expectedRewardPool = {"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"};
-      assert.equal(JSON.stringify(rewardPool), JSON.stringify(expectedRewardPool));
+      const expectedRewardPool = { _id: 1, rewardPool: '302398.50000000', pendingClaims: '9.9997685205', lastClaimDecayTimestamp: 1528415997000, lastRewardTimestamp: 1528415997000, createdTimestamp: 1527811200000, config: {} };
+      await assertPool(expectedRewardPool);
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -860,7 +1099,7 @@ describe('comments', function () {
       expectedRewardPool.lastClaimDecayTimestamp = 1528416000000;
       expectedRewardPool.lastRewardTimestamp = 1528416000000;
       expectedRewardPool.createdTimestamp = 1528416000000;
-      assert.equal(JSON.stringify(rewardPool), JSON.stringify(expectedRewardPool));
+      await assertPool(expectedRewardPool);
 
       resolve();
     })
@@ -891,8 +1130,7 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false});
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -909,8 +1147,7 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true});
 
       resolve();
     })
@@ -947,8 +1184,7 @@ describe('comments', function () {
       assertError(txs[1], 'operation must be signed with your active key')
       assertError(txs[2], 'must be issuer of token')
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true});
 
       resolve();
     })
@@ -966,7 +1202,7 @@ describe('comments', function () {
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setActive', '{ "rewardPoolId": 1, "active": false, "isSignedWithActiveKey": true }'));
 
       let block = {
@@ -980,14 +1216,13 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false});
 
       // forward clock, but should not process token
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'setActive', '{ "rewardPoolId": 1, "active": false, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -1009,8 +1244,7 @@ describe('comments', function () {
       // no newVote event
       assert.equal(res.transactions[2].logs, "{}");
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false});
 
       resolve();
     })
@@ -1032,9 +1266,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'author1', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": 1 }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": ["2"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'author1', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1048,8 +1280,6 @@ describe('comments', function () {
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
       assertError(txs[0], 'action must use comment operation');
-      assertError(txs[1], 'rewardPools must be an array of integers');
-      assertError(txs[2], 'rewardPools must be an array of integers');
 
       const posts = await fixture.database.find({ contract: 'comments', table: 'posts', query: {}});
       assert.equal(posts.length, 0);
@@ -1074,7 +1304,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1116,7 +1346,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1154,7 +1384,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "re-test1", "parentAuthor": "author1", "parentPermlink": "test1" }'));
 
       block = {
@@ -1169,7 +1399,7 @@ describe('comments', function () {
       await tableAsserts.assertNoErrorInLastBlock();
 
       let posts = await fixture.database.find({ contract: 'comments', table: 'posts', query: {}});
-      assert.equal(JSON.stringify(posts), '[{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"authorperm":"@author1/test1","rewardPoolId":1},{"_id":{"authorperm":"@author1/re-test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/re-test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"0","voteRshareSum":"0"}]');
+      assert.equal(JSON.stringify(posts), '[{"_id":{"authorperm":"@author1/re-test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/re-test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"0","voteRshareSum":"0"},{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"authorperm":"@author1/test1","rewardPoolId":1}]');
       let postMetadata = await fixture.database.findOne({ contract: 'comments', table: 'postMetadata', query: { authorperm: "@author1/test1" }});
       assert.equal(postMetadata, null);
       postMetadata = await fixture.database.findOne({ contract: 'comments', table: 'postMetadata', query: { authorperm: "@author1/re-test1" }});
@@ -1196,7 +1426,7 @@ describe('comments', function () {
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
       // allow comment to succeed
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'voter1', 'comments', 'vote', '{ "author": "author1", "permlink": "test1", "voter": "voter1", "weight": 10000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "author": "author1", "permlink": "test1", "voter": "voter1", "weight": "10" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "author": "author1", "permlink": "test1", "voter": "voter1", "weight": -10001 }'));
@@ -1242,7 +1472,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "author1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
@@ -1261,18 +1491,17 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"10.0000000000"}}');
       let vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9800,"downvotingPower":10000}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.0000000000","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.0000000000","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000"}');
 
       let votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
-      assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"10.0000000000","curationWeight":"3.1622776601","timestamp":1527811200000,"voter":"voter1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"author1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"0.0000000000","curationWeight":"0.0000000000","timestamp":1527811200000,"voter":"author1"}]');
+      assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"author1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"0.0000000000","curationWeight":"0.0000000000","timestamp":1527811200000,"voter":"author1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"10.0000000000","curationWeight":"3.1622776601","timestamp":1527811200000,"voter":"voter1"}]');
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test2", "weight": 10000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter2", "author": "author1", "permlink": "test2", "weight": 8000 }'));
 
@@ -1296,8 +1525,7 @@ describe('comments', function () {
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9604,"downvotingPower":10000}');
       let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527811200000,"votingPower":9840,"downvotingPower":10000}');
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"27.8000000000","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"27.8000000000","active":true});
 
       let post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000"}');
@@ -1307,8 +1535,7 @@ describe('comments', function () {
 
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"27.7993564875","active":true,"intervalPendingClaims":"27.7993564875","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"27.7993564875","active":true,"intervalPendingClaims":"27.7993564875","intervalRewardPool":"15.00000000"});
 
       // forward clock and then pay out both posts
       transactions = [];
@@ -1345,8 +1572,7 @@ describe('comments', function () {
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(post2, null);
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"151198.07499582","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"55.5992921371","active":true,"intervalPendingClaims":"55.5992921371","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499582","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"55.5992921371","active":true,"intervalPendingClaims":"55.5992921371","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -1368,7 +1594,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "author1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
@@ -1387,18 +1613,17 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"10.0000000000"}}');
       let vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9800,"downvotingPower":10000}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000"}');
 
       let votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
-      assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"10.0000000000","curationWeight":"5.0118723362","timestamp":1527811200000,"voter":"voter1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"author1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"0.0000000000","curationWeight":"0.0000000000","timestamp":1527811200000,"voter":"author1"}]');
+      assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"author1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"0.0000000000","curationWeight":"0.0000000000","timestamp":1527811200000,"voter":"author1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"10.0000000000","curationWeight":"5.0118723362","timestamp":1527811200000,"voter":"voter1"}]');
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test2", "weight": 10000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter2", "author": "author1", "permlink": "test2", "weight": 8000 }'));
 
@@ -1422,8 +1647,7 @@ describe('comments', function () {
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9604,"downvotingPower":10000}');
       let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527811200000,"votingPower":9840,"downvotingPower":10000}');
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1210400252","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1210400252","active":true});
 
       let post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000"}');
@@ -1433,8 +1657,7 @@ describe('comments', function () {
 
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1203427857","active":true,"intervalPendingClaims":"30.1203427857","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1203427857","active":true,"intervalPendingClaims":"30.1203427857","intervalRewardPool":"15.00000000"});
 
       // forward clock and then pay out both posts
       transactions = [];
@@ -1471,8 +1694,7 @@ describe('comments', function () {
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(post2, null);
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -1495,7 +1717,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1513,8 +1735,7 @@ describe('comments', function () {
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"15.00000000"});
 
       // forward clock past payout time
       transactions = [];
@@ -1561,7 +1782,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1628,8 +1849,7 @@ describe('comments', function () {
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7149450175","active":true,"intervalPendingClaims":"10.7149450175","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7149450175","active":true,"intervalPendingClaims":"10.7149450175","intervalRewardPool":"15.00000000"});
 
       // pay out post
       transactions = [];
@@ -1659,8 +1879,7 @@ describe('comments', function () {
       post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(post, null);
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"277073.83498528","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"11.6943264346","active":true,"intervalPendingClaims":"11.6943264346","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"277073.83498528","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"11.6943264346","active":true,"intervalPendingClaims":"11.6943264346","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -1682,8 +1901,8 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 1000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test2", "weight": 2000 }'));
 
@@ -1702,8 +1921,7 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events[0]), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[2].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"1.0000000000"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[3].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"1.9960000000"}}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0378178077","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0378178077","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.0000000000","voteRshareSum":"1.0000000000"}');
@@ -1737,14 +1955,12 @@ describe('comments', function () {
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.0000000000","voteRshareSum":"0.0000000000"}');
       votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":1000,"rshares":"1.0000000000","curationWeight":"1.0000000000","timestamp":1527811200000,"voter":"voter1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter2"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":-1000,"rshares":"-1.0000000000","curationWeight":"0","timestamp":1527811200000,"voter":"voter2"}]');
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0378178077","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0378178077","active":true});
 
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-01T23:59:57', "43198.5");
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"43198.5","lastRewardTimestamp":1527897597000,"lastClaimDecayTimestamp":1527897597000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0377474881","active":true,"intervalPendingClaims":"3.0377474881","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"43198.5","lastRewardTimestamp":1527897597000,"lastClaimDecayTimestamp":1527897597000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0377474881","active":true,"intervalPendingClaims":"3.0377474881","intervalRewardPool":"15.00000000"});
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1766,8 +1982,7 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'newVote')), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"-10.0000000000"}}');
       vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527897600000,"votingPower":10000,"downvotingPower":8000}');
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"43200.00000000","lastRewardTimestamp":1527897600000,"lastClaimDecayTimestamp":1527897600000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0377404562","active":true,"intervalPendingClaims":"3.0377404562","intervalRewardPool":"43200.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"43200.00000000","lastRewardTimestamp":1527897600000,"lastClaimDecayTimestamp":1527897600000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0377404562","active":true,"intervalPendingClaims":"3.0377404562","intervalRewardPool":"43200.00000000"});
 
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.9960000000","voteRshareSum":"-8.0040000000"}');
@@ -1778,8 +1993,7 @@ describe('comments', function () {
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0376701384","active":true,"intervalPendingClaims":"3.0376701384","intervalRewardPool":"43215.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0376701384","active":true,"intervalPendingClaims":"3.0376701384","intervalRewardPool":"43215.00000000"});
 
       // forward clock and then pay out both posts
       transactions = [];
@@ -1816,8 +2030,158 @@ describe('comments', function () {
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(post2, null);
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0376631067","active":true,"intervalPendingClaims":"3.0376631067","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0376631067","active":true,"intervalPendingClaims":"3.0376631067","intervalRewardPool":"302400.00000000"});
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('applies disableDownvote', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.7", disableDownvote: true});
+
+      let transactions;
+      let refBlockNumber;
+      let block;
+
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 1000 }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test2", "weight": 2000 }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+      let res = await fixture.database.getLatestBlockInfo();
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events[0]), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events[0]), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[2].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"1.0000000000"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[3].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"1.9960000000"}}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"disableDownvote":true,"ignoreDeclinePayout":false},"pendingClaims":"3.0378178077","active":true});
+
+      let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.0000000000","voteRshareSum":"1.0000000000"}');
+      let votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":1000,"rshares":"1.0000000000","curationWeight":"1.0000000000","timestamp":1527811200000,"voter":"voter1"}]');
+      let post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
+      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.9960000000","voteRshareSum":"1.9960000000"}');
+      let votes2 = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
+      assert.equal(JSON.stringify(votes2), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test2","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","weight":2000,"rshares":"1.9960000000","curationWeight":"1.6222298031","timestamp":1527811200000,"voter":"voter1"}]');
+
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter2", "author": "author1", "permlink": "test1", "weight": -1000 }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      res = await fixture.database.getLatestBlockInfo();
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'newVote')), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"0"}}');
+      let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
+      assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527811200000,"votingPower":10000,"downvotingPower":10000}');
+      post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.0000000000","voteRshareSum":"1.0000000000"}');
+      votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":1000,"rshares":"1.0000000000","curationWeight":"1.0000000000","timestamp":1527811200000,"voter":"voter1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter2"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":-1000,"rshares":"0","curationWeight":"0","timestamp":1527811200000,"voter":"voter2"}]');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"disableDownvote":true,"ignoreDeclinePayout":false},"pendingClaims":"3.0378178077","active":true});
+
+      // catch up post maintenance
+      await forwardPostMaintenanceAndAssertIssue('2018-06-01T23:59:57', "43198.5");
+
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"43198.5","lastRewardTimestamp":1527897597000,"lastClaimDecayTimestamp":1527897597000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"disableDownvote":true,"ignoreDeclinePayout":false},"pendingClaims":"3.0377474881","active":true,"intervalPendingClaims":"3.0377474881","intervalRewardPool":"15.00000000"});
+
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter2", "author": "author1", "permlink": "test2", "weight": -10000 }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-02T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      res = await fixture.database.getLatestBlockInfo();
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'newVote')), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"0"}}');
+      vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
+      assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527897600000,"votingPower":10000,"downvotingPower":10000}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"43200.00000000","lastRewardTimestamp":1527897600000,"lastClaimDecayTimestamp":1527897600000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0377404562","active":true,"intervalPendingClaims":"3.0377404562","intervalRewardPool":"43200.00000000"});
+
+      post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
+      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"1.9960000000","voteRshareSum":"1.9960000000"}');
+      votes2 = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
+      // weights are 9.8^0.7 vs 17.8^0.7 - 9.8^0.7
+      assert.equal(JSON.stringify(votes2), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test2","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","weight":2000,"rshares":"1.9960000000","curationWeight":"1.6222298031","timestamp":1527811200000,"voter":"voter1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test2","voter":"voter2"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","weight":-10000,"rshares":"0","curationWeight":"0","timestamp":1527897600000,"voter":"voter2"}]');
+
+      // catch up post maintenance
+      await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
+
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0376701384","active":true,"intervalPendingClaims":"3.0376701384","intervalRewardPool":"43215.00000000"});
+
+      // forward clock and then pay out both posts
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(maintenanceOp(refBlockNumber));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-09T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      res = await fixture.database.getLatestBlockInfo();
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      // ratio between author rewards should satisfy rshares1^a / rshares2^a ~ payout1 / payout2
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"24886.91876912"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"50715.00624649"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter1')), '{"contract":"comments","event":"curationReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"voter1","quantity":"24886.91876911"}}');
+      assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter2'), undefined);
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test2' && ev.data.account === 'voter1')), '{"contract":"comments","event":"curationReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"voter1","quantity":"50715.00624649"}}');
+      assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test2' && ev.data.account === 'voter2'), undefined);
+
+      await tableAsserts.assertUserBalances({account: "author1", symbol: "TKN", balance: "37800.96250781", stake: "37800.96250780"});
+      await tableAsserts.assertUserBalances({account: "voter1", symbol: "TKN", balance: "37800.96250781", stake: "37810.96250779"});
+      await tableAsserts.assertUserBalances({account: "voter2", symbol: "TKN", balance: "0", stake: "10.00000000"});
+
+      post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(post, null);
+      post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
+      assert.equal(post2, null);
+
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151196.14996879","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"6.0754809144","active":true,"intervalPendingClaims":"6.0754809144","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -1838,8 +2202,8 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -1957,7 +2321,7 @@ describe('comments', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "3000", "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "ABC", "precision": 8, "maxSupply": "1000000000" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'enableStaking', '{ "symbol": "ABC", "unstakingCooldown": 7, "numberTransactions": 1, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "ABC", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2", "curationRewardCurve": "power", "curationRewardCurveParameter": "1", "curationRewardPercentage": 75, "cashoutWindowDays": 7, "rewardPerInterval": "0.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 300, "downvotePowerConsumption": 1000, "tags":["scottest"] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "ABC", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2", "curationRewardCurve": "power", "curationRewardCurveParameter": "1", "curationRewardPercentage": 75, "cashoutWindowDays": 7, "rewardPerInterval": "0.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 300, "downvotePowerConsumption": 1000, "tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'issue', '{ "symbol": "ABC", "quantity": "1000", "to": "harpagon", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'stake', '{ "symbol": "ABC", "quantity": "50", "to": "voter1", "isSignedWithActiveKey": true }'));
 
@@ -1976,7 +2340,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1,2] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -1999,10 +2363,8 @@ describe('comments', function () {
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9700,"downvotingPower":10000}');
       let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 2}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":2,"account":"voter1"},"rewardPoolId":2,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9800,"downvotingPower":10000}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"ABC","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":3,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2500.0000000000","active":true}');
-      let rewardPool2 = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 2}});
-      assert.equal(JSON.stringify(rewardPool2), '{"_id":2,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true}');
+      await assertPool({"_id":1,"symbol":"ABC","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":3,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2500.0000000000","active":true});
+      await assertPool({"_id":2,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"ABC","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"50.0000000000","voteRshareSum":"50.0000000000"}');
@@ -2034,7 +2396,7 @@ describe('comments', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "3000", "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "ABC", "precision": 8, "maxSupply": "1000000000" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'enableStaking', '{ "symbol": "ABC", "unstakingCooldown": 7, "numberTransactions": 1, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "ABC", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2", "curationRewardCurve": "power", "curationRewardCurveParameter": "1", "curationRewardPercentage": 75, "cashoutWindowDays": 7, "rewardPerInterval": "0.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 300, "downvotePowerConsumption": 1000, "tags":["scottest"] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "ABC", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2", "curationRewardCurve": "power", "curationRewardCurveParameter": "1", "curationRewardPercentage": 75, "cashoutWindowDays": 7, "rewardPerInterval": "0.5", "rewardIntervalSeconds": 3, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 300, "downvotePowerConsumption": 1000, "tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'issue', '{ "symbol": "ABC", "quantity": "1000", "to": "harpagon", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'stake', '{ "symbol": "ABC", "quantity": "50", "to": "voter1", "isSignedWithActiveKey": true }'));
 
@@ -2049,7 +2411,7 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
 
-      await setUpRewardPool({ postRewardCurveParameter: '1.03', curationRewardCurveParameter: '0.5', tags: ['test', 'tag2']});
+      await setUpRewardPool({ postRewardCurveParameter: '1.03', curationRewardCurveParameter: '0.5', tags: ['test', 'tag2'], excludeTags: ['spam', 'banned']});
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2058,6 +2420,7 @@ describe('comments', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author2", "permlink": "re-test1", "parentAuthor": "author1", "parentPermlink": "test1"}'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author2", "permlink": "nopools", "parentAuthor": "other", "parentPermlink": "nonindexed"}'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author3", "permlink": "test3", "parentPermlink": "scottest", "jsonMetadata": {"tags": []} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author4", "permlink": "excluded", "parentPermlink": "pop", "jsonMetadata": {"tags": ["spam", "test"]} }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -2075,10 +2438,8 @@ describe('comments', function () {
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9700,"downvotingPower":10000}');
       let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 2}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":2,"account":"voter1"},"rewardPoolId":2,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9800,"downvotingPower":10000}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"ABC","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":3,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2500.0000000000","active":true}');
-      let rewardPool2 = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 2}});
-      assert.equal(JSON.stringify(rewardPool2), '{"_id":2,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["test","tag2"]},"pendingClaims":"10.7151930523","active":true}');
+      await assertPool({"_id":1,"symbol":"ABC","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":3,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2500.0000000000","active":true});
+      await assertPool({"_id":2,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["test","tag2"]},"pendingClaims":"10.7151930523","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"ABC","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"50.0000000000","voteRshareSum":"50.0000000000"}');
@@ -2101,6 +2462,11 @@ describe('comments', function () {
       reply = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author2/nopools" }});
       assert.equal(reply, null);
       reply2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 2, authorperm: "@author2/nopools" }});
+      assert.equal(reply2, null);
+
+      reply = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author4/excluded" }});
+      assert.equal(reply, null);
+      reply2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 2, authorperm: "@author4/excluded" }});
       assert.equal(reply2, null);
 
       resolve();
@@ -2133,7 +2499,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -2150,8 +2516,7 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(evt => evt.data.symbol === "TKN")), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events.find(evt => evt.data.symbol === "TKN")), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"60.0000000000"}}');
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"67.8415540697","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"67.8415540697","active":true});
       
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"60.0000000000","voteRshareSum":"60.0000000000"}');
@@ -2198,7 +2563,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -2216,8 +2581,7 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"10.0000000000"}}');
       let vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9800,"downvotingPower":10000}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000"}');
@@ -2227,7 +2591,8 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test2", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'commentOptions', '{ "author": "author1", "permlink": "test2", "maxAcceptedPayout": "1000000.000 HBD", "beneficiaries": [{"account": "bene1", "weight": 5000}, {"account": "bene2", "weight": 1}]}'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test2", "weight": 10000 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter2", "author": "author1", "permlink": "test2", "weight": 8000 }'));
 
@@ -2244,27 +2609,25 @@ describe('comments', function () {
 
       res = await fixture.database.getLatestBlockInfo();
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'newComment')), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[1].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"9.8000000000"}}');
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[2].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"8.0000000000"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[2].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"9.8000000000"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[3].logs).events[0]), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"8.0000000000"}}');
       vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9604,"downvotingPower":10000}');
       let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527811200000,"votingPower":9840,"downvotingPower":10000}');
 
       let post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
-      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000"}');
+      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000","beneficiaries":[{"account":"bene1","weight":5000},{"account":"bene2","weight":1}],"declinePayout":false}');
       let votes2 = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       // weights are 9.8^0.7 vs 17.8^0.7 - 9.8^0.7
       assert.equal(JSON.stringify(votes2), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test2","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","weight":10000,"rshares":"9.8000000000","curationWeight":"4.9414937793","timestamp":1527811200000,"voter":"voter1"},{"_id":{"rewardPoolId":1,"authorperm":"@author1/test2","voter":"voter2"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","weight":8000,"rshares":"8.0000000000","curationWeight":"2.5625265445","timestamp":1527811200000,"voter":"voter2"}]');
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1210400252","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1210400252","active":true});
 
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1203427857","active":true,"intervalPendingClaims":"30.1203427857","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"30.1203427857","active":true,"intervalPendingClaims":"30.1203427857","intervalRewardPool":"15.00000000"});
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2298,10 +2661,9 @@ describe('comments', function () {
       assert.equal(post, null);
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       // not paid out yet
-      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000"}');
+      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000","beneficiaries":[{"account":"bene1","weight":5000},{"account":"bene2","weight":1}],"declinePayout":false}');
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"248611.75713264","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"248611.75713264","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
 
       // forward clock and then pay out second post (3 seconds min gap time)
       transactions = [];
@@ -2335,10 +2697,9 @@ describe('comments', function () {
       await tableAsserts.assertUserBalances({account: "voter2", symbol: "TKN", balance: "8316.38027018", stake: "8326.38027018"});
 
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
-      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000"}');
+      assert.equal(JSON.stringify(post2), '{"_id":{"authorperm":"@author1/test2","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test2","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"17.8000000000","voteRshareSum":"17.8000000000","beneficiaries":[{"account":"bene1","weight":5000},{"account":"bene2","weight":1}],"declinePayout":false}');
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"248611.75713264","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"248611.75713264","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
 
       // forward clock and then finish paying out second post (3 seconds min gap time)
       transactions = [];
@@ -2359,20 +2720,21 @@ describe('comments', function () {
 
       // reward pool waits for last interval to finish processing
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract'), undefined);
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"48706.84106812"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"24348.54984996"}}');
       // curation reward in last block
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test2' && ev.data.account === 'voter1'), undefined);
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test2' && ev.data.account === 'voter2'), undefined);
 
-      await tableAsserts.assertUserBalances({account: "author1", symbol: "TKN", balance: "37800.48125090", stake: "37800.48125090"});
+      await tableAsserts.assertUserBalances({account: "author1", symbol: "TKN", balance: "25621.33564182", stake: "25621.33564182"});
+      await tableAsserts.assertUserBalances({account: "bene1", symbol: "TKN", balance: "12176.71026703", stake: "12176.71026703"});
+      await tableAsserts.assertUserBalances({account: "bene2", symbol: "TKN", balance: "2.4353421", stake: "2.43534200"});
       await tableAsserts.assertUserBalances({account: "voter1", symbol: "TKN", balance: "29484.10098072", stake: "29494.10098071"});
       await tableAsserts.assertUserBalances({account: "voter2", symbol: "TKN", balance: "8316.38027018", stake: "8326.38027018"});
 
       post2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test2" }});
       assert.equal(post2, null);
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
 
       // forward clock and then finalize reward interval (3 seconds min gap time)
       transactions = [];
@@ -2391,10 +2753,8 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-
       // check that lastClaimDecayTimestamp has advanced
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -2416,7 +2776,7 @@ describe('comments', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "3000", "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "ABC", "precision": 4, "maxSupply": "1000000000" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'enableStaking', '{ "symbol": "ABC", "unstakingCooldown": 7, "numberTransactions": 1, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "ABC", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2", "curationRewardCurve": "power", "curationRewardCurveParameter": "1", "curationRewardPercentage": 75, "cashoutWindowDays": 7, "rewardPerInterval": "0.5", "rewardIntervalSeconds": 6, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 300, "downvotePowerConsumption": 1000, "tags":["scottest"] }, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'comments', 'createRewardPool', '{ "symbol": "ABC", "config": { "postRewardCurve": "power", "postRewardCurveParameter": "2", "curationRewardCurve": "power", "curationRewardCurveParameter": "1", "curationRewardPercentage": 75, "cashoutWindowDays": 7, "rewardPerInterval": "0.5", "rewardIntervalSeconds": 6, "voteRegenerationDays": 5, "downvoteRegenerationDays": 5, "stakedRewardPercentage": 50, "votePowerConsumption": 300, "downvotePowerConsumption": 1000, "tags":["scottest"], "disableDownvote": false, "ignoreDeclinePayout": false }, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'issue', '{ "symbol": "ABC", "quantity": "1000", "to": "harpagon", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'stake', '{ "symbol": "ABC", "quantity": "50", "to": "voter1", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'comments', 'updateParams', '{ "maintenanceTokensPerBlock": 1 }'));
@@ -2439,7 +2799,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1,2] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
       block = {
@@ -2462,10 +2822,8 @@ describe('comments', function () {
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9700,"downvotingPower":10000}');
       let vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 2}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":2,"account":"voter1"},"rewardPoolId":2,"account":"voter1","lastVoteTimestamp":1527811200000,"votingPower":9800,"downvotingPower":10000}');
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"ABC","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2500.0000000000","active":true}');
-      let rewardPool2 = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 2}});
-      assert.equal(JSON.stringify(rewardPool2), '{"_id":2,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true}');
+      await assertPool({"_id":1,"symbol":"ABC","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2500.0000000000","active":true});
+      await assertPool({"_id":2,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7151930523","active":true});
 
       let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"ABC","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"50.0000000000","voteRshareSum":"50.0000000000"}');
@@ -2516,10 +2874,8 @@ describe('comments', function () {
       assert.equal(tokensIssued['ABC'].toFixed(), '2.5');  // 5*0.5
       assert.equal(tokensIssued['TKN'].toFixed(), '9');  // 6*1.5
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"ABC","rewardPool":"2.5000","lastRewardTimestamp":1527811230000,"lastClaimDecayTimestamp":1527811230000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2499.9421301652","active":true,"intervalPendingClaims":"2499.9421301652","intervalRewardPool":"2.5000"}');
-      rewardPool2 = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 2}});
-      assert.equal(JSON.stringify(rewardPool2), '{"_id":2,"symbol":"TKN","rewardPool":"9.00000000","lastRewardTimestamp":1527811218000,"lastClaimDecayTimestamp":1527811218000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7150442307","active":true,"intervalPendingClaims":"10.7150442307","intervalRewardPool":"9.00000000"}');
+      await assertPool({"_id":1,"symbol":"ABC","rewardPool":"2.5000","lastRewardTimestamp":1527811230000,"lastClaimDecayTimestamp":1527811230000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"2499.9421301652","active":true,"intervalPendingClaims":"2499.9421301652","intervalRewardPool":"2.5000"});
+      await assertPool({"_id":2,"symbol":"TKN","rewardPool":"9.00000000","lastRewardTimestamp":1527811218000,"lastClaimDecayTimestamp":1527811218000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"10.7150442307","active":true,"intervalPendingClaims":"10.7150442307","intervalRewardPool":"9.00000000"});
 
       // forward clock and mock state. Since it processes 1 token per block,
       // it will not have caught up with maintenance, but let's pretend it has
@@ -2591,10 +2947,8 @@ describe('comments', function () {
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1' && ev.data.symbol === 'TKN')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":2,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"75600.61250209"}}');
       assert.equal(JSON.parse(res.transactions[1].logs).events, undefined);
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"ABC","rewardPool":"25199.6500","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"4999.9305563590","active":true,"intervalPendingClaims":"4999.9305563590","intervalRewardPool":"50400.0000"}');
-      rewardPool2 = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 2}});
-      assert.equal(JSON.stringify(rewardPool2), '{"_id":2,"symbol":"TKN","rewardPool":"151198.77499582","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"21.4302124796","active":true,"intervalPendingClaims":"21.4302124796","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"ABC","rewardPool":"25199.6500","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"4999.9305563590","active":true,"intervalPendingClaims":"4999.9305563590","intervalRewardPool":"50400.0000"});
+      await assertPool({"_id":2,"symbol":"TKN","rewardPool":"151198.77499582","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"21.4302124796","active":true,"intervalPendingClaims":"21.4302124796","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -2631,6 +2985,57 @@ describe('comments', function () {
       });
   });
 
+  it('pays beneficiary with app tax', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await runBeneficiaryTest({ appTaxConfig: {
+          app: "neoxiancity",
+          percent: 50,
+          beneficiary: "neoxianburn",
+      }});
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('pays beneficiary with 100% app tax', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await runBeneficiaryTest({ appTaxConfig: {
+          app: "neoxiancity",
+          percent: 100,
+          beneficiary: "neoxianburn",
+      }});
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('pays beneficiary with exempt app tax', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await runBeneficiaryTest({ appTaxConfig: {
+          app: "neoxiancity",
+          percent: 50,
+          beneficiary: "neoxianburn",
+      }, appTaxExempt: true});
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
   it('does not pay for post declined payout', (done) => {
     new Promise(async (resolve) => {
       await fixture.setUp();
@@ -2643,7 +3048,7 @@ describe('comments', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "rewardPools": [1] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'commentOptions', '{ "author": "author1", "permlink": "test1", "maxAcceptedPayout": "0.000 HBD", "beneficiaries": [{"account": "bene1", "weight": 5000}, {"account": "bene2", "weight": 1}]}'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
 
@@ -2664,8 +3069,7 @@ describe('comments', function () {
 
       // catch up post maintenance
       await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"});
 
       // forward clock past payout time
       transactions = [];
@@ -2698,8 +3102,85 @@ describe('comments', function () {
       post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(post, null);
 
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"});
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('ignores declined payout with ignoreDeclinePayout', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1", ignoreDeclinePayout: true});
+
+      let transactions;
+      let refBlockNumber;
+      let block;
+
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'comment', '{ "author": "author1", "permlink": "test1", "jsonMetadata": {"tags": ["scottest"]} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'commentOptions', '{ "author": "author1", "permlink": "test1", "maxAcceptedPayout": "0.000 HBD", "beneficiaries": [{"account": "bene1", "weight": 5000}, {"account": "bene2", "weight": 1}]}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'comments', 'vote', '{ "voter": "voter1", "author": "author1", "permlink": "test1", "weight": 10000 }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+      let res = await fixture.database.getLatestBlockInfo();
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events[0]), '{"contract":"comments","event":"newComment","data":{"rewardPoolId":1,"symbol":"TKN"}}');
+      let post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(JSON.stringify(post), '{"_id":{"authorperm":"@author1/test1","rewardPoolId":1},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","author":"author1","created":1527811200000,"cashoutTime":1528416000000,"votePositiveRshareSum":"10.0000000000","voteRshareSum":"10.0000000000","beneficiaries":[{"account":"bene1","weight":5000},{"account":"bene2","weight":1}]}');
+
+      // catch up post maintenance
+      await forwardPostMaintenanceAndAssertIssue('2018-06-07T23:59:57', "302398.50000000");
+      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302398.50000000","lastRewardTimestamp":1528415997000,"lastClaimDecayTimestamp":1528415997000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"], "ignoreDeclinePayout": true},"pendingClaims":"9.9997685205","active":true,"intervalPendingClaims":"9.9997685205","intervalRewardPool":"15.00000000"});
+
+      // forward clock past payout time
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      // this transaction pays out with maintenance op
+      transactions.push(maintenanceOp(refBlockNumber));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-08T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      res = await fixture.database.getLatestBlockInfo();
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"37792.92115529"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene1')), '{"contract":"comments","event":"beneficiaryReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"bene1","quantity":"37800.48125153"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'beneficiaryReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'bene2')), '{"contract":"comments","event":"beneficiaryReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"bene2","quantity":"7.56009625"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter1')), '{"contract":"comments","event":"curationReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"voter1","quantity":"75600.96250306"}}');
+
+      await tableAsserts.assertUserBalances({account: "author1", symbol: "TKN", balance: "18896.46057765", stake: "18896.46057764"});
+      await tableAsserts.assertUserBalances({account: "bene1", symbol: "TKN", balance: "18900.24062577", stake: "18900.24062576"});
+      await tableAsserts.assertUserBalances({account: "bene2", symbol: "TKN", balance: "3.78004813", stake: "3.78004812"});
+      await tableAsserts.assertUserBalances({account: "voter1", symbol: "TKN", balance: "37800.48125153", stake: "37810.48125153"});
+
+      post = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
+      assert.equal(post, null);
+
       rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499387","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"});
 
       resolve();
     })
@@ -2739,8 +3220,7 @@ describe('comments', function () {
       let contractBalance = await fixture.database.findOne({ contract: 'tokens', table: 'contractsBalances', query: { "account": "comments", "symbol": "TKN" }});
       assert.equal(null, contractBalance);
 
-      let rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.01","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.01","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true});
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2764,8 +3244,7 @@ describe('comments', function () {
       contractBalance = await fixture.database.findOne({ contract: 'tokens', table: 'contractsBalances', query: { "account": "comments", "symbol": "TKN" }});
       assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.01","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
 
-      rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
-      assert.equal(JSON.stringify(rewardPool), '{"_id":1,"symbol":"TKN","rewardPool":"0.01000000","lastRewardTimestamp":1527811206000,"lastClaimDecayTimestamp":1527811206000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.01","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"0.01000000"}');
+      await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0.01000000","lastRewardTimestamp":1527811206000,"lastClaimDecayTimestamp":1527811206000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.01","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"0.01000000"});
 
       resolve();
     })

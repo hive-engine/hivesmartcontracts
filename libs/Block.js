@@ -1,5 +1,6 @@
 const SHA256 = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
+const log = require('loglevel');
 const { CONSTANTS } = require('../libs/Constants');
 
 const { SmartContracts } = require('./SmartContracts');
@@ -103,8 +104,20 @@ class Block {
     }
   }
 
+  /**
+   * Try cleaning up blocks after every 100 blocks if node is a light node.
+   * @param database
+   * @returns {Promise<void>}
+   */
+  async cleanupLightNode(database) {
+    if (this.blockNumber % 100 === 0) {
+      await database.cleanupLightNode();
+    }
+  }
+
   // produce the block (deploy a smart contract or execute a smart contract)
   async produceBlock(database, jsVMTimeout, mainBlock) {
+    await this.cleanupLightNode(database);
     await this.blockAdjustments(database);
 
     const nbTransactions = this.transactions.length;
@@ -115,14 +128,15 @@ class Block {
     const allowCommentContract = this.refHiveBlockNumber > 54560500;
     for (let i = 0; i < nbTransactions; i += 1) {
       const transaction = this.transactions[i];
+      log.info('Processing tx ', transaction);
       await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash); // eslint-disable-line
 
       currentDatabaseHash = transaction.databaseHash;
 
       if ((transaction.contract !== 'comments' || allowCommentContract) || transaction.logs === '{}') {
         if (mainBlock && currentDatabaseHash !== mainBlock.transactions[relIndex].databaseHash) {
-          console.warn(mainBlock.transactions[relIndex]); // eslint-disable-line no-console
-          console.warn(transaction); // eslint-disable-line no-console
+          log.warn(mainBlock.transactions[relIndex]); // eslint-disable-line no-console
+          log.warn(transaction); // eslint-disable-line no-console
           throw new Error('tx hash mismatch with api');
         }
         relIndex += 1;
@@ -184,8 +198,8 @@ class Block {
           this.virtualTransactions.push(transaction);
           if (mainBlock && currentDatabaseHash
               !== mainBlock.virtualTransactions[relIndex].databaseHash) {
-            console.warn(mainBlock.virtualTransactions[relIndex]); // eslint-disable-line no-console
-            console.warn(transaction); // eslint-disable-line no-console
+            log.warn(mainBlock.virtualTransactions[relIndex]); // eslint-disable-line no-console
+            log.warn(transaction); // eslint-disable-line no-console
             throw new Error('tx hash mismatch with api');
           }
           relIndex += 1;
@@ -265,7 +279,7 @@ class Block {
     newCurrentDatabaseHash = database.getDatabaseHash();
 
 
-    // console.log('transac logs', results.logs);
+    log.info('Tx results: ', results);
     transaction.addLogs(results.logs);
     transaction.executedCodeHash = results.executedCodeHash || ''; // eslint-disable-line
     transaction.databaseHash = newCurrentDatabaseHash; // eslint-disable-line

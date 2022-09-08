@@ -2,6 +2,7 @@
 /* eslint-disable no-await-in-loop */
 const SHA256 = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
+const log = require('loglevel');
 const validator = require('validator');
 const { MongoClient } = require('mongodb');
 const { EJSON } = require('bson');
@@ -70,6 +71,8 @@ class Database {
     this.session = null;
     this.contractCache = {};
     this.objectCache = {};
+    this.lightNode = false;
+    this.blocksToKeep = 864000; // this only applies if lightNode is true
   }
 
   startSession() {
@@ -131,10 +134,12 @@ class Database {
     });
   }
 
-  async init(databaseURL, databaseName) {
+  async init(databaseURL, databaseName, lightNode = false, blocksToKeep = 864000) {
     // init the database
     this.client = await MongoClient.connect(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
     this.database = await this.client.db(databaseName);
+    this.lightNode = lightNode;
+    this.blocksToKeep = blocksToKeep; // this only applies if lightNode is true
     // await database.dropDatabase();
     // return
     // get the chain collection and init the chain if not done yet
@@ -202,8 +207,8 @@ class Database {
       this.databaseHash = SHA256(this.databaseHash + contractInDb.tables[table].hash)
         .toString(enchex);
       if (enableHashLogging) {
-        console.log(`updated hash of ${table} to ${contractInDb.tables[table].hash}`); // eslint-disable-line no-console
-        console.log(`updated db hash from ${oldDatabaseHash} to ${this.databaseHash}`); // eslint-disable-line no-console
+        log.info(`updated hash of ${table} to ${contractInDb.tables[table].hash}`); // eslint-disable-line no-console
+        log.info(`updated db hash from ${oldDatabaseHash} to ${this.databaseHash}`); // eslint-disable-line no-console
       }
     }
   }
@@ -260,7 +265,7 @@ class Database {
       return latestBlock;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
       return null;
     }
   }
@@ -278,7 +283,7 @@ class Database {
       return latestBlock;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
       return null;
     }
   }
@@ -292,7 +297,7 @@ class Database {
       return block;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
       return null;
     }
   }
@@ -327,11 +332,11 @@ class Database {
         );
       } else {
         // eslint-disable-next-line no-console
-        console.error('verifyBlock', blockNumber, 'does not exist');
+        log.error('verifyBlock', blockNumber, 'does not exist');
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
     }
   }
 
@@ -360,7 +365,7 @@ class Database {
       return null;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
       return null;
     }
   }
@@ -488,7 +493,7 @@ class Database {
         result = true;
       }
     } else {
-      console.warn(`Table invalid, was not created, payload: ${JSON.stringify(payload)}`); // eslint-disable-line no-console
+      log.warn(`Table invalid, was not created, payload: ${JSON.stringify(payload)}`); // eslint-disable-line no-console
     }
 
     return result;
@@ -527,14 +532,14 @@ class Database {
             let createIndex = true;
             if (typeof index === 'object') {
               if (tableIndexes[index.name] !== undefined) {
-                console.log(`Index with name ${index.name} already exists for ${finalTableName}`); // eslint-disable-line no-console
+                log.info(`Index with name ${index.name} already exists for ${finalTableName}`); // eslint-disable-line no-console
                 createIndex = false;
               } else {
                 indexOptions.name = index.name;
                 finalIndex = index.index;
               }
             } else if (tableIndexes[`${index}_1`] !== undefined) {
-              console.log(`Index ${index} already exists for ${finalTableName}`); // eslint-disable-line no-console
+              log.info(`Index ${index} already exists for ${finalTableName}`); // eslint-disable-line no-console
               createIndex = false;
             } else {
               finalIndex[index] = 1;
@@ -572,6 +577,7 @@ class Database {
         indexes,
       } = payload;
 
+      log.info('Find payload ', JSON.stringify(payload));
       await this.flushCache();
 
       const lim = limit || 1000;
@@ -608,9 +614,8 @@ class Database {
           if (ind.length > 0) {
             const tableIndexes = await indexInformation(tableData);
 
-            let sort;
+            const sort = [];
             if (ind.every(el => tableIndexes[`${el.index}_1`] !== undefined || el.index === '$loki' || el.index === '_id' || tableIndexes[el.index] !== undefined)) {
-              sort = [];
               ind.forEach((el) => {
                 if (tableIndexes[el.index] !== undefined) {
                   tableIndexes[el.index].forEach((indexPart) => {
@@ -630,7 +635,10 @@ class Database {
               // This can happen when creating a table and using find with index all in the same transaction
               // and should be rare in production. Otherwise, contract code is asking for an index that does
               // not exist.
-              console.log(`Index ${JSON.stringify(ind)} not available for ${finalTableName}`); // eslint-disable-line no-console
+              log.info(`Index ${JSON.stringify(ind)} not available for ${finalTableName}`); // eslint-disable-line no-console
+            }
+            if (sort.findIndex(el => el[0] === '_id') < 0) {
+                sort.push(['_id', 'asc']);
             }
             result = await tableData.find(EJSON.deserialize(query), {
               limit: lim,
@@ -644,6 +652,7 @@ class Database {
             result = await tableData.find(EJSON.deserialize(query), {
               limit: lim,
               skip: off,
+              sort: ['_id', 'asc'],
               session: this.session,
             }).toArray();
             result = EJSON.serialize(result);
@@ -654,7 +663,7 @@ class Database {
       return result;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
       return null;
     }
   }
@@ -669,6 +678,7 @@ class Database {
   async findOne(payload) { // eslint-disable-line no-unused-vars
     try {
       const { contract, table, query } = payload;
+      log.info('findOne payload ', payload);
       let result = null;
       if (contract && typeof contract === 'string'
         && table && typeof table === 'string'
@@ -710,7 +720,7 @@ class Database {
       return result;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error(error);
+      log.error(error);
       return null;
     }
   }
@@ -1008,6 +1018,56 @@ class Database {
     const tableInDb = this.database.collection(table);
     await this.updateTableHash(table.split('_')[0], table.split('_')[1]);
     await tableInDb.deleteOne({ _id: record._id }, { session: this.session }); // eslint-disable-line no-underscore-dangle
+  }
+
+  /**
+   * Used by light nodes to cleanup (unneeded) blocks / transactions already verified
+   * by witnesses <= lastVerifiedBlockNumber - blocksToKeep
+   * @returns {Promise<void>}
+   */
+  async cleanupLightNode() {
+    if (!this.lightNode) {
+      return;
+    }
+    const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
+    if (params && params.lastVerifiedBlockNumber) {
+      console.log(`cleaning up light node blocks and transactions`);
+      const cleanupUntilBlock = params.lastVerifiedBlockNumber - 1 - this.blocksToKeep;
+      await this.cleanupBlocks(cleanupUntilBlock);
+      await this.cleanupTransactions(cleanupUntilBlock);
+    }
+  }
+
+  /**
+   * Used by light nodes to cleanup (unneeded) blocks already verified
+   * by witnesses <= lastVerifiedBlockNumber - blocksToKeep
+   * @param cleanupUntilBlock cleanup blocks with a smaller blockNumber
+   * @returns {Promise<void>}
+   */
+  async cleanupBlocks(cleanupUntilBlock) {
+    // block 0 is specifically excluded, as the genesis block is also kept by light nodes, due to the condition in
+    // createGenesisBlock in Blockchain.js
+    await this.chain.deleteMany({ $and: [{ _id: { $gt: 0 } }, { _id: { $lte: cleanupUntilBlock } }] }, { session: this.session });
+  }
+
+  /**
+   * Used by light nodes to cleanup (unneeded) transactions
+   * @param cleanupUntilBlock cleanup transactions with a smaller blockNumber
+   * @returns {Promise<void>}
+   */
+  async cleanupTransactions(cleanupUntilBlock) {
+    await this.database.collection('transactions').deleteMany({ blockNumber: { $lte: cleanupUntilBlock } }, { session: this.session });
+  }
+
+  /**
+   * Checks if a node was a light node previously and returns true in case it was. Light nodes
+   * drop block data after a configured number of blocksToKeep, which means that block 1 is not stored
+   * by light nodes, otherwise it would be a full node.
+   * @returns {Promise<boolean>}
+   */
+  async wasLightNodeBefore() {
+    const block = await this.getBlockInfo(1);
+    return !block;
   }
 }
 

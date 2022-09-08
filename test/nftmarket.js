@@ -1,5 +1,5 @@
 /* eslint-disable */
-const assert = require('assert');
+const assert = require('assert').strict;
 const BigNumber = require('bignumber.js');
 const { Base64 } = require('js-base64');
 const { MongoClient } = require('mongodb');
@@ -647,6 +647,9 @@ describe('nftmarket', function() {
       assert.equal(openInterest.length, 50);
       assert.equal(openInterest[0].count, 0);
 
+      const res = await fixture.database.getLatestBlockInfo();
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(e => e.event === 'hitSellOrder')), '{"contract":"nftmarket","event":"hitSellOrder","data":{"symbol":"TEST","priceSymbol":"BEE","account":"cryptomancer","ownedBy":"u","sellers":[{"account":"account0","ownedBy":"u","nftIds":["1"],"nftSales":[{"id":"1","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account9","ownedBy":"u","nftIds":["10"],"nftSales":[{"id":"10","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account10","ownedBy":"u","nftIds":["11"],"nftSales":[{"id":"11","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account11","ownedBy":"u","nftIds":["12"],"nftSales":[{"id":"12","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account12","ownedBy":"u","nftIds":["13"],"nftSales":[{"id":"13","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account13","ownedBy":"u","nftIds":["14"],"nftSales":[{"id":"14","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account14","ownedBy":"u","nftIds":["15"],"nftSales":[{"id":"15","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account15","ownedBy":"u","nftIds":["16"],"nftSales":[{"id":"16","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account16","ownedBy":"u","nftIds":["17"],"nftSales":[{"id":"17","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account17","ownedBy":"u","nftIds":["18"],"nftSales":[{"id":"18","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account18","ownedBy":"u","nftIds":["19"],"nftSales":[{"id":"19","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account1","ownedBy":"u","nftIds":["2"],"nftSales":[{"id":"2","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account19","ownedBy":"u","nftIds":["20"],"nftSales":[{"id":"20","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account20","ownedBy":"u","nftIds":["21"],"nftSales":[{"id":"21","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account21","ownedBy":"u","nftIds":["22"],"nftSales":[{"id":"22","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account22","ownedBy":"u","nftIds":["23"],"nftSales":[{"id":"23","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account23","ownedBy":"u","nftIds":["24"],"nftSales":[{"id":"24","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account24","ownedBy":"u","nftIds":["25"],"nftSales":[{"id":"25","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account25","ownedBy":"u","nftIds":["26"],"nftSales":[{"id":"26","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account26","ownedBy":"u","nftIds":["27"],"nftSales":[{"id":"27","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account27","ownedBy":"u","nftIds":["28"],"nftSales":[{"id":"28","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account28","ownedBy":"u","nftIds":["29"],"nftSales":[{"id":"29","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account2","ownedBy":"u","nftIds":["3"],"nftSales":[{"id":"3","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account29","ownedBy":"u","nftIds":["30"],"nftSales":[{"id":"30","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account30","ownedBy":"u","nftIds":["31"],"nftSales":[{"id":"31","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account31","ownedBy":"u","nftIds":["32"],"nftSales":[{"id":"32","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account32","ownedBy":"u","nftIds":["33"],"nftSales":[{"id":"33","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account33","ownedBy":"u","nftIds":["34"],"nftSales":[{"id":"34","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account34","ownedBy":"u","nftIds":["35"],"nftSales":[{"id":"35","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account35","ownedBy":"u","nftIds":["36"],"nftSales":[{"id":"36","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account36","ownedBy":"u","nftIds":["37"],"nftSales":[{"id":"37","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account37","ownedBy":"u","nftIds":["38"],"nftSales":[{"id":"38","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account38","ownedBy":"u","nftIds":["39"],"nftSales":[{"id":"39","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account3","ownedBy":"u","nftIds":["4"],"nftSales":[{"id":"4","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account39","ownedBy":"u","nftIds":["40"],"nftSales":[{"id":"40","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account40","ownedBy":"u","nftIds":["41"],"nftSales":[{"id":"41","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account41","ownedBy":"u","nftIds":["42"],"nftSales":[{"id":"42","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account42","ownedBy":"u","nftIds":["43"],"nftSales":[{"id":"43","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account43","ownedBy":"u","nftIds":["44"],"nftSales":[{"id":"44","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account44","ownedBy":"u","nftIds":["45"],"nftSales":[{"id":"45","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account45","ownedBy":"u","nftIds":["46"],"nftSales":[{"id":"46","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account46","ownedBy":"u","nftIds":["47"],"nftSales":[{"id":"47","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account47","ownedBy":"u","nftIds":["48"],"nftSales":[{"id":"48","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account48","ownedBy":"u","nftIds":["49"],"nftSales":[{"id":"49","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account4","ownedBy":"u","nftIds":["5"],"nftSales":[{"id":"5","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account49","ownedBy":"u","nftIds":["50"],"nftSales":[{"id":"50","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account5","ownedBy":"u","nftIds":["6"],"nftSales":[{"id":"6","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account6","ownedBy":"u","nftIds":["7"],"nftSales":[{"id":"7","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account7","ownedBy":"u","nftIds":["8"],"nftSales":[{"id":"8","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"},{"account":"account8","ownedBy":"u","nftIds":["9"],"nftSales":[{"id":"9","price":"0.1","fee":"0.001","symbol":"BEE"}],"paymentTotal":"0.09900000"}],"paymentTotal":"4.95000000","marketAccount":"peakmonsters","feeTotal":"0.05000000"}}');
+
       resolve();
     })
       .then(() => {
@@ -668,6 +671,7 @@ describe('nftmarket', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftmarketContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'nft', 'updateParams', `{ "nftCreationFee": "5", "nftIssuanceFee": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.1"}, "dataPropertyCreationFee": "1" }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"cryptomancer", "quantity":"200", "isSignedWithActiveKey":true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"mancermart", "quantity":"200", "isSignedWithActiveKey":true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"yabapmatt", "quantity":"3.14158999", "isSignedWithActiveKey":true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "TKN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'create', '{ "isSignedWithActiveKey": true, "name":"test NFT", "symbol":"TEST", "url":"http://mynft.com" }'));
@@ -679,6 +683,7 @@ describe('nftmarket', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"marc", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nftmarket', 'enableMarket', '{ "isSignedWithActiveKey": true, "symbol": "TEST" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nftmarket', 'setMarketParams', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "officialMarket": "mancermart", "agentCut": 2000 }'));
 
       // do a few sell orders
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'aggroed', 'nftmarket', 'sell', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "nfts": ["1","2","3"], "price": "3.14159", "priceSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "fee": 500 }`));
@@ -696,6 +701,8 @@ describe('nftmarket', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nftmarket', 'buy', '{ "isSignedWithActiveKey": true, "marketAccount": "peakmonsters", "symbol": "TEST", "nfts": ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51"] }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nftmarket', 'buy', '{ "isSignedWithActiveKey": true, "expPriceSymbol": "ENG", "marketAccount": "peakmonsters", "symbol": "TEST", "nfts": ["1","2","3"] }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nftmarket', 'buy', `{ "isSignedWithActiveKey": true, "expPriceSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "expPrice": "9.42477001", "marketAccount": "peakmonsters", "symbol": "TEST", "nfts": ["1","2","3"] }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nftmarket', 'buy', '{ "isSignedWithActiveKey": true, "marketAccount": "cryptomancer", "symbol": "TEST", "nfts": ["1"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'mancermart', 'nftmarket', 'buy', '{ "isSignedWithActiveKey": true, "marketAccount": "cryptomancer", "symbol": "TEST", "nfts": ["1"] }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -711,8 +718,6 @@ describe('nftmarket', function() {
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
-      console.log(JSON.parse(transactionsBlock1[18].logs).errors[0]);
-      console.log(JSON.parse(transactionsBlock1[19].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[20].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[21].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[22].logs).errors[0]);
@@ -722,18 +727,24 @@ describe('nftmarket', function() {
       console.log(JSON.parse(transactionsBlock1[26].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[27].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[28].logs).errors[0]);
+      console.log(JSON.parse(transactionsBlock1[29].logs).errors[0]);
+      console.log(JSON.parse(transactionsBlock1[30].logs).errors[0]);
+      console.log(JSON.parse(transactionsBlock1[31].logs).errors[0]);
+      console.log(JSON.parse(transactionsBlock1[32].logs).errors[0]);
 
-      assert.equal(JSON.parse(transactionsBlock1[18].logs).errors[0], 'market not enabled for symbol');
-      assert.equal(JSON.parse(transactionsBlock1[19].logs).errors[0], 'you must use a custom_json signed with your active key');
-      assert.equal(JSON.parse(transactionsBlock1[20].logs).errors[0], 'invalid params');
-      assert.equal(JSON.parse(transactionsBlock1[21].logs).errors[0], 'invalid params');
-      assert.equal(JSON.parse(transactionsBlock1[22].logs).errors[0], 'invalid market account');
-      assert.equal(JSON.parse(transactionsBlock1[23].logs).errors[0], 'cannot fill your own orders');
-      assert.equal(JSON.parse(transactionsBlock1[24].logs).errors[0], 'all orders must have the same price symbol');
-      assert.equal(JSON.parse(transactionsBlock1[25].logs).errors[0], 'you must have enough tokens for payment');
-      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'cannot act on more than 50 IDs at once');
-      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'unexpected price symbol BEE');
-      assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'total required payment 9.42477000 BEE does not match expected amount');
+      assert.equal(JSON.parse(transactionsBlock1[20].logs).errors[0], 'market not enabled for symbol');
+      assert.equal(JSON.parse(transactionsBlock1[21].logs).errors[0], 'you must use a custom_json signed with your active key');
+      assert.equal(JSON.parse(transactionsBlock1[22].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[23].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[24].logs).errors[0], 'invalid market account');
+      assert.equal(JSON.parse(transactionsBlock1[25].logs).errors[0], 'cannot fill your own orders');
+      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'all orders must have the same price symbol');
+      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'you must have enough tokens for payment');
+      assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'cannot act on more than 50 IDs at once');
+      assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'unexpected price symbol BEE');
+      assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'total required payment 9.42477000 BEE does not match expected amount');
+      assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], 'market account cannot be same as buyer');
+      assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], 'official market account cannot be same as buyer');
 
       // check if the NFT instances are still owned by the market
       let instances = await fixture.database.find({

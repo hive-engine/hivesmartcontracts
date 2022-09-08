@@ -19,6 +19,66 @@ let serverRPC = null;
 let server = null;
 let database = null;
 
+const requestLogger = function (req, _, next) {
+  console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(req.body)}`);
+  next();
+}
+
+async function generateStatus() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const result = {};
+      // retrieve the last block of the sidechain
+      const block = await database.getLatestBlockMetadata();
+
+      if (block) {
+        result.lastBlockNumber = block.blockNumber;
+        result.lastBlockRefHiveBlockNumber = block.refHiveBlockNumber;
+        result.lastHash = block.hash;
+      }
+
+      // get the Hive block number that the streamer is currently parsing
+      const res = await ipc.send(
+        { to: STREAMER_PLUGIN_NAME, action: STREAMER_PLUGIN_ACTION.GET_CURRENT_BLOCK },
+      );
+
+      if (res && res.payload) {
+        result.lastParsedHiveBlockNumber = res.payload;
+      }
+
+      // get the version of the SSC node
+      result.SSCnodeVersion = packagejson.version;
+
+      // gets the domain of the SSC node
+      result.domain = config.domain;
+
+      // get the ssc chain id from config
+      result.chainId = config.chainId;
+
+      // get light node config of the SSC node
+      result.lightNode = config.lightNode;
+      if (config.lightNode) {
+        result.blocksToKeep = config.blocksToKeep;
+      }
+
+      // first block currently stored by light node
+      if (result.lightNode) {
+        const firstBlock = await database.chain.findOne({ blockNumber: { $gt: 0 } }, { session: database.session });
+        result.firstBlockNumber = firstBlock?.blockNumber;
+      }
+
+      const witnessParams = await database.findOne({ contract: 'witnesses', table: 'params', query: {} });
+      if (witnessParams && witnessParams.lastVerifiedBlockNumber) {
+        result.lastVerifiedBlockNumber = witnessParams.lastVerifiedBlockNumber;
+      }
+
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 function blockchainRPC() {
   return {
     getLatestBlockInfo: async (args, callback) => {
@@ -65,30 +125,7 @@ function blockchainRPC() {
     },
     getStatus: async (args, callback) => {
       try {
-        const result = {};
-        // retrieve the last block of the sidechain
-        const block = await database.getLatestBlockMetadata();
-
-        if (block) {
-          result.lastBlockNumber = block.blockNumber;
-          result.lastBlockRefHiveBlockNumber = block.refHiveBlockNumber;
-        }
-
-        // get the Hive block number that the streamer is currently parsing
-        const res = await ipc.send(
-          { to: STREAMER_PLUGIN_NAME, action: STREAMER_PLUGIN_ACTION.GET_CURRENT_BLOCK },
-        );
-
-        if (res && res.payload) {
-          result.lastParsedHiveBlockNumber = res.payload;
-        }
-
-        // get the version of the SSC node
-        result.SSCnodeVersion = packagejson.version;
-
-        // get the ssc chain id from config
-        result.chainId = config.chainId;
-
+        const result = await generateStatus();
         callback(null, result);
       } catch (error) {
         callback(error, null);
@@ -156,9 +193,25 @@ function contractsRPC() {
         if (contract && typeof contract === 'string'
           && table && typeof table === 'string'
           && query && typeof query === 'object') {
-          const lim = limit || 1000;
+          const lim = limit || config.rpcConfig.maxLimit;
           const off = offset || 0;
           const ind = indexes || [];
+
+          if (lim > config.rpcConfig.maxLimit) {
+            callback({
+              code: 400,
+              message: `limit is too high, maximum limit is ${config.rpcConfig.maxLimit}`,
+            }, null);
+            return;
+          }
+
+          if (config.rpcConfig.maxOffset != -1 && off > config.rpcConfig.maxOffset) {
+            callback({
+              code: 400,
+              message: `offset is too high, maximum offset is ${config.rpcConfig.maxOffset}`,
+            }, null);
+            return;
+          }
 
           const result = await database.find({
             contract,
@@ -199,8 +252,20 @@ const init = async (conf, callback) => {
   serverRPC.use(bodyParser.json());
   serverRPC.set('trust proxy', true);
   serverRPC.set('trust proxy', 'loopback');
+  if (config.rpcConfig.logRequests) {
+    serverRPC.use(requestLogger);
+  }
   serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
+  serverRPC.get('/', async (_, res) => {
+    try {
+      const status = await generateStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500);
+      res.json({ error: 'Error generating status.' });
+    }
+  });
 
   server = http.createServer(serverRPC)
     .listen(rpcNodePort, () => {

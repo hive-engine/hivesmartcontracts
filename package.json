@@ -1,6 +1,6 @@
 {
   "name": "hivesmartcontracts",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "",
   "main": "app.js",
   "scripts": {
@@ -25,10 +25,12 @@
     "test15": "./node_modules/mocha/bin/mocha ./test/tokenfunds.js",
     "test16": "./node_modules/mocha/bin/mocha ./test/nftauction.js",
     "test17": "./node_modules/mocha/bin/mocha ./test/comments.js",
-    "test18": "./node_modules/mocha/bin/mocha ./test/ticks.js"
+    "test18": "./node_modules/mocha/bin/mocha ./test/ticks.js",
+    "test19": "./node_modules/mocha/bin/mocha ./test/hivepegged.js",
+    "test20": "./node_modules/mocha/bin/mocha ./test/nftairdrops.js"
   },
   "engines": {
-    "node": ">=13.7.0",
+    "node": ">=14.0.0",
     "npm": ">=6.13.6"
   },
   "keywords": [],
@@ -49,6 +51,7 @@
     "jayson": "^2.1.2",
     "js-base64": "^2.6.4",
     "line-by-line": "^0.1.6",
+    "loglevel": "^1.8.0",
     "mongodb": "^3.6.3",
     "read-last-lines": "^1.8.0",
     "seedrandom": "^3.0.5",

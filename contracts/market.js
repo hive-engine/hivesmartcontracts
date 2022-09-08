@@ -242,8 +242,23 @@ actions.createSSC = async () => {
     await api.db.createTable('tradesHistory', ['symbol']);
     await api.db.createTable('metrics', ['symbol']);
   } else {
-    // remove stuck SPS order
-    const order = await api.db.findOne('buyBook', { txId: '6227fc476f7749ed7a52571b284574b9bd8023c6' });
+    // remove stuck 0 quantity orders
+    let order = await api.db.findOne('buyBook', { txId: 'eece39c4078764a76d041a438ec15d86dc7d848d' });
+    if (order) {
+      await api.db.remove('buyBook', order);
+      await updateBidMetric(order.symbol);
+    }
+    order = await api.db.findOne('buyBook', { txId: 'c86eabd01d75db987d811ef33279102690d6e761' });
+    if (order) {
+      await api.db.remove('buyBook', order);
+      await updateBidMetric(order.symbol);
+    }
+    order = await api.db.findOne('buyBook', { txId: '7fc247ee7b0072c0b209ef8139ea44c816564090' });
+    if (order) {
+      await api.db.remove('buyBook', order);
+      await updateBidMetric(order.symbol);
+    }
+    order = await api.db.findOne('buyBook', { txId: 'b2ad5c73d8f9bfb02668fda617b43a7c91a20736' });
     if (order) {
       await api.db.remove('buyBook', order);
       await updateBidMetric(order.symbol);

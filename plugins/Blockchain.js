@@ -1,4 +1,5 @@
 const axios = require('axios');
+const log = require('loglevel');
 const { Block } = require('../libs/Block');
 const { Transaction } = require('../libs/Transaction');
 const { IPC } = require('../libs/IPC');
@@ -165,12 +166,15 @@ const init = async (conf, callback) => {
   const {
     databaseURL,
     databaseName,
+    lightNode,
+    blocksToKeep,
   } = conf;
   javascriptVMTimeout = conf.javascriptVMTimeout; // eslint-disable-line prefer-destructuring
   enableHashVerification = conf.enableHashVerification; // eslint-disable-line prefer-destructuring
+  log.setDefaultLevel(conf.defaultLogLevel ? conf.defaultLogLevel : 'warn');
 
   database = new Database();
-  await database.init(databaseURL, databaseName);
+  await database.init(databaseURL, databaseName, lightNode, blocksToKeep);
 
   await createGenesisBlock(conf);
 
