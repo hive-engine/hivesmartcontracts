@@ -1635,10 +1635,10 @@ actions.issueMultiple = async (payload) => {
       // do the issuance
       for (let i = 0; i < instances.length; i += 1) {
         const {
-          symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, properties,
+          symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties,
         } = instances[i];
         await actions.issue({
-          symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
+          symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
         });
       }
     }
