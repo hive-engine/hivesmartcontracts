@@ -1451,7 +1451,7 @@ actions.create = async (payload) => {
 
 actions.issue = async (payload) => {
   const {
-    symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
+    symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, soulBound, properties, isSignedWithActiveKey, callingContractInfo,
   } = payload;
   const types = ['user', 'contract'];
 
@@ -1471,7 +1471,8 @@ actions.issue = async (payload) => {
       && feeSymbol && typeof feeSymbol === 'string' && feeSymbol in nftIssuanceFee
       && (properties === undefined || (properties && typeof properties === 'object'))
       && (lockTokens === undefined || (lockTokens && typeof lockTokens === 'object'))
-      && (lockNfts === undefined || (lockNfts && typeof lockNfts === 'object' && Array.isArray(lockNfts))), 'invalid params')
+      && (lockNfts === undefined || (lockNfts && typeof lockNfts === 'object' && Array.isArray(lockNfts)))
+      && (soulBound === undefined || (soulBound && typeof soulBound === 'boolean')), 'invalid params')
     && (lockNfts === undefined || isValidNftIdArray(lockNfts))) {
     const finalTo = finalToType === 'user' ? to.trim().toLowerCase() : to.trim();
     const toValid = finalToType === 'user' ? isValidHiveAccountLength(finalTo) : isValidContractLength(finalTo);
@@ -1573,6 +1574,7 @@ actions.issue = async (payload) => {
             if (finalLockNfts.length > 0) {
               newInstance = {
                 account: finalTo,
+                soulBound,
                 ownedBy,
                 lockedTokens: finalLockTokens,
                 lockedNfts: finalLockNfts,
@@ -1581,6 +1583,7 @@ actions.issue = async (payload) => {
             } else {
               newInstance = {
                 account: finalTo,
+                soulBound,
                 ownedBy,
                 lockedTokens: finalLockTokens,
                 properties: finalProperties,
