@@ -1115,10 +1115,12 @@ actions.transfer = async (payload) => {
             if (nftInstance) {
               // verify action is being performed by the account that owns this instance
               // and there is no existing delegation
+              // and that it is not soulbound
               if (nftInstance.account === finalFrom
                 && ((nftInstance.ownedBy === 'u' && finalFromType === 'user')
                   || (nftInstance.ownedBy === 'c' && finalFromType === 'contract'))
-                && nftInstance.delegatedTo === undefined) {
+                && nftInstance.delegatedTo === undefined
+                && !nftInstance.soulBound) {
                 const origOwnedBy = nftInstance.ownedBy;
                 const newOwnedBy = finalToType === 'user' ? 'u' : 'c';
 
