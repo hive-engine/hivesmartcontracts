@@ -1603,7 +1603,7 @@ actions.issue = async (payload) => {
 
             api.emit('issue', {
               // eslint-disable-next-line no-underscore-dangle
-              from: finalFrom, fromType: finalFromType, to: finalTo, toType: finalToType, symbol, lockedTokens: finalLockTokens, lockedNfts: finalLockNfts, properties: finalProperties, id: result._id,
+              from: finalFrom, fromType: finalFromType, to: finalTo, toType: finalToType, symbol, lockedTokens: finalLockTokens, lockedNfts: finalLockNfts, soulBound: !!soulBound, properties: finalProperties, id: result._id,
             });
             return true;
           }
