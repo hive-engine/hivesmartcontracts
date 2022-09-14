@@ -1176,7 +1176,8 @@ actions.delegate = async (payload) => {
                 if (nftInstance.account === finalFrom
                   && ((nftInstance.ownedBy === 'u' && finalFromType === 'user')
                     || (nftInstance.ownedBy === 'c' && finalFromType === 'contract'))
-                  && nftInstance.delegatedTo === undefined) {
+                  && nftInstance.delegatedTo === undefined
+                  && !nftInstance.soulBound) {
                   const newOwnedBy = finalToType === 'user' ? 'u' : 'c';
 
                   const newDelegation = {
