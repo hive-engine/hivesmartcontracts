@@ -1467,7 +1467,7 @@ actions.issue = async (payload) => {
       && (properties === undefined || (properties && typeof properties === 'object'))
       && (lockTokens === undefined || (lockTokens && typeof lockTokens === 'object'))
       && (lockNfts === undefined || (lockNfts && typeof lockNfts === 'object' && Array.isArray(lockNfts)))
-      && (soulBound === undefined || (soulBound && typeof soulBound === 'boolean')), 'invalid params')
+      && (soulBound === undefined || (typeof soulBound === 'boolean')), 'invalid params')
     && (lockNfts === undefined || isValidNftIdArray(lockNfts))) {
     const finalTo = finalToType === 'user' ? to.trim().toLowerCase() : to.trim();
     const toValid = finalToType === 'user' ? isValidHiveAccountLength(finalTo) : isValidContractLength(finalTo);
