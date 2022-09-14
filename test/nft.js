@@ -3120,14 +3120,17 @@ describe('nft', function() {
       assert.equal(instances[0]._id, 1);
       assert.equal(instances[0].account, 'aggroed');
       assert.equal(instances[0].ownedBy, 'u');
+      assert.equal(typeof instances[0].soulBound, 'undefined');
       assert.equal(JSON.stringify(instances[0].properties), '{"level":0}');
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'harpagon');
       assert.equal(instances[1].ownedBy, 'u');
+      assert.equal(typeof instances[1].soulBound, 'undefined');
       assert.equal(JSON.stringify(instances[1].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5.75"}`);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'nft');
       assert.equal(instances[2].ownedBy, 'c');
+      assert.equal(typeof instances[2].soulBound, 'undefined');
       assert.equal(JSON.stringify(instances[2].properties), '{"color":"red","frozen":true}');
       assert.equal(JSON.stringify(instances[2].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
       assert.equal(instances[2].previousAccount, 'cryptomancer');
@@ -3135,26 +3138,166 @@ describe('nft', function() {
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'marc');
       assert.equal(instances[3].ownedBy, 'u');
+      assert.equal(typeof instances[3].soulBound, 'undefined');
 
       assert.equal(instances[4]._id, 5);
       assert.equal(instances[4].account, 'dice');
       assert.equal(instances[4].ownedBy, 'c');
+      assert.equal(typeof instances[4].soulBound, 'undefined');
       assert.equal(JSON.stringify(instances[4].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5.75"}`);
       assert.equal(instances[5]._id, 6);
       assert.equal(instances[5].account, 'tokens');
       assert.equal(instances[5].ownedBy, 'c');
+      assert.equal(typeof instances[5].soulBound, 'undefined');
       assert.equal(JSON.stringify(instances[5].properties), '{"color":"red","frozen":true}');
       assert.equal(JSON.stringify(instances[5].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
       assert.equal(instances[6]._id, 7);
       assert.equal(instances[6].account, 'market');
       assert.equal(instances[6].ownedBy, 'c');
+      assert.equal(typeof instances[6].soulBound, 'undefined');
 
       assert.equal(instances[7]._id, 8);
       assert.equal(instances[7].account, 'aggroed');
       assert.equal(instances[7].ownedBy, 'u');
+      assert.equal(typeof instances[7].soulBound, 'undefined');
       assert.equal(JSON.stringify(instances[7].properties), '{}');
       assert.equal(JSON.stringify(instances[7].lockedTokens), '{}');
       assert.equal(JSON.stringify(instances[7].lockedNfts[0]), '{"symbol":"TSTNFT","ids":["3"]}');
+
+      res = await fixture.database.getBlockInfo(1);
+
+      const block1 = res;
+      const transactionsBlock1 = block1.transactions;
+
+      assert.equal(JSON.parse(transactionsBlock1[12].logs).errors[0], 'not allowed to issue tokens');
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+
+  it('issues multiple nft soulbound set instances', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      const lockTokens = {};
+      lockTokens[CONSTANTS.UTILITY_TOKEN_SYMBOL] = "5.75";
+
+      const lockTokens2 = {};
+      lockTokens2[CONSTANTS.UTILITY_TOKEN_SYMBOL] = "10";
+
+      let instances1 = [
+        { symbol: "TSTNFT", to:"aggroed", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, properties:{"level":0}, soulBound : true },
+        { symbol: "TSTNFT", to:"harpagon", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens, soulBound : false },
+        { symbol: "TSTNFT", to:"cryptomancer", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens: lockTokens2, properties:{"color":"red","frozen":true}, soulBound : true },
+        { symbol: "TSTNFT", to:"marc", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, soulBound : false},
+      ];
+
+      let instances2 = [
+        { fromType: "user", symbol: "TSTNFT", to:"contract1", toType: "contract", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, properties:{"level":0}, soulBound : true },   // won't issue this one because caller not authorized
+        { fromType: "contract", symbol: "TSTNFT", to:"dice", toType: "contract", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens, soulBound : false },
+        { fromType: "contract", symbol: "TSTNFT", to:"tokens", toType: "contract", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens: lockTokens2, properties:{"color":"red","frozen":true}, soulBound : true },
+        { fromType: "contract", symbol: "TSTNFT", to:"market", toType: "contract", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens:{}, properties:{}, soulBound : false },
+        { fromType: "contract", symbol: "TSTNFT", to:"cryptomancer", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens:{}, properties:{}, soulBound : false },
+      ];
+
+      let instances3 = [
+        { symbol: "TSTNFT", to:"aggroed", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockNfts: [ {symbol:"TSTNFT", ids:["3","2", "8"]} ], soulBound : true },    // won't lock token ID 2 because owner is harpagon, won't lock 3 because it's soulBound
+      ];
+
+      
+
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(testcontractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'nft', 'updateParams', `{ "nftCreationFee": "5", "dataPropertyCreationFee": "1", "nftIssuanceFee": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"1"} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"cryptomancer", "quantity":"200", "isSignedWithActiveKey":true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'tokens', 'transferToContract', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "quantity": "100", "to": "testcontract", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'create', '{ "isSignedWithActiveKey":true, "name":"test NFT", "symbol":"TSTNFT", "url":"http://mynft.com", "maxSupply":"1000", "authorizedIssuingContracts": ["testcontract"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'addProperty', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "name":"id", "type":"string", "isReadOnly":true, "authorizedEditingContracts": ["testcontract"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'addProperty', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "name":"color", "type":"string", "authorizedEditingContracts": ["testcontract"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'addProperty', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "name":"level", "type":"number", "authorizedEditingContracts": ["testcontract"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'addProperty', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "name":"frozen", "type":"boolean", "isReadOnly":true, "authorizedEditingContracts": ["testcontract"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issueMultiple', `{ "isSignedWithActiveKey": true, "instances": ${JSON.stringify(instances1)} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'aggroed', 'testcontract', 'doMultipleIssuance', `{ "isSignedWithActiveKey": true, "instances": ${JSON.stringify(instances2)} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issueMultiple', `{ "isSignedWithActiveKey": true, "instances": ${JSON.stringify(instances3)} }`));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.find({
+          contract: 'nft',
+          table: 'TSTNFTinstances',
+          query: {}
+        });
+
+      let instances = res;
+      
+      
+
+      // check NFT instances are OK
+      assert.equal(instances[0]._id, 1);
+      assert.equal(instances[0].account, 'aggroed');
+      assert.equal(instances[0].ownedBy, 'u');
+      assert.equal(instances[0].soulBound, true);
+      assert.equal(JSON.stringify(instances[0].properties), '{"level":0}');
+      assert.equal(instances[1]._id, 2);
+      assert.equal(instances[1].account, 'harpagon');
+      assert.equal(instances[1].ownedBy, 'u');
+      assert.equal(instances[1].soulBound, false);
+      assert.equal(JSON.stringify(instances[1].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5.75"}`);
+      assert.equal(instances[2]._id, 3);
+      assert.equal(instances[2].account, 'cryptomancer');
+      assert.equal(instances[2].ownedBy, 'u');
+      assert.equal(instances[2].soulBound, true);
+      assert.equal(JSON.stringify(instances[2].properties), '{"color":"red","frozen":true}');
+      assert.equal(JSON.stringify(instances[2].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
+      assert.equal(instances[3]._id, 4);
+      assert.equal(instances[3].account, 'marc');
+      assert.equal(instances[3].ownedBy, 'u');
+      assert.equal(instances[3].soulBound, false);
+
+      assert.equal(instances[4]._id, 5);
+      assert.equal(instances[4].account, 'dice');
+      assert.equal(instances[4].ownedBy, 'c');
+      assert.equal(instances[4].soulBound, false);
+      assert.equal(JSON.stringify(instances[4].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5.75"}`);
+      assert.equal(instances[5]._id, 6);
+      assert.equal(instances[5].account, 'tokens');
+      assert.equal(instances[5].ownedBy, 'c');
+      assert.equal(instances[5].soulBound, true);
+      assert.equal(JSON.stringify(instances[5].properties), '{"color":"red","frozen":true}');
+      assert.equal(JSON.stringify(instances[5].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
+      assert.equal(instances[6]._id, 7);
+      assert.equal(instances[6].account, 'market');
+      assert.equal(instances[6].ownedBy, 'c');
+      assert.equal(instances[6].soulBound, false);
+      assert.equal(instances[7]._id, 8);
+      assert.equal(instances[7].account, 'nft');
+      assert.equal(instances[7].ownedBy, 'c');
+      assert.equal(instances[7].soulBound, false);
+
+      assert.equal(instances[8]._id, 9);
+      assert.equal(instances[8].account, 'aggroed');
+      assert.equal(instances[8].ownedBy, 'u');
+      assert.equal(instances[8].soulBound, true);
+      assert.equal(JSON.stringify(instances[8].properties), '{}');
+      assert.equal(JSON.stringify(instances[8].lockedTokens), '{}');
+      assert.equal(JSON.stringify(instances[8].lockedNfts[0]), '{"symbol":"TSTNFT","ids":["8"]}');
 
       res = await fixture.database.getBlockInfo(1);
 
