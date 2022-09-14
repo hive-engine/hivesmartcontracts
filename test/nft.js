@@ -3345,6 +3345,7 @@ describe('nft', function() {
         { fromType: "contract", symbol: "BAD", to:"dice", toType: "contract", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens },      // bad symbol
         { fromType: "contract", symbol: "TSTNFT", to:"tokens", toType: "contract", feeSymbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, lockTokens: lockTokens2, properties:{"invalid":"red","frozen":true} },   // data property doesn't exist
         { fromType: "contract", symbol: "TSTNFT", to:"market", toType: "contract", lockTokens:{}, properties:{} },     // missing fee symbol, invalid params
+        { fromType: "contract", symbol: "TSTNFT", to:"market", toType: "contract", lockTokens:{}, properties:{}, soulBound : null },     // invalid soulBound params
       ];
 
       // can't issue more than one container token at a time
@@ -3415,6 +3416,7 @@ describe('nft', function() {
       assert.equal(JSON.parse(transactionsBlock1[15].logs).errors[1], 'symbol does not exist');
       assert.equal(JSON.parse(transactionsBlock1[15].logs).errors[2], 'data property must exist');
       assert.equal(JSON.parse(transactionsBlock1[15].logs).errors[3], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[15].logs).errors[4], 'invalid params');
       assert.equal(JSON.parse(transactionsBlock1[16].logs).errors[0], 'cannot issue more than 1 container NFT instances at once');
       assert.equal(JSON.parse(transactionsBlock1[17].logs).errors[0], 'cannot issue a mix of container and non-container NFT instances simultaneously');
 
