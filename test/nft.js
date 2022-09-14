@@ -1071,13 +1071,13 @@ describe('nft', function() {
       
       
 
-      assert.equal(JSON.parse(transactionsBlock1[20].logs).errors[0], 'delegation not enabled for TEST');
-      assert.equal(JSON.parse(transactionsBlock1[22].logs).errors[0], 'you must use a custom_json signed with your active key');
-      assert.equal(JSON.parse(transactionsBlock1[23].logs).errors[0], 'invalid params');
-      assert.equal(JSON.parse(transactionsBlock1[24].logs).errors[0], 'invalid to');
-      assert.equal(JSON.parse(transactionsBlock1[25].logs).errors[0], 'cannot delegate to self');
-      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'cannot delegate to null');
-      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'invalid nft list');
+      assert.equal(JSON.parse(transactionsBlock1[21].logs).errors[0], 'delegation not enabled for TEST');
+      assert.equal(JSON.parse(transactionsBlock1[23].logs).errors[0], 'you must use a custom_json signed with your active key');
+      assert.equal(JSON.parse(transactionsBlock1[24].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[25].logs).errors[0], 'invalid to');
+      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'cannot delegate to self');
+      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'cannot delegate to null');
+      assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'invalid nft list');
 
       res = await fixture.database.find({
           contract: 'nft',
