@@ -533,12 +533,12 @@ describe('nft', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'addProperty', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "name":"color", "type":"string" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'enableDelegation', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "undelegationCooldown": 5 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'enableDelegation', '{ "isSignedWithActiveKey":true, "symbol":"TEST", "undelegationCooldown": 5 }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5","TKN":"0.25"}, "properties": {"color":"white"} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5","TKN":"0.25"}, "properties": {"color":"white"}, "soulBound" : false }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"aggroed", "toType":"user", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10","TKN":"0.5"}, "properties": {"color":"orange"} }`));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"aggroed", "toType":"user", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"15","TKN":"0.75"}, "properties": {"color":"black"} }`));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "toType":"user", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.001","TKN":"0.001"}, "properties": {"color":"red"} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"aggroed", "toType":"user", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"15","TKN":"0.75"}, "properties": {"color":"black"}, "soulBound" : false }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "toType":"user", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.001","TKN":"0.001"}, "properties": {"color":"red"}, "soulBound" : false }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.002","TKN":"0.01"}, "properties": {"color":"green"} }`));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.1","TKN":"0.1"}, "properties": {"color":"blue"} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.1","TKN":"0.1"}, "properties": {"color":"blue"}, "soulBound" : false }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "properties": {"color":"purple"} }`));
 
       // do some delegations
@@ -594,9 +594,11 @@ describe('nft', function() {
       assert.equal(instances[0].account, 'testcontract');
       assert.equal(instances[0].ownedBy, 'c');
       assert.equal(instances[0].delegatedTo, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'aggroed');
       assert.equal(instances[1].ownedBy, 'u');
+      assert.equal(instances[1].soulBound, undefined);
       assert.equal(JSON.stringify(instances[1].delegatedTo), '{"account":"cryptomancer","ownedBy":"u"}');
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'aggroed');
@@ -604,6 +606,7 @@ describe('nft', function() {
       assert.equal(instances[2].delegatedTo.account, 'testcontract');
       assert.equal(instances[2].delegatedTo.ownedBy, 'c');
       assert.equal(instances[2].delegatedTo.undelegateAt > 0, true);
+      assert.equal(instances[2].soulBound, false);
 
       res = await fixture.database.find({
           contract: 'nft',
@@ -621,24 +624,28 @@ describe('nft', function() {
       assert.equal(instances[0].delegatedTo.account, 'cryptomancer');
       assert.equal(instances[0].delegatedTo.ownedBy, 'u');
       assert.equal(instances[0].delegatedTo.undelegateAt > 0, true);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'testcontract');
       assert.equal(instances[1].ownedBy, 'c');
       assert.equal(instances[1].delegatedTo.account, 'contract2');
       assert.equal(instances[1].delegatedTo.ownedBy, 'c');
       assert.equal(instances[1].delegatedTo.undelegateAt > 0, true);
+      assert.equal(instances[1].soulBound, undefined);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'testcontract');
       assert.equal(instances[2].ownedBy, 'c');
       assert.equal(instances[2].delegatedTo.account, 'contract2');
       assert.equal(instances[2].delegatedTo.ownedBy, 'c');
       assert.equal(instances[2].delegatedTo.undelegateAt > 0, true);
+      assert.equal(instances[2].soulBound, false);
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'testcontract');
       assert.equal(instances[3].ownedBy, 'c');
       assert.equal(instances[3].delegatedTo.account, 'harpagon');
       assert.equal(instances[3].delegatedTo.ownedBy, 'u');
       assert.equal(instances[3].delegatedTo.undelegateAt > 0, true);
+      assert.equal(instances[3].soulBound, undefined);
 
       res = await fixture.database.find({
           contract: 'nft',
@@ -1014,6 +1021,7 @@ describe('nft', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.002","TKN":"0.01"}, "properties": {"color":"green"} }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "lockTokens": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.1","TKN":"0.1"}, "properties": {"color":"blue"} }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"testcontract", "toType":"contract", "feeSymbol": "TKN", "properties": {"color":"purple"} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "properties": {"color":"purple"}, "soulBound" : true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'enableDelegation', '{ "isSignedWithActiveKey":true, "symbol":"TSTNFT", "undelegationCooldown": 5 }'));
       
       // symbol not enabled for delegation
@@ -1035,7 +1043,8 @@ describe('nft', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'aggroed', 'nft', 'delegate', '{ "isSignedWithActiveKey": true, "to":"cryptomancer", "nfts": [ {"symbol":"INVALID", "ids":["2"]} ] }'));
       // instances do not exist
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'aggroed', 'nft', 'delegate', '{ "isSignedWithActiveKey": true, "to":"cryptomancer", "nfts": [ {"symbol":"TSTNFT", "ids":["200","201","202"]} ] }'));
-
+      // instance is soulBound
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'aggroed', 'nft', 'delegate', '{ "isSignedWithActiveKey": true, "to":"cryptomancer", "nfts": [ {"symbol":"TSTNFT", "ids":["5"]} ] }'));
       let block = {
         refHiveBlockNumber: refBlockNumber,
         refHiveBlockId: 'ABCD1',
@@ -1107,18 +1116,27 @@ describe('nft', function() {
       assert.equal(instances[0].account, 'aggroed');
       assert.equal(instances[0].ownedBy, 'u');
       assert.equal(instances[0].delegatedTo, undefined);
+      assert.equal(instances[0].soulBound, undefined);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'testcontract');
       assert.equal(instances[1].ownedBy, 'c');
       assert.equal(instances[1].delegatedTo, undefined);
+      assert.equal(instances[1].soulBound, undefined);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'testcontract');
       assert.equal(instances[2].ownedBy, 'c');
       assert.equal(instances[2].delegatedTo, undefined);
+      assert.equal(instances[2].soulBound, undefined);
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'testcontract');
       assert.equal(instances[3].ownedBy, 'c');
       assert.equal(instances[3].delegatedTo, undefined);
+      assert.equal(instances[3].soulBound, undefined);
+      assert.equal(instances[4]._id, 5);
+      assert.equal(instances[4].account, 'aggroed');
+      assert.equal(instances[4].ownedBy, 'u');
+      assert.equal(instances[4].delegatedTo, undefined);
+      assert.equal(instances[4].soulBound, true);
 
       resolve();
     })
