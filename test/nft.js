@@ -2960,6 +2960,19 @@ describe('nft', function() {
       // invalid locked NFT list - can't lock more than 50 at once
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "lockNfts": [{"symbol":"TSTNFT", "ids":["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51"]} ] }'));
 
+      // invalid soulBound
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" : "aString" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" : "" }')); // Empty String
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" : 1 }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" : 0 }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" : -1 }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" :  123456789 }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" :  null }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" :  [] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" :  [[]] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" :  {} }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "to":"aggroed", "feeSymbol": "TKN", "soulBound" :  {"a" : "b"} }'));
+
       let block = {
         refHiveBlockNumber: refBlockNumber,
         refHiveBlockId: 'ABCD1',
@@ -3015,6 +3028,17 @@ describe('nft', function() {
       assert.equal(JSON.parse(transactionsBlock1[37].logs).errors[0], 'invalid basket of tokens to lock (cannot lock more than 10 token types; issuing account must have enough balance)');
       assert.equal(JSON.parse(transactionsBlock1[38].logs).errors[0], 'invalid basket of tokens to lock (cannot lock more than 10 token types; issuing account must have enough balance)');
       assert.equal(JSON.parse(transactionsBlock1[39].logs).errors[0], 'cannot operate on more than 50 NFT instances at once');
+      assert.equal(JSON.parse(transactionsBlock1[40].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[41].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[42].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[43].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[44].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[45].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[46].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[47].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[48].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[49].logs).errors[0], 'invalid params');
+      assert.equal(JSON.parse(transactionsBlock1[50].logs).errors[0], 'invalid params');
 
       resolve();
     })
