@@ -598,7 +598,7 @@ describe('nft', function() {
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'aggroed');
       assert.equal(instances[1].ownedBy, 'u');
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(JSON.stringify(instances[1].delegatedTo), '{"account":"cryptomancer","ownedBy":"u"}');
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'aggroed');
@@ -631,7 +631,7 @@ describe('nft', function() {
       assert.equal(instances[1].delegatedTo.account, 'contract2');
       assert.equal(instances[1].delegatedTo.ownedBy, 'c');
       assert.equal(instances[1].delegatedTo.undelegateAt > 0, true);
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'testcontract');
       assert.equal(instances[2].ownedBy, 'c');
@@ -645,7 +645,7 @@ describe('nft', function() {
       assert.equal(instances[3].delegatedTo.account, 'harpagon');
       assert.equal(instances[3].delegatedTo.ownedBy, 'u');
       assert.equal(instances[3].delegatedTo.undelegateAt > 0, true);
-      assert.equal(instances[3].soulBound, undefined);
+      assert.equal(instances[3].soulBound, false);
 
       res = await fixture.database.find({
           contract: 'nft',
@@ -1116,22 +1116,22 @@ describe('nft', function() {
       assert.equal(instances[0].account, 'aggroed');
       assert.equal(instances[0].ownedBy, 'u');
       assert.equal(instances[0].delegatedTo, undefined);
-      assert.equal(instances[0].soulBound, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'testcontract');
       assert.equal(instances[1].ownedBy, 'c');
       assert.equal(instances[1].delegatedTo, undefined);
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'testcontract');
       assert.equal(instances[2].ownedBy, 'c');
       assert.equal(instances[2].delegatedTo, undefined);
-      assert.equal(instances[2].soulBound, undefined);
+      assert.equal(instances[2].soulBound, false);
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'testcontract');
       assert.equal(instances[3].ownedBy, 'c');
       assert.equal(instances[3].delegatedTo, undefined);
-      assert.equal(instances[3].soulBound, undefined);
+      assert.equal(instances[3].soulBound, false);
       assert.equal(instances[4]._id, 5);
       assert.equal(instances[4].account, 'aggroed');
       assert.equal(instances[4].ownedBy, 'u');
@@ -1255,7 +1255,7 @@ describe('nft', function() {
       assert.equal(instances[0]._id, 1);
       assert.equal(instances[0].account, 'cryptomancer');
       assert.equal(instances[0].ownedBy, 'u');
-      assert.equal(instances[0].soulBound, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'contract2');
       assert.equal(instances[1].ownedBy, 'c');
@@ -1407,19 +1407,19 @@ describe('nft', function() {
       assert.equal(instances[0]._id, 1);
       assert.equal(instances[0].account, 'aggroed');
       assert.equal(instances[0].ownedBy, 'u');
-      assert.equal(instances[0].soulBound, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'testcontract');
       assert.equal(instances[1].ownedBy, 'c');
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'testcontract');
       assert.equal(instances[2].ownedBy, 'c');
-      assert.equal(instances[2].soulBound, undefined);
+      assert.equal(instances[2].soulBound, false);
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'testcontract');
       assert.equal(instances[3].ownedBy, 'c');
-      assert.equal(instances[3].soulBound, undefined);
+      assert.equal(instances[3].soulBound, false);
       assert.equal(instances[4]._id, 5);
       assert.equal(instances[4].account, 'aggroed');
       assert.equal(instances[4].ownedBy, 'u');
@@ -2638,17 +2638,17 @@ describe('nft', function() {
       assert.equal(instances[0]._id, 1);
       assert.equal(instances[0].account, 'aggroed');
       assert.equal(instances[0].ownedBy, 'u');
-      assert.equal(instances[0].soulBound, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(JSON.stringify(instances[0].lockedTokens), '{}');
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'aggroed');
       assert.equal(instances[1].ownedBy, 'u');
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(JSON.stringify(instances[1].lockedTokens), '{}');
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'contract1');
       assert.equal(instances[2].ownedBy, 'c');
-      assert.equal(instances[2].soulBound, undefined);
+      assert.equal(instances[2].soulBound, false);
       assert.equal(JSON.stringify(instances[2].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"3.5","TKN":"0.003"}`);
 
       res = await fixture.database.find({
@@ -2664,27 +2664,27 @@ describe('nft', function() {
       assert.equal(instances[0]._id, 1);
       assert.equal(instances[0].account, 'dice');
       assert.equal(instances[0].ownedBy, 'c');
-      assert.equal(instances[0].soulBound, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(JSON.stringify(instances[0].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'contract2');
       assert.equal(instances[1].ownedBy, 'c');
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(JSON.stringify(instances[1].lockedTokens), '{}');
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'contract3');
       assert.equal(instances[2].ownedBy, 'c');
-      assert.equal(instances[2].soulBound, undefined);
+      assert.equal(instances[2].soulBound, false);
       assert.equal(JSON.stringify(instances[2].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"4","TKN":"0.5"}`);
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'contract4');
       assert.equal(instances[3].ownedBy, 'c');
-      assert.equal(instances[3].soulBound, undefined);
+      assert.equal(instances[3].soulBound, false);
       assert.equal(JSON.stringify(instances[3].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"4","TKN":"0.5"}`);
       assert.equal(instances[4]._id, 5);
       assert.equal(instances[4].account, 'null');
       assert.equal(instances[4].ownedBy, 'u');
-      assert.equal(instances[4].soulBound, undefined);
+      assert.equal(instances[4].soulBound, false);
       assert.equal(JSON.stringify(instances[4].lockedTokens), '{}');
 
       res = await fixture.database.find({
@@ -3154,17 +3154,17 @@ describe('nft', function() {
       assert.equal(instances[0]._id, 1);
       assert.equal(instances[0].account, 'aggroed');
       assert.equal(instances[0].ownedBy, 'u');
-      assert.equal(instances[0].soulBound, undefined);
+      assert.equal(instances[0].soulBound, false);
       assert.equal(JSON.stringify(instances[0].properties), '{"level":0}');
       assert.equal(instances[1]._id, 2);
       assert.equal(instances[1].account, 'harpagon');
       assert.equal(instances[1].ownedBy, 'u');
-      assert.equal(instances[1].soulBound, undefined);
+      assert.equal(instances[1].soulBound, false);
       assert.equal(JSON.stringify(instances[1].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5.75"}`);
       assert.equal(instances[2]._id, 3);
       assert.equal(instances[2].account, 'nft');
       assert.equal(instances[2].ownedBy, 'c');
-      assert.equal(instances[2].soulBound, undefined);
+      assert.equal(instances[2].soulBound, false);
       assert.equal(JSON.stringify(instances[2].properties), '{"color":"red","frozen":true}');
       assert.equal(JSON.stringify(instances[2].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
       assert.equal(instances[2].previousAccount, 'cryptomancer');
@@ -3172,28 +3172,28 @@ describe('nft', function() {
       assert.equal(instances[3]._id, 4);
       assert.equal(instances[3].account, 'marc');
       assert.equal(instances[3].ownedBy, 'u');
-      assert.equal(instances[3].soulBound, undefined);
+      assert.equal(instances[3].soulBound, false);
 
       assert.equal(instances[4]._id, 5);
       assert.equal(instances[4].account, 'dice');
       assert.equal(instances[4].ownedBy, 'c');
-      assert.equal(instances[4].soulBound, undefined);
+      assert.equal(instances[4].soulBound, false);
       assert.equal(JSON.stringify(instances[4].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"5.75"}`);
       assert.equal(instances[5]._id, 6);
       assert.equal(instances[5].account, 'tokens');
       assert.equal(instances[5].ownedBy, 'c');
-      assert.equal(instances[5].soulBound, undefined);
+      assert.equal(instances[5].soulBound, false);
       assert.equal(JSON.stringify(instances[5].properties), '{"color":"red","frozen":true}');
       assert.equal(JSON.stringify(instances[5].lockedTokens), `{"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"10"}`);
       assert.equal(instances[6]._id, 7);
       assert.equal(instances[6].account, 'market');
       assert.equal(instances[6].ownedBy, 'c');
-      assert.equal(instances[6].soulBound, undefined);
+      assert.equal(instances[6].soulBound, false);
 
       assert.equal(instances[7]._id, 8);
       assert.equal(instances[7].account, 'aggroed');
       assert.equal(instances[7].ownedBy, 'u');
-      assert.equal(instances[7].soulBound, undefined);
+      assert.equal(instances[7].soulBound, false);
       assert.equal(JSON.stringify(instances[7].properties), '{}');
       assert.equal(JSON.stringify(instances[7].lockedTokens), '{}');
       assert.equal(JSON.stringify(instances[7].lockedNfts[0]), '{"symbol":"TSTNFT","ids":["3"]}');

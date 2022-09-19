@@ -1570,7 +1570,7 @@ actions.issue = async (payload) => {
             if (finalLockNfts.length > 0) {
               newInstance = {
                 account: finalTo,
-                soulBound,
+                soulBound: !!soulBound,
                 ownedBy,
                 lockedTokens: finalLockTokens,
                 lockedNfts: finalLockNfts,
@@ -1579,7 +1579,7 @@ actions.issue = async (payload) => {
             } else {
               newInstance = {
                 account: finalTo,
-                soulBound,
+                soulBound: !!soulBound,
                 ownedBy,
                 lockedTokens: finalLockTokens,
                 properties: finalProperties,
