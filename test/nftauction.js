@@ -402,6 +402,8 @@ describe('NFT Auction Smart Contract', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nftauction', 'create', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "nfts": ["1"], "minBid": "0.1", "finalPrice": "100", "priceSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "expiry": "2021-03-20T00:00:00", "feePercent": "100" }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nftauction', 'setMarketParams', '{ "isSignedWithActiveKey": true, "symbol": "TEST", "officialMarket": "broker", "agentFeePercent": 1100, "minFeePercent": 250 }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nftauction', 'create', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "nfts": ["1"], "minBid": "0.1", "finalPrice": "100", "priceSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "expiry": "2021-03-20T00:00:00", "feePercent": 100 }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to": "ali-h", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "soulBound" : true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nftauction', 'create', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "nfts": ["1"], "minBid": "0.1", "finalPrice": "100", "priceSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "expiry": "2021-03-20T00:00:00" }`));
 
 
       const block = {
@@ -435,6 +437,7 @@ describe('NFT Auction Smart Contract', function () {
       assertError(txs[22], 'failed to trasfer NFTs to the contract');
       assertError(txs[23], 'invalid params'); // invalid fee
       assertError(txs[25], 'feePercent must be >= 250'); // invalid fee
+      assertError(txs[27], 'invalid params'); // soulBound nft
 
       resolve();
     })
@@ -457,7 +460,7 @@ describe('NFT Auction Smart Contract', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'nft', 'updateParams', `{ "nftCreationFee": "1", "nftIssuanceFee": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.01"} }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"ali-h", "quantity":"100", "isSignedWithActiveKey":true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nft', 'create', '{ "isSignedWithActiveKey": true, "name":"Test NFT", "symbol":"TEST", "url":"http://mynft.com" }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to": "ali-h", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "to": "ali-h", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "soulBound": false }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'ali-h', 'nftauction', 'create', `{ "isSignedWithActiveKey": true, "symbol": "TEST", "nfts": ["1"], "minBid": "0.1", "finalPrice": "100", "priceSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "expiry": "2021-03-20T00:00:00", "feePercent": 100 }`));
 
       const block = {
