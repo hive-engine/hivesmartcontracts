@@ -398,7 +398,7 @@ describe('NFT Airdrops Smart Contract', function () {
         { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "white"} },
         { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "grey"} },
         { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "black"} },
-        { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "transparent"} }
+        { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "transparent"}, "soulBound" : false }
       ] }`));
 
       let block = {
@@ -923,6 +923,9 @@ describe('NFT Airdrops Smart Contract', function () {
         { "symbol": "TSTNFT", "to":"yabapmatt", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "black"} },
         { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "transparent"} }
       ] }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nft', 'issueMultiple', `{ "isSignedWithActiveKey": true, "instances": [
+        { "symbol": "TSTNFT", "to":"bennierex", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "properties": {"color": "blue"}, "soulBound" : true }
+      ] }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nft', 'delegate', '{ "isSignedWithActiveKey": true, "to": "cryptomancer", "nfts": [ {"symbol":"TSTNFT", "ids":["10"]} ] }'));
 
       let block = {
@@ -974,18 +977,21 @@ describe('NFT Airdrops Smart Contract', function () {
         { "to": "bait002", "ids": ["1"] }, { "to": "aggroed", "ids": ["2"] }, { "to": "bennierex", "ids": ["10"] }
       ] }`)); // 13
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nftairdrops', 'newAirdrop', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "list": [
-        { "to": "bait002", "ids": ["1"] }, { "to": "aggroed", "ids": ["2"] }, { "to": "bennierex", "ids": ["3"] }
-      ], "startBlockNumber": "100000009" }`)); // 14
+        { "to": "bait002", "ids": ["1"] }, { "to": "aggroed", "ids": ["2"] }, { "to": "bennierex", "ids": ["11"] }
+      ] }`)); // 14
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nftairdrops', 'newAirdrop', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "list": [
         { "to": "bait002", "ids": ["1"] }, { "to": "aggroed", "ids": ["2"] }, { "to": "bennierex", "ids": ["3"] }
-      ], "startBlockNumber": 2 }`)); // 15
+      ], "startBlockNumber": "100000009" }`)); // 15
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nftairdrops', 'newAirdrop', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "list": [
         { "to": "bait002", "ids": ["1"] }, { "to": "aggroed", "ids": ["2"] }, { "to": "bennierex", "ids": ["3"] }
-      ] }`)); // 16
+      ], "startBlockNumber": 2 }`)); // 16
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nftairdrops', 'newAirdrop', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "list": [
+        { "to": "bait002", "ids": ["1"] }, { "to": "aggroed", "ids": ["2"] }, { "to": "bennierex", "ids": ["3"] }
+      ] }`)); // 17
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transferToContract', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "testcontract", "quantity": "100", "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'testcontract', 'doAirdrop', `{ "isSignedWithActiveKey": true, "fromType": "contract", "symbol": "TSTNFT", "list": [
         { "to": "aggroed", "ids": ["8"] }
-      ] }`)); // 18
+      ] }`)); // 19
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1012,12 +1018,13 @@ describe('NFT Airdrops Smart Contract', function () {
       assertError(txs[9],  'invalid nft ids array for account bennierex at index 0'); // array items wrong type
       assertError(txs[10], 'invalid nft ids array for account bennierex at index 0'); // array items not valid ids
       assertError(txs[11], 'airdrop list contains duplicate nfts');
-      assertError(txs[12], 'cannot airdrop nfts that are delegated or not owned by this account'); // owned by other account
-      assertError(txs[13], 'cannot airdrop nfts that are delegated or not owned by this account'); // delegated
-      assertError(txs[14], 'invalid startBlockNumber'); // wrong type
-      assertError(txs[15], 'invalid startBlockNumber'); // lte current blocknumber
-      assertError(txs[16], 'you must have enough tokens to cover the airdrop fee');
-      assert.strictEqual(JSON.parse(txs[18].logs).errors[1], 'could not secure NFTs');
+      assertError(txs[12], 'cannot airdrop nfts that are delegated or not owned by this account or soulBound'); // owned by other account
+      assertError(txs[13], 'cannot airdrop nfts that are delegated or not owned by this account or soulBound'); // delegated
+      assertError(txs[14], 'cannot airdrop nfts that are delegated or not owned by this account or soulBound'); // soulBound
+      assertError(txs[15], 'invalid startBlockNumber'); // wrong type
+      assertError(txs[16], 'invalid startBlockNumber'); // lte current blocknumber
+      assertError(txs[17], 'you must have enough tokens to cover the airdrop fee');
+      assert.strictEqual(JSON.parse(txs[19].logs).errors[1], 'could not secure NFTs');
 
       resolve();
     })
