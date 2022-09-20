@@ -2074,6 +2074,89 @@ describe('nft', function() {
       });
   });
 
+  it('does not lock soulBound instances', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(testcontractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'updateParams', '{ "tokenCreationFee": "1" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'nft', 'updateParams', `{ "nftCreationFee": "5", "nftIssuanceFee": {"${CONSTANTS.UTILITY_TOKEN_SYMBOL}":"0.1","TKN":"0.2"}, "dataPropertyCreationFee": "2" }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"cryptomancer", "quantity":"2000", "isSignedWithActiveKey":true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'create', '{ "isSignedWithActiveKey": true, "name":"test NFT", "symbol":"TSTNFT", "url":"http://mynft.com", "maxSupply":"300" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"cryptomancer", "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "soulBound" : true }`));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      // check if the NFT instances were issued and are soulBOund
+      let instances = await fixture.database.find({
+        contract: 'nft',
+        table: 'TSTNFTinstances',
+        query: { account: 'cryptomancer' }
+      });
+      assert.equal(instances.length, 1);
+      assert.equal(instances[0].soulBound, true);
+
+      // attempt to issue a single token with 1 soulBound NFT instance contained within it
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'cryptomancer', 'nft', 'issue', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "to":"aggroed", "lockNfts": [ {"symbol":"TSTNFT", "ids":["1"]} ], "feeSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      const block2 = await fixture.database.getBlockInfo(2);
+      const transactionsBlock2 = block2.transactions;
+
+
+      // verify instances are not locked
+      instances = await fixture.database.find({
+        contract: 'nft',
+        table: 'TSTNFTinstances',
+        query: { account: 'nft' }
+      });
+      assert.equal(instances.length, 0);
+      //verify instance never got token
+      instances = await fixture.database.find({
+        contract: 'nft',
+        table: 'TSTNFTinstances',
+        query: { account: 'cryptomancer' }
+      });
+      assert.equal(instances.length, 1);
+      //verify instance got sent to account and that it doesn't have anything locked
+      instances = await fixture.database.find({
+        contract: 'nft',
+        table: 'TSTNFTinstances',
+        query: { account: 'aggroed' }
+      });
+      assert.equal(instances.length, 1);
+      assert.equal(instances[0].lockedNfts, undefined)
+      resolve();
+    }).then(() => {
+      fixture.tearDown();
+      done();
+    });
+  });
+
   it('obeys container token burn restrictions', (done) => {
     new Promise(async (resolve) => {
 
