@@ -20,7 +20,7 @@ const extP2PPort = Number(String(process.env.P2PPORT)) || p2pPort;
 
 program
   .option('-v, --verify', 'verify transaction on hive-engine', false)
-  .option('-e, --engineNode [url]', 'verify with given hive-engine node', 'https://api.hive-engine.com/rpc')
+  .option('-e, --engineNode [url]', 'verify with given hive-engine node', 'https://engine.rishipanthee.com')
   .option('-s, --skipDiverganceCheck', 'skips divergance check', false)
   .parse(process.argv);
 
