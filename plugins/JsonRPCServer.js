@@ -292,6 +292,7 @@ const init = async (conf, callback) => {
     wssServer.websocket({
       port: rpcWebsockets.port,
     });
+    console.log(`Websockets RPC Node now listening on port ${rpcWebsockets.port}`); // eslint-disable-line
   }
 
   callback(null);
