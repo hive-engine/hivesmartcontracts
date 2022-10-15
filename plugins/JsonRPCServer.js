@@ -238,10 +238,10 @@ function contractsRPC() {
 
 function dualRPC() {
   const methods = {};
-  for (let method in jayson.server(blockchainRPC())._methods){
+  for (const method in jayson.server(blockchainRPC())._methods){
     methods['blockchain.' + method] = jayson.server(blockchainRPC())._methods[method]
   }
-  for (let method in jayson.server(contractsRPC())._methods){
+  for (const method in jayson.server(contractsRPC())._methods){
     methods['contracts.' + method] = jayson.server(contractsRPC())._methods[method]
   }
   return methods
