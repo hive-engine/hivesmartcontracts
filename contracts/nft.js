@@ -34,20 +34,15 @@ const RESERVED_SYMBOLS = {
   TESTERA: 'aggroed',
   SQRL: 'stuffbyspencer',
   CRAFT: 'immanuel94',
-  MUSIC: 'atomcollector',
   CGULL: 'cgull',
   NFT: 'cadawg',
   RARE: 'beggars',
   LIC: 'lictoken',
   MEMBER: 'membertoken',
   COFFEE: 'c0ff33a',
-  ART: 'byo',
   ROCK: 'beggars',
-  CRITTER: 'cryptomancer',
-  CITY: 'gerber',
   MONSTERS: 'simplegame',
   SETS: 'lootkit.games',
-  ANIME: 'animetoken',
   PHOTOFT: 'wwwiebe',
   BEER: 'detlev',
   SPIR: 'spinvest',
@@ -57,10 +52,8 @@ const RESERVED_SYMBOLS = {
   PXL: 'pixelnft',
   COW: 'stuffbyspencer',
   LOOOT: 'stuffbyspencer',
-  API: 'steemcityapi',
   SPORTSMOM: 'sportstester',
   SWT: 'satren',
-  STAR: 'atomcollector',
 };
 
 actions.createSSC = async () => {
@@ -1115,10 +1108,12 @@ actions.transfer = async (payload) => {
             if (nftInstance) {
               // verify action is being performed by the account that owns this instance
               // and there is no existing delegation
+              // and that it is not soulbound
               if (nftInstance.account === finalFrom
                 && ((nftInstance.ownedBy === 'u' && finalFromType === 'user')
                   || (nftInstance.ownedBy === 'c' && finalFromType === 'contract'))
-                && nftInstance.delegatedTo === undefined) {
+                && nftInstance.delegatedTo === undefined
+                && !nftInstance.soulBound) {
                 const origOwnedBy = nftInstance.ownedBy;
                 const newOwnedBy = finalToType === 'user' ? 'u' : 'c';
 
@@ -1181,7 +1176,8 @@ actions.delegate = async (payload) => {
                 if (nftInstance.account === finalFrom
                   && ((nftInstance.ownedBy === 'u' && finalFromType === 'user')
                     || (nftInstance.ownedBy === 'c' && finalFromType === 'contract'))
-                  && nftInstance.delegatedTo === undefined) {
+                  && nftInstance.delegatedTo === undefined
+                  && !nftInstance.soulBound) {
                   const newOwnedBy = finalToType === 'user' ? 'u' : 'c';
 
                   const newDelegation = {
@@ -1451,7 +1447,7 @@ actions.create = async (payload) => {
 
 actions.issue = async (payload) => {
   const {
-    symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
+    symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, soulBound, properties, isSignedWithActiveKey, callingContractInfo,
   } = payload;
   const types = ['user', 'contract'];
 
@@ -1471,7 +1467,8 @@ actions.issue = async (payload) => {
       && feeSymbol && typeof feeSymbol === 'string' && feeSymbol in nftIssuanceFee
       && (properties === undefined || (properties && typeof properties === 'object'))
       && (lockTokens === undefined || (lockTokens && typeof lockTokens === 'object'))
-      && (lockNfts === undefined || (lockNfts && typeof lockNfts === 'object' && Array.isArray(lockNfts))), 'invalid params')
+      && (lockNfts === undefined || (lockNfts && typeof lockNfts === 'object' && Array.isArray(lockNfts)))
+      && (soulBound === undefined || (typeof soulBound === 'boolean')), 'invalid params')
     && (lockNfts === undefined || isValidNftIdArray(lockNfts))) {
     const finalTo = finalToType === 'user' ? to.trim().toLowerCase() : to.trim();
     const toValid = finalToType === 'user' ? isValidHiveAccountLength(finalTo) : isValidContractLength(finalTo);
@@ -1573,6 +1570,7 @@ actions.issue = async (payload) => {
             if (finalLockNfts.length > 0) {
               newInstance = {
                 account: finalTo,
+                soulBound: !!soulBound,
                 ownedBy,
                 lockedTokens: finalLockTokens,
                 lockedNfts: finalLockNfts,
@@ -1581,6 +1579,7 @@ actions.issue = async (payload) => {
             } else {
               newInstance = {
                 account: finalTo,
+                soulBound: !!soulBound,
                 ownedBy,
                 lockedTokens: finalLockTokens,
                 properties: finalProperties,
@@ -1598,7 +1597,7 @@ actions.issue = async (payload) => {
 
             api.emit('issue', {
               // eslint-disable-next-line no-underscore-dangle
-              from: finalFrom, fromType: finalFromType, to: finalTo, toType: finalToType, symbol, lockedTokens: finalLockTokens, lockedNfts: finalLockNfts, properties: finalProperties, id: result._id,
+              from: finalFrom, fromType: finalFromType, to: finalTo, toType: finalToType, symbol, lockedTokens: finalLockTokens, lockedNfts: finalLockNfts, soulBound: !!soulBound, properties: finalProperties, id: result._id,
             });
             return true;
           }
@@ -1630,10 +1629,10 @@ actions.issueMultiple = async (payload) => {
       // do the issuance
       for (let i = 0; i < instances.length; i += 1) {
         const {
-          symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, properties,
+          symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties,
         } = instances[i];
         await actions.issue({
-          symbol, fromType, to, toType, feeSymbol, lockTokens, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
+          symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
         });
       }
     }

@@ -215,9 +215,12 @@ const parseAndValidateAirdrop = async ({ symbol, sender, senderType, list, start
                 ownedBy: { $ne: ownedByType },
               }, {
                 delegatedTo: { $exists: true },
+              },
+              {
+                soulBound: true,
               }],
             });
-          if (api.assert(result === null, 'cannot airdrop nfts that are delegated or not owned by this account')) {
+          if (api.assert(result === null, 'cannot airdrop nfts that are delegated or not owned by this account or soulBound')) {
             // blockNumber shall be greater than the current block number.
             if (api.assert(Number.isInteger(airdrop.blockNumber) && airdrop.blockNumber > api.blockNumber, 'invalid startBlockNumber')) {
               airdrop.totalFee = api.BigNumber(params.feePerTransaction).times(airdrop.nftIds.length).toFixed(UTILITY_TOKEN_PRECISION);
