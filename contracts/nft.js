@@ -1619,7 +1619,7 @@ actions.issueMultiple = async (payload) => {
     // additional check for locked NFT instances
     let containerCount = 0;
     instances.forEach((instance) => {
-      if (instance.lockNfts) {
+      if (instance && instance.lockNfts) {
         containerCount += 1;
       }
     });
@@ -1628,12 +1628,14 @@ actions.issueMultiple = async (payload) => {
       && api.assert(containerCount === 0 || containerCount === instances.length, 'cannot issue a mix of container and non-container NFT instances simultaneously')) {
       // do the issuance
       for (let i = 0; i < instances.length; i += 1) {
-        const {
-          symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties,
-        } = instances[i];
-        await actions.issue({
-          symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
-        });
+        if (instances[i]) {
+          const {
+            symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties,
+          } = instances[i];
+          await actions.issue({
+            symbol, fromType, to, toType, feeSymbol, lockTokens, soulBound, lockNfts, properties, isSignedWithActiveKey, callingContractInfo,
+          });
+        }
       }
     }
   }
