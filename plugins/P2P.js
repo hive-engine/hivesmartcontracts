@@ -224,7 +224,7 @@ const proposeRound = async (witness, round, retry = 0) => {
       },
     };
     let witIP = witnessRec.IP;
-    if (net.isIPv6(witIP)){
+    if (net.isIPv6(witIP)) {
       witIP = `[${witIP}]`;
     }
     const url = `http://${witIP}:${witnessRec.P2PPort}/p2p`;

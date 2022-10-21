@@ -188,13 +188,13 @@ const initLightNode = async () => {
     // check if was previously a light node
     const wasLightNode = await database.wasLightNodeBefore();
     if (wasLightNode) {
-      console.log('Can\'t switch from a node, which was previously a light node, to a full node. Please restore your database from a full node dump.');
+      logger.info('Can\'t switch from a node, which was previously a light node, to a full node. Please restore your database from a full node dump.');
       await gracefulShutdown();
       process.exit();
     }
     return;
   }
-  console.log('Initializing light node - this may take a while..');
+  logger.info('Initializing light node - this may take a while..');
 
   // cleanup old blocks / transactions for light nodes
   await database.cleanupLightNode();

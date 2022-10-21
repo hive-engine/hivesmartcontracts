@@ -638,7 +638,7 @@ class Database {
               log.info(`Index ${JSON.stringify(ind)} not available for ${finalTableName}`); // eslint-disable-line no-console
             }
             if (sort.findIndex(el => el[0] === '_id') < 0) {
-                sort.push(['_id', 'asc']);
+              sort.push(['_id', 'asc']);
             }
             result = await tableData.find(EJSON.deserialize(query), {
               limit: lim,
@@ -1031,7 +1031,7 @@ class Database {
     }
     const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
     if (params && params.lastVerifiedBlockNumber) {
-      console.log(`cleaning up light node blocks and transactions`);
+      console.log('cleaning up light node blocks and transactions');
       const cleanupUntilBlock = params.lastVerifiedBlockNumber - 1 - this.blocksToKeep;
       await this.cleanupBlocks(cleanupUntilBlock);
       await this.cleanupTransactions(cleanupUntilBlock);
