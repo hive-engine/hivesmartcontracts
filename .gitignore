@@ -10,3 +10,4 @@ blocks.log
 *.log
 app.*.js
 config.*.json
+.idea

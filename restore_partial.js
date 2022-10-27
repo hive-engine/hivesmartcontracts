@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-underscore-dangle */
+/* eslint-disable max-len */
 /**
  * Script for helping to restore / repair hive-engine node databases. The restore mode will simply drop the
  * existing database and do a full restore.
@@ -232,6 +233,7 @@ async function revertDatabase(database, chain, divergentBlockNum, archiveHiveBlo
   console.log(`Divergent block: ${divergentBlockNum} (${divergentBlock.refHiveBlockNumber}) Archive block: ${archiveBlockNum} (${archiveHiveBlock}) Restoring to: ${deleteFromBlock}`);
 
   const collectionsToRemove = await database.database.listCollections().toArray();
+  // eslint-disable-next-line no-restricted-syntax
   for (const col of collectionsToRemove) {
     if (col.name === 'system.profile') {
       // skip

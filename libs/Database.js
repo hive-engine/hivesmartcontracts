@@ -1031,6 +1031,7 @@ class Database {
     }
     const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
     if (params && params.lastVerifiedBlockNumber) {
+      // eslint-disable-next-line no-console
       console.log('cleaning up light node blocks and transactions');
       const cleanupUntilBlock = params.lastVerifiedBlockNumber - 1 - this.blocksToKeep;
       await this.cleanupBlocks(cleanupUntilBlock);

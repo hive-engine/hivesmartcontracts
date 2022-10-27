@@ -19,10 +19,11 @@ let serverRPC = null;
 let server = null;
 let database = null;
 
-const requestLogger = function (req, _, next) {
+const requestLogger = (req, _, next) => {
+  // eslint-disable-next-line no-console
   console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(req.body)}`);
   next();
-}
+};
 
 async function generateStatus() {
   return new Promise(async (resolve, reject) => {
@@ -63,8 +64,11 @@ async function generateStatus() {
 
       // first block currently stored by light node
       if (result.lightNode) {
+        // eslint-disable-next-line max-len
         const firstBlock = await database.chain.findOne({ blockNumber: { $gt: 0 } }, { session: database.session });
-        result.firstBlockNumber = firstBlock?.blockNumber;
+        if (firstBlock && firstBlock.blockNumber) {
+          result.firstBlockNumber = firstBlock.blockNumber;
+        }
       }
 
       const witnessParams = await database.findOne({ contract: 'witnesses', table: 'params', query: {} });
@@ -205,7 +209,7 @@ function contractsRPC() {
             return;
           }
 
-          if (config.rpcConfig.maxOffset != -1 && off > config.rpcConfig.maxOffset) {
+          if (config.rpcConfig.maxOffset !== -1 && off > config.rpcConfig.maxOffset) {
             callback({
               code: 400,
               message: `offset is too high, maximum offset is ${config.rpcConfig.maxOffset}`,

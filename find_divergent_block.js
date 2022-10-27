@@ -39,10 +39,11 @@ async function getBlock(blockNumber, tries = 1) {
     }
     console.log(`Attempt #${tries} failed, retrying...`);
     await new Promise(r => setTimeout(() => r(), 500));
-    return await getBlock(blockNumber, tries + 1);
+    return getBlock(blockNumber, tries + 1);
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 const blockData = t => ({
   refHiveBlockNumber: t.refHiveBlockNumber,
   transactionId: t.transactionId,
@@ -59,6 +60,7 @@ function getCompareData(block) {
 function getCompareString(block) {
   return JSON.stringify(getCompareData(block));
 }
+// eslint-disable-next-line no-unused-vars
 function compareBlocks(block1, block2) {
   return getCompareString(block1) === getCompareString(block2);
 }
