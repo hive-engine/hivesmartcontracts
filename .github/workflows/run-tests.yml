@@ -3,9 +3,11 @@ on:
   push:
     branches:
       - main
+      - qa
   pull_request:
     branches:
       - main
+      - qa
 jobs:
   build:
     runs-on: '${{ matrix.os }}'
