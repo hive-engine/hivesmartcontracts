@@ -127,7 +127,8 @@ class Database {
         const collection = await this.database.collection(name, { strict: true })
         resolve(collection);
       } catch (err) {
-        console.log(err);
+        // eslint-disable-next-line
+        console.error(err);
         resolve(null);
       }
     });
