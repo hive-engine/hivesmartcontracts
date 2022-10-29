@@ -121,16 +121,15 @@ class Database {
     return null;
   }
 
-  getCollection(name) {
-    return new Promise((resolve) => {
-      this.database.collection(name, { strict: true }, (err, collection) => {
-        // collection does not exist
-        if (err) {
-          resolve(null);
-        } else {
-          resolve(collection);
-        }
-      });
+  async getCollection(name) {
+    return new Promise(async (resolve) => {
+      try {
+        const collection = await this.database.collection(name, { strict: true })
+        resolve(collection);
+      } catch (err) {
+        console.log(err);
+        resolve(null);
+      }
     });
   }
 
