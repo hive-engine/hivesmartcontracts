@@ -1,0 +1,40 @@
+name: Run Tests
+on:
+  push:
+    branches:
+      - main
+      - qa
+  pull_request:
+    branches:
+      - main
+      - qa
+jobs:
+  build:
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        node-version: [16.x, 18.x]
+        mongodb-version: ['4.4', '5.0', '6.0']
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+
+      - name: 'Set up Node.js ${{ matrix.node-version }}'
+        uses: actions/setup-node@v3
+        with:
+          node-version: '${{ matrix.node-version }}'
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.8.0
+        with:
+          mongodb-version: ${{ matrix.mongodb-version }}
+          mongodb-replica-set: testssc
+
+      - name: Install dependencies
+        run: npm ci
+#      - name: Run lint
+#        run: npm run lint
+      - name: Run tests
+        run: npm run test
