@@ -236,11 +236,23 @@ function contractsRPC() {
   };
 }
 
+function dualRPC() {
+  const methods = {};
+  for (const method in jayson.server(blockchainRPC())._methods){
+    methods['blockchain.' + method] = jayson.server(blockchainRPC())._methods[method]
+  }
+  for (const method in jayson.server(contractsRPC())._methods){
+    methods['contracts.' + method] = jayson.server(contractsRPC())._methods[method]
+  }
+  return methods
+}
+
 const init = async (conf, callback) => {
   const {
     rpcNodePort,
     databaseURL,
     databaseName,
+    rpcWebsockets
   } = conf;
 
   database = new Database();
@@ -257,6 +269,7 @@ const init = async (conf, callback) => {
   }
   serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
+  serverRPC.post('/', jayson.server(dualRPC()).middleware());
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
@@ -271,6 +284,16 @@ const init = async (conf, callback) => {
     .listen(rpcNodePort, () => {
       console.log(`RPC Node now listening on port ${rpcNodePort}`); // eslint-disable-line
     });
+
+
+  if (rpcWebsockets.enabled){
+    const wssServer = new jayson.Server(dualRPC());
+
+    wssServer.websocket({
+      port: rpcWebsockets.port,
+    });
+    console.log(`Websockets RPC Node now listening on port ${rpcWebsockets.port}`); // eslint-disable-line
+  }
 
   callback(null);
 };
