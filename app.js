@@ -147,6 +147,7 @@ const stop = async () => {
   }
 
   await unloadPlugin(blockchain);
+  await unloadPlugin(lightNodePlugin);
 
   return res ? res.payload : null;
 };
