@@ -12,7 +12,6 @@ let database = null;
 let manageLightNodeTimeoutHandler = null;
 
 const manageLightNode = async (cleanupInterval) => {
-    console.log('Cleaning up blocks / transactions not needed by light node...');
     await database.cleanupLightNode();
 
     manageLightNodeTimeoutHandler = setTimeout(() => {
