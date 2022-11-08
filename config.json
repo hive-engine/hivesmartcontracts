@@ -18,6 +18,7 @@
     "defaultLogLevel": "warn",
     "lightNode": false,
     "blocksToKeep": 864000,
+    "lightNodeCleanupInterval": 600000,
     "domain" : "",
     "rpcConfig" : {
         "maxLimit" : 1000,

@@ -9,6 +9,7 @@ const jsonRPCServer = require('./plugins/JsonRPCServer');
 const streamer = require('./plugins/Streamer');
 const replay = require('./plugins/Replay');
 const p2p = require('./plugins/P2P');
+const lightNodePlugin = require('./plugins/LightNode');
 
 const conf = require('./config');
 const { Database } = require('./libs/Database');
@@ -211,6 +212,9 @@ const start = async (requestedPlugins) => {
       res = await loadPlugin(p2p, requestedPlugins);
       if (res && res.payload === null) {
         res = await loadPlugin(jsonRPCServer, requestedPlugins);
+        if (res && res.payload === null) {
+          res = await loadPlugin(lightNodePlugin, requestedPlugins);
+        }
       }
     }
   }
@@ -231,7 +235,7 @@ const replayBlocksLog = async () => {
 program
   .version(packagejson.version)
   .option('-r, --replay [type]', 'replay the blockchain from [file]', /^(file)$/i)
-  .option('-p, --plugins <plugins>', 'which plugins to run. (Available plugins: Blockchain,Streamer,P2P,JsonRPCServer', 'Blockchain,Streamer,P2P,JsonRPCServer')
+  .option('-p, --plugins <plugins>', 'which plugins to run. (Available plugins: Blockchain,Streamer,P2P,JsonRPCServer,LightNode', 'Blockchain,Streamer,P2P,JsonRPCServer,LightNode')
   .parse(process.argv);
 
 const requestedPlugins = program.plugins.split(',');
