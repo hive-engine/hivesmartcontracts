@@ -22,18 +22,16 @@ const manageLightNode = async (cleanupInterval) => {
 const init = async (conf, callback) => {
     const {
         lightNode,
-        lightNodeCleanupInterval,
-        blocksToKeep,
         databaseURL,
         databaseName,
     } = conf;
 
-    if (!lightNode) {
+    if (!lightNode.enabled) {
         console.log('LightNode not started as it is not enabled in the config.json file');
     } else {
         database = new Database();
-        await database.init(databaseURL, databaseName, lightNode, blocksToKeep);
-        manageLightNode(lightNodeCleanupInterval ? lightNodeCleanupInterval : 600000);
+        await database.init(databaseURL, databaseName, lightNode.enabled, lightNode.blocksToKeep);
+        manageLightNode(lightNode.cleanupInterval ? lightNode.cleanupInterval : 600000);
     }
     callback(null);
 };

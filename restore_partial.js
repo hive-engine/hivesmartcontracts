@@ -259,7 +259,7 @@ async function restorePartial() {
     lightNode,
   } = conf;
 
-  if (lightNode && !drop) {
+  if (lightNode.enabled && !drop) {
     console.log('Restoring a light node database is not supported. Please add the \'-d\' flag to completely restore your db.');
     return;
   }
@@ -270,7 +270,7 @@ async function restorePartial() {
 
   let divergentBlockNum = Number.MAX_SAFE_INTEGER;
   if (!drop) {
-    divergentBlockNum = await findDivergentBlock(chain, lightNode);
+    divergentBlockNum = await findDivergentBlock(chain, lightNode.enabled);
     if (divergentBlockNum === -1) {
       console.log('ok');
       await database.close();
