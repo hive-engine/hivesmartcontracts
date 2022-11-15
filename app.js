@@ -182,11 +182,13 @@ const initLightNode = async () => {
     databaseName,
     lightNode,
     blocksToKeep,
+    startHiveBlock,
+    genesisHiveBlock,
   } = conf;
   const database = new Database();
   await database.init(databaseURL, databaseName, lightNode.enabled, blocksToKeep);
 
-  if (!lightNode.enabled) {
+  if (!lightNode.enabled && startHiveBlock !== genesisHiveBlock) {
     // check if was previously a light node
     const wasLightNode = await database.wasLightNodeBefore();
     if (wasLightNode) {
