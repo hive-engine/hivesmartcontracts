@@ -188,7 +188,7 @@ const verifyRoundHandler = async (witnessAccount, data) => {
 
             // if all the signatures have been gathered
             if (lastProposedRound.signatures.length
-                >= lastProposedRound.witnessSignaturesRequired) {
+              >= lastProposedRound.witnessSignaturesRequired) {
               // send round to sidechain
               const json = {
                 contractName: 'witnesses',
@@ -224,7 +224,7 @@ const proposeRound = async (witness, round, retry = 0) => {
       },
     };
     let witIP = witnessRec.IP;
-    if (net.isIPv6(witIP)){
+    if (net.isIPv6(witIP)) {
       witIP = `[${witIP}]`;
     }
     const url = `http://${witIP}:${witnessRec.P2PPort}/p2p`;
@@ -249,8 +249,8 @@ const proposeRound = async (witness, round, retry = 0) => {
         console.error(`Error posting to ${witness} / round ${round.round} / ${response.data.error.code} / ${response.data.error.message}`);
 
         if (currentRound === round.round
-            && (response.data.error.message === 'current round is lower'
-                || response.data.error.message === 'current witness is different')) {
+          && (response.data.error.message === 'current round is lower'
+            || response.data.error.message === 'current witness is different')) {
           if (retry < 3) {
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
@@ -349,6 +349,13 @@ const manageRoundProposition = async () => {
 };
 
 const proposeRoundHandler = async (args, callback) => {
+  if (!args || !args.round) {
+    callback({
+      code: 401,
+      message: 'invalid submission',
+    }, null);
+    return;
+  }
   console.log('round hash proposition received', args.round.account, args.round);
 
   const {
