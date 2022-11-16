@@ -192,7 +192,7 @@ const initLightNode = async () => {
     // check if was previously a light node
     const wasLightNode = await database.wasLightNodeBefore();
     if (wasLightNode) {
-      console.log('Can\'t switch from a node, which was previously a light node, to a full node. Please restore your database from a full node dump.');
+      console.log('Looks like your database belongs to a light node. Did you forget to set lightNode.enabled = true in the config.json? Switching from a light node to a full node is not possible - you would have to do a full database restore in such a case.');
       await gracefulShutdown();
       process.exit();
     }
