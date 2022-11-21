@@ -176,7 +176,6 @@ actions.updateWitnessesApprovals = async (payload) => {
       .toFixed(GOVERNANCE_TOKEN_PRECISION);
 
     acct.approvalWeight = approvalWeight;
-    acct.lastVoteDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
 
     if (!api.BigNumber(deltaApprovalWeight).eq(0)) {
       await api.db.update('accounts', acct);
