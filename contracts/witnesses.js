@@ -10,7 +10,7 @@ const MAX_ROUNDS_MISSED_IN_A_ROW = 3; // after that the witness is disabled
 const MAX_ROUND_PROPOSITION_WAITING_PERIOD = 40; // number of blocks
 const NB_TOKENS_TO_REWARD = '0.01902586'; // inflation.js tokens per block
 const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.0951293'; // 5x to reward
-const WITNESS_VOTE_EXPIRE_DAYS = 180; // Approximately half a year
+const WITNESS_VOTE_EXPIRE_BLOCKS = 5184000; // Approximately half a year, 20 blocks a minute * 60 minutes an hour * 24 hours a day * 180 days
 // eslint-disable-next-line no-template-curly-in-string
 const UTILITY_TOKEN_SYMBOL = "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'";
 // eslint-disable-next-line no-template-curly-in-string
@@ -45,7 +45,7 @@ actions.createSSC = async () => {
       witnessSignaturesRequired: NB_WITNESSES_SIGNATURES_REQUIRED,
       maxRoundsMissedInARow: MAX_ROUNDS_MISSED_IN_A_ROW,
       maxRoundPropositionWaitingPeriod: MAX_ROUND_PROPOSITION_WAITING_PERIOD,
-      witnessVoteExpireDays: WITNESS_VOTE_EXPIRE_DAYS,
+      witnessVoteExpireDays: WITNESS_VOTE_EXPIRE_BLOCKS,
     };
 
     await api.db.insert('params', params);
@@ -257,7 +257,7 @@ actions.approve = async (payload) => {
           account: api.sender,
           approvals: 0,
           approvalWeight: { $numberDecimal: '0' },
-          lastVoteDate: new Date(`${api.hiveBlockTimestamp}.000Z`),
+          lastVoteBlock: api.blockNumber,
         };
 
         acct = await api.db.insert('accounts', acct);
@@ -288,7 +288,7 @@ actions.approve = async (payload) => {
 
           acct.approvals += 1;
           acct.approvalWeight = approvalWeight;
-          acct.lastVoteDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
+          acct.lastVoteBlock = api.blockNumber;
 
           await api.db.update('accounts', acct);
 
@@ -315,7 +315,7 @@ actions.disapprove = async (payload) => {
           account: api.sender,
           approvals: 0,
           approvalWeight: { $numberDecimal: '0' },
-          lastVoteDate: new Date(`${api.hiveBlockTimestamp}.000Z`),
+          lastVoteBlock: api.blockNumber,
         };
 
         await api.db.insert('accounts', acct);
@@ -342,7 +342,7 @@ actions.disapprove = async (payload) => {
 
           acct.approvals -= 1;
           acct.approvalWeight = approvalWeight;
-          acct.lastVoteDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
+          acct.lastVoteBlock = api.blockNumber;
 
           await api.db.update('accounts', acct);
 
