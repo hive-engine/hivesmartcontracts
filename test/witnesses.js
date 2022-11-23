@@ -39,7 +39,7 @@ const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contract
 const nftauctionContractPayload = setupContractPayload('nftauction', './contracts/nftauction.js');
 const inflationContractPayload = setupContractPayload('inflation', './contracts/inflation.js');
 const witnessesContractPayload = setupContractPayload('witnesses', './contracts/witnesses.js',
-  (contractCode) => contractCode.replace(/NB_TOP_WITNESSES = .*;/, 'NB_TOP_WITNESSES = 4;').replace(/MAX_ROUND_PROPOSITION_WAITING_PERIOD = .*;/, 'MAX_ROUND_PROPOSITION_WAITING_PERIOD = 20;').replace(/NB_WITNESSES_SIGNATURES_REQUIRED = .*;/, 'NB_WITNESSES_SIGNATURES_REQUIRED = 3;').replace(/WITNESS_APPROVE_EXPIRE_BLOCKS = .*;/, 'WITNESS_APPROVE_EXPIRE_BLOCKS = 100;'));
+  (contractCode) => contractCode.replace(/NB_TOP_WITNESSES = .*;/, 'NB_TOP_WITNESSES = 4;').replace(/MAX_ROUND_PROPOSITION_WAITING_PERIOD = .*;/, 'MAX_ROUND_PROPOSITION_WAITING_PERIOD = 20;').replace(/NB_WITNESSES_SIGNATURES_REQUIRED = .*;/, 'NB_WITNESSES_SIGNATURES_REQUIRED = 3;').replace(/WITNESS_APPROVE_EXPIRE_BLOCKS = .*;/, 'WITNESS_APPROVE_EXPIRE_BLOCKS = 50;'));
 
 function addGovernanceTokenTransactions(fixture, transactions, blockNumber) {
   transactions.push(new Transaction(blockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', `{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "precision": 5, "maxSupply": "10000000", "isSignedWithActiveKey": true }`));
@@ -1627,7 +1627,7 @@ describe('witnesses', function () {
 
       params = res;
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":100}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
@@ -1677,7 +1677,7 @@ describe('witnesses', function () {
         query: {}
       });
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":100}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1700,7 +1700,7 @@ describe('witnesses', function () {
         query: {}
       });
 
-      const paramsString = '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"maxRoundsMissedInARow":4,"maxRoundPropositionWaitingPeriod":21,"witnessApproveExpireBlocks":100}';
+      const paramsString = '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"maxRoundsMissedInARow":4,"maxRoundPropositionWaitingPeriod":21,"witnessApproveExpireBlocks":50}';
       assert.equal(JSON.stringify(params), paramsString);
 
       // Verify 1 backup witness condition in setting
@@ -1731,6 +1731,121 @@ describe('witnesses', function () {
       // unchanged from above
       assert.equal(JSON.stringify(params), paramsString);
 
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it.only('expires votes', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+      let transactions = [];
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(tokenfundsContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftauctionContractPayload)));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(witnessesContractPayload)));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(witnessesContractPayload)));
+      addGovernanceTokenTransactions(fixture, transactions, 37899120);
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'stake', `{ "to": "${CONSTANTS.HIVE_ENGINE_ACCOUNT}", "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "quantity": "100", "isSignedWithActiveKey": true }`));
+
+      // register 100 witnesses
+      for (let index = 0; index < 100; index++) {
+        const witnessAccount = `witness${index}`;
+        const wif = dhive.PrivateKey.fromLogin(witnessAccount, 'testnet', 'active');
+        transactions.push(new Transaction(99999999, fixture.getNextTxId(), witnessAccount, 'witnesses', 'register', `{ "IP": "123.123.123.${index}", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "${wif.createPublic('TST').toString()}", "enabled": true, "isSignedWithActiveKey": true }`));
+      }
+
+      let block = {
+        refHiveBlockNumber: 99999999,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      transactions = [];
+      for (let index = 0; index < 30; index++) {
+        transactions.push(new Transaction(100000000, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'approve', `{ "witness": "witness${index + 5}", "isSignedWithActiveKey": true }`));
+      }
+
+      block = {
+        refHiveBlockNumber: 100000000,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'params',
+        query: {
+
+        }
+      });
+
+      let params = res;
+
+      assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.numberOfApprovedWitnesses, 30);
+      assert.equal(params.lastVerifiedBlockNumber, 1);
+      assert.equal(params.currentWitness, 'witness6');
+      assert.equal(params.lastWitnesses.includes('witness6'), true);
+      assert.equal(params.round, 1);
+      assert.equal(params.lastBlockRound, 6);
+
+      // generate 71 blocks
+      for (let index = 30; index < 102; index++) {
+        transactions = [];
+        transactions.push(new Transaction(100000001 + index, fixture.getNextTxId(), 'satoshi', 'whatever', 'whatever', ''));
+
+        block = {
+          refHiveBlockNumber: 100000001 + index,
+          refHiveBlockId: 'ABCD1',
+          prevRefHiveBlockId: 'ABCD2',
+          timestamp: '2018-07-14T00:02:00',
+          transactions,
+        };
+
+        await fixture.sendBlock(block);
+      }
+
+      const expiringBlock = await fixture.database.getBlockInfo(62); // The block with the expiring actions
+      assert.equal(JSON.stringify(JSON.parse(expiringBlock.virtualTransactions[0].logs).events[30].data), '{"account":"hive-engine"}')
+
+      let accounts = await fixture.database.find({
+        contract: 'witnesses',
+        table: 'accounts',
+        query: {
+
+        }
+      });
+
+      for (const approver of accounts) {
+        assert.equal(approver.approvalExpired, true);
+      }
+
+
+      res = await fixture.database.find({
+        contract: 'witnesses',
+        table: 'witnesses',
+        query: {
+
+        }
+      });
+
+      for (const witness of res) {
+        assert.match(witness.approvalWeight["$numberDecimal"], /(0.0000|0)/) //Ensure all votes are gone
+      }
       resolve();
     })
       .then(() => {
