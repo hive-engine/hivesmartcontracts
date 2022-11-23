@@ -247,7 +247,7 @@ const removeApproval = async (from, to, manual = true) => {
 
   // a user can only disapprove if it already approved a witness
   if (api.assert(approval !== null, 'you have not approved this witness')) {
-    const acct = await api.db.findOne('accounts', { account: api.sender });
+    const acct = await api.db.findOne('accounts', { account: from });
     await api.db.remove('approvals', approval);
 
     const balance = await api.db.findOneInTable('tokens', 'balances', { account: from, symbol: GOVERNANCE_TOKEN_SYMBOL });
@@ -371,8 +371,8 @@ actions.disapprove = async (payload) => {
 };
 
 const expireAllUserApprovals = async (username) => {
-  const approvals = await api.db.findOne('approvals', { from: username });
-  for (let i = 0; i <= approvals.length; i += 1) {
+  const approvals = await api.db.find('approvals', { from: username });
+  for (let i = 0; i < approvals.length; i += 1) {
     const approval = approvals[i];
     await removeApproval(approval.from, approval.to, false);
   }
