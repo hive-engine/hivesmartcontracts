@@ -270,7 +270,6 @@ const removeApproval = async (from, to, manual = true) => {
     acct.approvalWeight = approvalWeight;
     if (manual) {
       acct.lastApproveBlock = api.blockNumber;
-      acct.approvalExpired = false;
     }
 
     await api.db.update('accounts', acct);
@@ -299,7 +298,6 @@ actions.approve = async (payload) => {
           approvals: 0,
           approvalWeight: { $numberDecimal: '0' },
           lastApproveBlock: api.blockNumber,
-          approvalExpired: false,
         };
 
         acct = await api.db.insert('accounts', acct);
@@ -331,7 +329,6 @@ actions.approve = async (payload) => {
           acct.approvals += 1;
           acct.approvalWeight = approvalWeight;
           acct.lastApproveBlock = api.blockNumber;
-          acct.approvalExpired = false;
 
           await api.db.update('accounts', acct);
 
@@ -361,7 +358,6 @@ actions.disapprove = async (payload) => {
           approvals: 0,
           approvalWeight: { $numberDecimal: '0' },
           lastApproveBlock: api.blockNumber,
-          approvalExpired: false,
         };
 
         await api.db.insert('accounts', acct);
@@ -381,7 +377,6 @@ const expireAllUserApprovals = async (username) => {
     await removeApproval(approval.from, approval.to, false);
   }
   const acct = await api.db.findOne('accounts', { account: username });
-  acct.approvalExpired = true;
   await api.db.update('accounts', acct);
 };
 
@@ -391,7 +386,7 @@ const findAndExpireApprovals = async () => {
     witnessApproveExpireBlocks,
   } = params;
   // Do up to 1000 per round, starting with oldest
-  const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvalExpired: false }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
+  const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
   for (let i = 0; i < accounts.length; i += 1) {
     await expireAllUserApprovals(accounts[i].account);
     api.emit('approvalsExpired', { account: accounts[i].account });
