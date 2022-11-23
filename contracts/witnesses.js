@@ -50,6 +50,10 @@ actions.createSSC = async () => {
     };
 
     await api.db.insert('params', params);
+  } else {
+    const params = await api.db.findOne('params', {});
+    params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
+    await api.db.update('params', params);
   }
 };
 
