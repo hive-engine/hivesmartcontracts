@@ -370,6 +370,30 @@ actions.disapprove = async (payload) => {
   }
 };
 
+const expireAllUserApprovals = async (username) => {
+  const approvals = await api.db.findOne('approvals', { from: username });
+  for (let i = 0; i <= approvals.length; i += 1) {
+    const approval = approvals[i];
+    await removeApproval(approval.from, approval.to, false);
+  }
+  const acct = await api.db.findOne('accounts', { account: api.sender });
+  acct.approvalExpired = true;
+  await api.db.update('accounts', acct);
+};
+
+const findAndExpireApprovals = async () => {
+  const params = await api.db.findOne('params', {});
+  const {
+    witnessApproveExpireBlocks,
+  } = params;
+  // Do up to 1000 per round, starting with oldest
+  const accounts = await api.db.find('accounts', { lastApproveBlock: { $gt: api.blockNumber + witnessApproveExpireBlocks }, approvalExpired: false }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
+  for (let i = 0; i < accounts.length; i += 1) {
+    await expireAllUserApprovals(accounts[i].account);
+    api.emit('approvalsExpired', { account: accounts[i].account });
+  }
+};
+
 const changeCurrentWitness = async () => {
   const params = await api.db.findOne('params', {});
   const {
@@ -381,6 +405,9 @@ const changeCurrentWitness = async () => {
     maxRoundsMissedInARow,
     maxRoundPropositionWaitingPeriod,
   } = params;
+
+  // remove expired approvals before changing
+  await findAndExpireApprovals();
 
   let witnessFound = false;
   // get a deterministic random weight
@@ -720,30 +747,6 @@ const manageWitnessesSchedule = async () => {
   }
 };
 
-const expireAllUserApprovals = async (username) => {
-  const approvals = await api.db.findOne('approvals', { from: username });
-  for (let i = 0; i <= approvals.length; i += 1) {
-    const approval = approvals[i];
-    await removeApproval(approval.from, approval.to, false);
-  }
-  const acct = await api.db.findOne('accounts', { account: api.sender });
-  acct.approvalExpired = true;
-  await api.db.update('accounts', acct);
-};
-
-const findAndExpireApprovals = async () => {
-  const params = await api.db.findOne('params', {});
-  const {
-    witnessApproveExpireBlocks,
-  } = params;
-  // Do up to 1000 per round, starting with oldest
-  const accounts = await api.db.find('accounts', { lastApproveBlock: { $gt: api.blockNumber + witnessApproveExpireBlocks }, approvalExpired: false }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
-  for (let i = 0; i < accounts.length; i += 1) {
-    await expireAllUserApprovals(accounts[i].account);
-    api.emit('approvalsExpired', { account: accounts[i].account });
-  }
-};
-
 actions.proposeRound = async (payload) => {
   const {
     roundHash,
@@ -862,9 +865,6 @@ actions.proposeRound = async (payload) => {
 
           // calculate new schedule
           await manageWitnessesSchedule();
-
-          // remove expired approvals
-          await findAndExpireApprovals();
         }
       }
     }
