@@ -54,6 +54,18 @@ actions.createSSC = async () => {
     const params = await api.db.findOne('params', {});
     params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
     await api.db.update('params', params);
+
+    let offset = 0;
+    let accounts;
+    do {
+      accounts = await api.db.find('accounts', { }, 1000, offset, []);
+      for (let i = 0; i < accounts.length; i += 1) {
+        const account = accounts[i];
+        account.lastApproveBlock = api.blockNumber;
+        await api.db.update('accounts', account);
+      }
+      offset += 1000;
+    } while (accounts.length === 1000);
   }
 };
 
