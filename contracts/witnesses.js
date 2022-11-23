@@ -376,8 +376,7 @@ const expireAllUserApprovals = async (username) => {
     const approval = approvals[i];
     await removeApproval(approval.from, approval.to, false);
   }
-  const acct = await api.db.findOne('accounts', { account: username });
-  await api.db.update('accounts', acct);
+  api.emit('approvalsExpired', { account: username });
 };
 
 const findAndExpireApprovals = async () => {
@@ -389,7 +388,6 @@ const findAndExpireApprovals = async () => {
   const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
   for (let i = 0; i < accounts.length; i += 1) {
     await expireAllUserApprovals(accounts[i].account);
-    api.emit('approvalsExpired', { account: accounts[i].account });
   }
 };
 
