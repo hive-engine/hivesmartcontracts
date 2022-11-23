@@ -740,6 +740,7 @@ const findAndExpireApprovals = async () => {
   const accounts = await api.db.find('accounts', { lastApproveBlock: { $gt: api.blockNumber + witnessApproveExpireBlocks }, approvalExpired: false }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
   for (let i = 0; i < accounts.length; i += 1) {
     await expireAllUserApprovals(accounts[i].account);
+    api.emit('approvalsExpired', { account: accounts[i].account });
   }
 };
 
