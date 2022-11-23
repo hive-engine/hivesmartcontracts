@@ -1831,7 +1831,7 @@ describe('witnesses', function () {
       });
 
       for (const approver of accounts) {
-        assert.equal(approver.approvalExpired, true);
+        assert.equal(approver.approvals, 0);
       }
 
 
