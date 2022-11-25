@@ -16,9 +16,12 @@
     "genesisHiveBlock": 41967000,
     "witnessEnabled": true,
     "defaultLogLevel": "warn",
-    "lightNode": false,
-    "blocksToKeep": 864000,
     "domain" : "",
+    "lightNode": {
+        "enabled": false,
+        "blocksToKeep": 864000,
+        "cleanupInterval": 600000
+    },
     "rpcConfig" : {
         "maxLimit" : 1000,
         "maxOffset" : -1,

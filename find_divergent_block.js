@@ -126,7 +126,7 @@ async function findDivergentBlock() {
     }
   } else {
     let low = 0;
-    if (lightNode) {
+    if (lightNode.enabled) {
         const firstBlock = await chain.findOne({ blockNumber: { $gt: 0 } });
         if (firstBlock) {
             low = firstBlock.blockNumber;

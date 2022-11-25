@@ -9,6 +9,7 @@ const jsonRPCServer = require('./plugins/JsonRPCServer');
 const streamer = require('./plugins/Streamer');
 const replay = require('./plugins/Replay');
 const p2p = require('./plugins/P2P');
+const lightNodePlugin = require('./plugins/LightNode');
 
 const conf = require('./config');
 const { Database } = require('./libs/Database');
@@ -146,6 +147,7 @@ const stop = async () => {
   }
 
   await unloadPlugin(blockchain);
+  await unloadPlugin(lightNodePlugin);
 
   return res ? res.payload : null;
 };
@@ -180,15 +182,17 @@ const initLightNode = async () => {
     databaseName,
     lightNode,
     blocksToKeep,
+    startHiveBlock,
+    genesisHiveBlock,
   } = conf;
   const database = new Database();
-  await database.init(databaseURL, databaseName, lightNode, blocksToKeep);
+  await database.init(databaseURL, databaseName, lightNode.enabled, blocksToKeep);
 
-  if (!lightNode) {
+  if (!lightNode.enabled && startHiveBlock !== genesisHiveBlock) {
     // check if was previously a light node
     const wasLightNode = await database.wasLightNodeBefore();
     if (wasLightNode) {
-      console.log('Can\'t switch from a node, which was previously a light node, to a full node. Please restore your database from a full node dump.');
+      console.log('Looks like your database belongs to a light node. Did you forget to set lightNode.enabled = true in the config.json? Switching from a light node to a full node is not possible - you would have to do a full database restore in such a case.');
       await gracefulShutdown();
       process.exit();
     }
@@ -211,6 +215,9 @@ const start = async (requestedPlugins) => {
       res = await loadPlugin(p2p, requestedPlugins);
       if (res && res.payload === null) {
         res = await loadPlugin(jsonRPCServer, requestedPlugins);
+        if (res && res.payload === null) {
+          res = await loadPlugin(lightNodePlugin, requestedPlugins);
+        }
       }
     }
   }
@@ -231,7 +238,7 @@ const replayBlocksLog = async () => {
 program
   .version(packagejson.version)
   .option('-r, --replay [type]', 'replay the blockchain from [file]', /^(file)$/i)
-  .option('-p, --plugins <plugins>', 'which plugins to run. (Available plugins: Blockchain,Streamer,P2P,JsonRPCServer', 'Blockchain,Streamer,P2P,JsonRPCServer')
+  .option('-p, --plugins <plugins>', 'which plugins to run. (Available plugins: Blockchain,Streamer,P2P,JsonRPCServer,LightNode', 'Blockchain,Streamer,P2P,JsonRPCServer,LightNode')
   .parse(process.argv);
 
 const requestedPlugins = program.plugins.split(',');
