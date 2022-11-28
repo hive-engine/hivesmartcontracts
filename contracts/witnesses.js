@@ -55,17 +55,21 @@ actions.createSSC = async () => {
     params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
     await api.db.update('params', params);
 
-    let offset = 0;
-    let accounts;
-    do {
-      accounts = await api.db.find('accounts', { }, 1000, offset, []);
-      for (let i = 0; i < accounts.length; i += 1) {
-        const account = accounts[i];
-        account.lastApproveBlock = api.blockNumber;
-        await api.db.update('accounts', account);
-      }
-      offset += 1000;
-    } while (accounts.length === 1000);
+    // This should be removed after being deployed
+    if (!params.witnessApproveExpireBlocks) {
+      let offset = 0;
+      let accounts;
+      do {
+        accounts = await api.db.find('accounts', {}, 1000, offset, [{ index: '_id', descending: false }]);
+        for (let i = 0; i < accounts.length; i += 1) {
+          const account = accounts[i];
+          account.lastApproveBlock = api.blockNumber;
+          await api.db.update('accounts', account);
+        }
+        offset += 1000;
+      } while (accounts.length === 1000);
+    }
+    // End block to remove
   }
 };
 
@@ -258,12 +262,14 @@ actions.register = async (payload) => {
   }
 };
 
-const removeApproval = async (from, to, manual = true) => {
+const removeApproval = async (from, to, acct, manual = true) => {
   const approval = await api.db.findOne('approvals', { from, to });
-
   // a user can only disapprove if it already approved a witness
   if (api.assert(approval !== null, 'you have not approved this witness')) {
-    const acct = await api.db.findOne('accounts', { account: from });
+    let account = acct;
+    if (!acct) {
+      account = await api.db.findOne('accounts', { account: from });
+    }
     await api.db.remove('approvals', approval);
 
     const balance = await api.db.findOneInTable('tokens', 'balances', { account: from, symbol: GOVERNANCE_TOKEN_SYMBOL });
@@ -278,13 +284,13 @@ const removeApproval = async (from, to, manual = true) => {
         .toFixed(GOVERNANCE_TOKEN_PRECISION);
     }
 
-    acct.approvals -= 1;
-    acct.approvalWeight = approvalWeight;
+    account.approvals -= 1;
+    account.approvalWeight = approvalWeight;
     if (manual) {
-      acct.lastApproveBlock = api.blockNumber;
+      account.lastApproveBlock = api.blockNumber;
     }
 
-    await api.db.update('accounts', acct);
+    await api.db.update('accounts', account);
 
     // update the rank of the witness that received the disapproval
     await updateWitnessRank(to, `-${approvalWeight}`);
@@ -376,26 +382,22 @@ actions.disapprove = async (payload) => {
       }
 
       if (api.assert(acct.approvals > 0, 'no approvals found')) {
-        await removeApproval(api.sender, witness, true);
+        await removeApproval(api.sender, witness, acct, true);
       }
     }
   }
 };
 
-const expireAllUserApprovals = async (username) => {
-  const approvals = await api.db.find('approvals', { from: username });
+const expireAllUserApprovals = async (acct) => {
+  const approvals = await api.db.find('approvals', { from: acct.account });
   for (let i = 0; i < approvals.length; i += 1) {
     const approval = approvals[i];
-    await removeApproval(approval.from, approval.to, false);
+    await removeApproval(approval.from, approval.to, acct, false);
   }
-  api.emit('approvalsExpired', { account: username });
+  api.emit('approvalsExpired', { account: acct.account });
 };
 
-const findAndExpireApprovals = async () => {
-  const params = await api.db.findOne('params', {});
-  const {
-    witnessApproveExpireBlocks,
-  } = params;
+const findAndExpireApprovals = async (witnessApproveExpireBlocks) => {
   // Do up to 1000 per round, starting with oldest
   const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
   for (let i = 0; i < accounts.length; i += 1) {
@@ -413,10 +415,11 @@ const changeCurrentWitness = async () => {
     round,
     maxRoundsMissedInARow,
     maxRoundPropositionWaitingPeriod,
+    witnessApproveExpireBlocks,
   } = params;
 
   // remove expired approvals before changing
-  await findAndExpireApprovals();
+  await findAndExpireApprovals(witnessApproveExpireBlocks);
 
   let witnessFound = false;
   // get a deterministic random weight
