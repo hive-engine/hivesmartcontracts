@@ -1739,7 +1739,7 @@ describe('witnesses', function () {
       });
   });
 
-  it.only('expires votes', (done) => {
+  it('expires votes', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
