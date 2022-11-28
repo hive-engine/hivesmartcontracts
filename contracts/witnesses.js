@@ -267,7 +267,7 @@ const removeApproval = async (from, to, acct, manual = true) => {
   // a user can only disapprove if it already approved a witness
   if (api.assert(approval !== null, 'you have not approved this witness')) {
     let account = acct;
-    if (!acct) {
+    if (!acct || acct.account !== from) {
       account = await api.db.findOne('accounts', { account: from });
     }
     await api.db.remove('approvals', approval);
@@ -401,7 +401,7 @@ const findAndExpireApprovals = async (witnessApproveExpireBlocks) => {
   // Do up to 1000 per round, starting with oldest
   const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
   for (let i = 0; i < accounts.length; i += 1) {
-    await expireAllUserApprovals(accounts[i].account);
+    await expireAllUserApprovals(accounts[i]);
   }
 };
 
