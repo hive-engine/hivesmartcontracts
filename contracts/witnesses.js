@@ -52,7 +52,7 @@ actions.createSSC = async () => {
     await api.db.insert('params', params);
   } else {
     const params = await api.db.findOne('params', {});
-    
+
     // This should be removed after being deployed
     if (!params.witnessApproveExpireBlocks) {
       let offset = 0;
@@ -68,7 +68,7 @@ actions.createSSC = async () => {
       } while (accounts.length === 1000);
     }
     // End block to remove
-  
+
     params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
     await api.db.update('params', params);
   }
@@ -147,6 +147,11 @@ const updateWitnessRank = async (witness, approvalWeight) => {
     )
       .plus(approvalWeight)
       .toFixed(GOVERNANCE_TOKEN_PRECISION);
+
+    // Don't allow witness to have negative approval weight.
+    if (api.BigNumber(witnessRec.approvalWeight.$numberDecimal).lt(0)) {
+      witnessRec.approvalWeight.$numberDecimal = api.BigNumber(0);
+    }
 
     await api.db.update('witnesses', witnessRec);
 
