@@ -51,10 +51,6 @@ actions.createSSC = async () => {
 
     await api.db.insert('params', params);
   } else {
-    const params = await api.db.findOne('params', {});
-    params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
-    await api.db.update('params', params);
-
     // This should be removed after being deployed
     if (!params.witnessApproveExpireBlocks) {
       let offset = 0;
@@ -70,6 +66,10 @@ actions.createSSC = async () => {
       } while (accounts.length === 1000);
     }
     // End block to remove
+    
+    const params = await api.db.findOne('params', {});
+    params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
+    await api.db.update('params', params);
   }
 };
 
