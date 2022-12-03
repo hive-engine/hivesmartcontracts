@@ -421,11 +421,7 @@ const changeCurrentWitness = async () => {
     round,
     maxRoundsMissedInARow,
     maxRoundPropositionWaitingPeriod,
-    witnessApproveExpireBlocks,
   } = params;
-
-  // remove expired approvals before changing
-  await findAndExpireApprovals(witnessApproveExpireBlocks);
 
   let witnessFound = false;
   // get a deterministic random weight
@@ -572,7 +568,11 @@ const manageWitnessesSchedule = async () => {
     numberOfTopWitnesses,
     numberOfWitnessSlots,
     maxRoundPropositionWaitingPeriod,
+    witnessApproveExpireBlocks,
   } = params;
+
+  // remove expired approvals before changing
+  await findAndExpireApprovals(witnessApproveExpireBlocks);
 
   // check the current schedule
   const currentBlock = lastVerifiedBlockNumber + 1;

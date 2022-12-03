@@ -1819,7 +1819,7 @@ describe('witnesses', function () {
         await fixture.sendBlock(block);
       }
 
-      const expiringBlock = await fixture.database.getBlockInfo(62); // The block with the expiring actions
+      const expiringBlock = await fixture.database.getBlockInfo(53); // The block with the expiring actions
       assert.equal(JSON.stringify(JSON.parse(expiringBlock.virtualTransactions[0].logs).events[30].data), '{"account":"hive-engine"}')
 
       let accounts = await fixture.database.find({
