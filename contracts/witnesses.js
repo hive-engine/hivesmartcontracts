@@ -405,7 +405,7 @@ const expireAllUserApprovals = async (acct) => {
     const approval = approvals[i];
     await removeApproval(approval.from, approval.to, acct, false);
   }
-  api.emit('approvalsExpired', { account: acct.account });
+  api.emit('witnessApprovalsExpired', { account: acct.account });
 };
 
 const findAndExpireApprovals = async (witnessApproveExpireBlocks) => {
