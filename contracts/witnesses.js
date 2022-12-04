@@ -101,6 +101,7 @@ actions.updateParams = async (payload) => {
     witnessSignaturesRequired,
     maxRoundsMissedInARow,
     maxRoundPropositionWaitingPeriod,
+    witnessApproveExpireBlocks,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -128,6 +129,10 @@ actions.updateParams = async (payload) => {
   }
   if (!api.assert(params.numberOfTopWitnesses + 1 === params.numberOfWitnessSlots, 'only 1 backup allowed')) {
     return;
+  }
+  if (witnessApproveExpireBlocks && Number.isInteger(witnessApproveExpireBlocks)
+    && api.assert(witnessApproveExpireBlocks > params.numberOfWitnessSlots, 'witnessApproveExpireBlocks should be greater than numberOfWitnessSlots')) {
+    params.witnessApproveExpireBlocks = witnessApproveExpireBlocks;
   }
   await api.db.update('params', params);
   if (shouldResetSchedule) {

@@ -1681,7 +1681,7 @@ describe('witnesses', function () {
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"witnessApproveExpireBlocks":100}'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1700,7 +1700,7 @@ describe('witnesses', function () {
         query: {}
       });
 
-      const paramsString = '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"maxRoundsMissedInARow":4,"maxRoundPropositionWaitingPeriod":21,"witnessApproveExpireBlocks":50}';
+      const paramsString = '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"maxRoundsMissedInARow":4,"maxRoundPropositionWaitingPeriod":21,"witnessApproveExpireBlocks":100}';
       assert.equal(JSON.stringify(params), paramsString);
 
       // Verify 1 backup witness condition in setting
@@ -1721,6 +1721,35 @@ describe('witnesses', function () {
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
       assertError(txs[0], 'only 1 backup allowed');
+
+      params = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'params',
+        query: {}
+      });
+
+      // unchanged from above
+      assert.equal(JSON.stringify(params), paramsString);
+
+
+      // Verify witnessApproveExpireBlocks > numberOfWitnessSlots
+      transactions = [];
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"witnessApproveExpireBlocks":1}'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      res = await fixture.database.getLatestBlockInfo();
+      txs = res.transactions;
+      assertError(txs[0], 'witnessApproveExpireBlocks should be greater than numberOfWitnessSlots');
 
       params = await fixture.database.findOne({
         contract: 'witnesses',
