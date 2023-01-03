@@ -296,13 +296,12 @@ const removeApproval = async (approval, acct, blnce, manual = true) => {
         .toFixed(GOVERNANCE_TOKEN_PRECISION);
     }
 
-    account.approvals -= 1;
-    account.approvalWeight = approvalWeight;
     if (manual) {
+      account.approvals -= 1;
+      account.approvalWeight = approvalWeight;
       account.lastApproveBlock = api.blockNumber;
+      await api.db.update('accounts', account);
     }
-
-    await api.db.update('accounts', account);
 
     // update the rank of the witness that received the disapproval
     await updateWitnessRank(to, `-${approvalWeight}`);
@@ -409,6 +408,9 @@ const expireAllUserApprovals = async (acct) => {
     const approval = approvals[i];
     await removeApproval(approval, acct, balance, false);
   }
+  const account = acct;
+  account.approvals = 0;
+  account.approvalWeight = balance.stake || 0;
   api.emit('witnessApprovalsExpired', { account: acct.account });
 };
 
