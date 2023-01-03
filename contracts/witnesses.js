@@ -393,7 +393,7 @@ actions.disapprove = async (payload) => {
       }
 
       if (api.assert(acct.approvals > 0, 'no approvals found')) {
-        const approval = await api.db.find('approvals', { from: acct.account, to: witness });
+        const approval = await api.db.findOne('approvals', { from: acct.account, to: witness });
         const balance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: GOVERNANCE_TOKEN_SYMBOL });
         await removeApproval(approval, acct, balance, true);
       }
