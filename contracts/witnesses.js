@@ -52,7 +52,6 @@ actions.createSSC = async () => {
     await api.db.insert('params', params);
   } else {
     const params = await api.db.findOne('params', {});
-
     // This should be removed after being deployed
     if (!params.witnessApproveExpireBlocks) {
       let offset = 0;
@@ -66,11 +65,10 @@ actions.createSSC = async () => {
         }
         offset += 1000;
       } while (accounts.length === 1000);
+      params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
+      await api.db.update('params', params);
     }
     // End block to remove
-
-    params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
-    await api.db.update('params', params);
   }
 };
 
@@ -273,17 +271,20 @@ actions.register = async (payload) => {
   }
 };
 
-const removeApproval = async (from, to, acct, manual = true) => {
-  const approval = await api.db.findOne('approvals', { from, to });
+const removeApproval = async (approval, acct, blnce, manual = true) => {
   // a user can only disapprove if it already approved a witness
   if (api.assert(approval !== null, 'you have not approved this witness')) {
+    const { from, to } = approval;
     let account = acct;
     if (!acct || acct.account !== from) {
       account = await api.db.findOne('accounts', { account: from });
     }
     await api.db.remove('approvals', approval);
 
-    const balance = await api.db.findOneInTable('tokens', 'balances', { account: from, symbol: GOVERNANCE_TOKEN_SYMBOL });
+    let balance = blnce;
+    if (!balance) {
+      balance = await api.db.findOneInTable('tokens', 'balances', { account: from, symbol: GOVERNANCE_TOKEN_SYMBOL });
+    }
     let approvalWeight = 0;
     if (balance && balance.stake) {
       approvalWeight = balance.stake;
@@ -393,7 +394,9 @@ actions.disapprove = async (payload) => {
       }
 
       if (api.assert(acct.approvals > 0, 'no approvals found')) {
-        await removeApproval(api.sender, witness, acct, true);
+        const approval = await api.db.find('approvals', { from: acct.account, to: witness });
+        const balance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: GOVERNANCE_TOKEN_SYMBOL });
+        await removeApproval(approval, acct, balance, true);
       }
     }
   }
@@ -401,9 +404,10 @@ actions.disapprove = async (payload) => {
 
 const expireAllUserApprovals = async (acct) => {
   const approvals = await api.db.find('approvals', { from: acct.account });
+  const balance = await api.db.findOneInTable('tokens', 'balances', { account: acct.account, symbol: GOVERNANCE_TOKEN_SYMBOL });
   for (let i = 0; i < approvals.length; i += 1) {
     const approval = approvals[i];
-    await removeApproval(approval.from, approval.to, acct, false);
+    await removeApproval(approval, acct, balance, false);
   }
   api.emit('witnessApprovalsExpired', { account: acct.account });
 };
