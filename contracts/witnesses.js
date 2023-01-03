@@ -408,9 +408,19 @@ const expireAllUserApprovals = async (acct) => {
     const approval = approvals[i];
     await removeApproval(approval, acct, balance, false);
   }
+  let approvalWeight = 0;
+  if (balance && balance.stake) {
+    approvalWeight = balance.stake;
+  }
+
+  if (balance && balance.delegationsIn) {
+    approvalWeight = api.BigNumber(approvalWeight)
+      .plus(balance.delegationsIn)
+      .toFixed(GOVERNANCE_TOKEN_PRECISION);
+  }
   const account = acct;
   account.approvals = 0;
-  account.approvalWeight = balance.stake || 0;
+  account.approvalWeight = approvalWeight;
   await api.db.update('accounts', account);
   api.emit('witnessApprovalsExpired', { account: acct.account });
 };
