@@ -411,6 +411,7 @@ const expireAllUserApprovals = async (acct) => {
   const account = acct;
   account.approvals = 0;
   account.approvalWeight = balance.stake || 0;
+  await api.db.update('accounts', account);
   api.emit('witnessApprovalsExpired', { account: acct.account });
 };
 
