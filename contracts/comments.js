@@ -439,14 +439,27 @@ async function tokenMaintenance() {
       } = rewardPool;
       const {
         rewardIntervalSeconds,
-        rewardPerInterval,
         cashoutWindowDays,
       } = config;
+
       const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
       const rewardIntervalDurationMillis = rewardIntervalSeconds * 1000;
       const nextRewardTimestamp = lastRewardTimestamp + rewardIntervalDurationMillis;
+
       const nextClaimDecayTimestamp = lastClaimDecayTimestamp + rewardIntervalDurationMillis;
       if (nextClaimDecayTimestamp >= nextRewardTimestamp) {
+        let rewardPerInterval = config.rewardPerInterval;
+        if (config.rewardReductionIntervalSeconds) {
+          const rewardReductionIntervalMillis = config.rewardReductionIntervalSeconds * 1000;
+          const nextRewardReductionTimestamp = rewardPool.lastRewardReductionTimestamp + rewardReductionIntervalMillis;
+          if (nextClaimDecayTimestamp >= nextRewardReductionTimestamp) {
+            const reduction = api.BigNumber(rewardPerInterval).multipliedBy(config.rewardReductionPercentage).dividedBy(100).toFixed(token.precision, api.BigNumber.ROUND_DOWN);
+            rewardPerInterval = api.BigNumber(rewardPerInterval).minus(reduction).toFixed(token.precision, api.BigNumber.ROUND_DOWN);
+            rewardPool.lastRewardReductionTimestamp = nextRewardReductionTimestamp;
+            config.rewardPerInterval = rewardPerInterval;
+          }
+        }
+
         const rewardToAdd = api.BigNumber(rewardPerInterval);
         if (api.BigNumber(rewardToAdd).gt(0)) {
           await api.executeSmartContract('tokens', 'issueToContract',
@@ -551,6 +564,8 @@ actions.createRewardPool = async (payload) => {
     ignoreDeclinePayout,
     appTaxConfig,
     excludeTags,
+    rewardReductionIntervalSeconds,
+    rewardReductionPercentage
   } = config;
 
   if (!api.assert(postRewardCurve && postRewardCurve === 'power', 'postRewardCurve should be one of: [power]')) return;
@@ -586,6 +601,10 @@ actions.createRewardPool = async (payload) => {
 
   if (!api.assert(!excludeTags || (Array.isArray(excludeTags) && excludeTags.length >= 1 && excludeTags.length <= maxTagsPerPool && excludeTags.every(t => typeof t === 'string')), `excludeTags should be a non-empty array of strings of length at most ${maxTagsPerPool}`)) return;
 
+  if (!api.assert(!rewardReductionIntervalSeconds || (Number.isInteger(rewardReductionIntervalSeconds) && rewardReductionIntervalSeconds >= rewardIntervalSeconds), 'rewardReductionIntervalSeconds should be an integer greater or equal to rewardIntervalSeconds')) return;
+  const rewardReductionPercentageDecimal = api.BigNumber(rewardReductionPercentage);
+  if (!api.assert(!rewardReductionPercentage || (typeof rewardReductionPercentage === 'string' && rewardReductionPercentageDecimal.isFinite() && rewardReductionPercentageDecimal.gte('0') && rewardReductionPercentageDecimal.lte('100') && rewardReductionPercentageDecimal.dp() <= 1), 'rewardReductionPercentage should be between "0" and "100" with precision at most 1')) return;
+    
 
   // for now, restrict to 1 pool per symbol, and creator must be issuer.
   // eslint-disable-next-line no-template-curly-in-string
@@ -604,6 +623,7 @@ actions.createRewardPool = async (payload) => {
     lastRewardTimestamp: timestamp,
     lastClaimDecayTimestamp: timestamp,
     createdTimestamp: timestamp,
+    lastRewardReductionTimestamp: timestamp,
     config: {
       postRewardCurve,
       postRewardCurveParameter,
@@ -623,6 +643,8 @@ actions.createRewardPool = async (payload) => {
       ignoreDeclinePayout,
       appTaxConfig,
       excludeTags,
+      rewardReductionIntervalSeconds,
+      rewardReductionPercentage
     },
     pendingClaims: '0',
     active: true,
@@ -681,6 +703,8 @@ actions.updateRewardPool = async (payload) => {
     ignoreDeclinePayout,
     appTaxConfig,
     excludeTags,
+    rewardReductionIntervalSeconds,
+    rewardReductionPercentage
   } = config;
 
   const existingRewardPool = await api.db.findOne('rewardPools', { _id: rewardPoolId });
@@ -742,6 +766,18 @@ actions.updateRewardPool = async (payload) => {
 
   if (!api.assert(!excludeTags || (Array.isArray(excludeTags) && excludeTags.length >= 1 && excludeTags.length <= maxTagsPerPool && excludeTags.every(t => typeof t === 'string')), `excludeTags should be a non-empty array of strings of length at most ${maxTagsPerPool}`)) return;
   existingRewardPool.config.excludeTags = excludeTags;
+
+  if (!api.assert(!rewardReductionIntervalSeconds || (Number.isInteger(rewardReductionIntervalSeconds) && rewardReductionIntervalSeconds >= rewardIntervalSeconds), 'rewardReductionIntervalSeconds should be an integer greater or equal to rewardIntervalSeconds')) return;
+  if (existingRewardPool.config.rewardReductionIntervalSeconds != rewardReductionIntervalSeconds) {
+    const blockDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
+    const timestamp = blockDate.getTime();
+    existingRewardPool.lastRewardReductionTimestamp = timestamp;
+  }
+  existingRewardPool.config.rewardReductionIntervalSeconds = rewardReductionIntervalSeconds;
+
+  const rewardReductionPercentageDecimal = api.BigNumber(rewardReductionPercentage);
+  if (!api.assert(!rewardReductionPercentage || (typeof rewardReductionPercentage === 'string' && rewardReductionPercentageDecimal.isFinite() && rewardReductionPercentageDecimal.gte('0') && rewardReductionPercentageDecimal.lte('100') && rewardReductionPercentageDecimal.dp() <= 1), 'rewardReductionPercentage should be between "0" and "100" with precision at most 1')) return;
+  existingRewardPool.config.rewardReductionPercentage = rewardReductionPercentage;
 
   // eslint-disable-next-line no-template-curly-in-string
   if (!api.assert(api.sender === token.issuer || (api.sender === api.owner && token.symbol === "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'"), 'must be issuer of token')) return;
