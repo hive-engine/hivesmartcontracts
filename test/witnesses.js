@@ -1888,11 +1888,11 @@ describe('witnesses', function () {
   it.only('expires many votes', function (done) {
     this.timeout(120000); // 2 minutes
     new Promise(async (resolve) => {
+      await fixture.setUp();
       if (PERFORMANCE_CHECKS_ENABLED !== true) {
         console.log("Performace checks disabled; skipping");
         resolve();
       }
-      await fixture.setUp();
       let transactions = [];
       transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
       transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningContractPayload)));
