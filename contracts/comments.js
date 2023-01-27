@@ -449,7 +449,7 @@ async function tokenMaintenance() {
       const nextClaimDecayTimestamp = lastClaimDecayTimestamp + rewardIntervalDurationMillis;
       if (nextClaimDecayTimestamp >= nextRewardTimestamp) {
         let rewardPerInterval = config.rewardPerInterval;
-        if (config.rewardReductionIntervalSeconds) {
+        if (config.rewardReductionIntervalSeconds && config.rewardReductionPercentage) {
           const rewardReductionIntervalMillis = config.rewardReductionIntervalSeconds * 1000;
           const nextRewardReductionTimestamp = rewardPool.lastRewardReductionTimestamp + rewardReductionIntervalMillis;
           if (nextClaimDecayTimestamp >= nextRewardReductionTimestamp) {
