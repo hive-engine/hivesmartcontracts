@@ -12,6 +12,7 @@ const NB_TOKENS_TO_REWARD = '0.01902586'; // inflation.js tokens per block
 const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.0951293'; // 5x to reward
 // eslint-disable-next-line max-len
 const WITNESS_APPROVE_EXPIRE_BLOCKS = 5184000; // Approximately half a year, 20 blocks a minute * 60 minutes an hour * 24 hours a day * 180 days
+const WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK = 10;
 // eslint-disable-next-line no-template-curly-in-string
 const UTILITY_TOKEN_SYMBOL = "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'";
 // eslint-disable-next-line no-template-curly-in-string
@@ -426,8 +427,8 @@ const expireAllUserApprovals = async (acct) => {
 };
 
 const findAndExpireApprovals = async (witnessApproveExpireBlocks) => {
-  // Do up to 1000 per round, starting with oldest
-  const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, 1000, 0, [{ index: 'lastApproveBlock', descending: false }]);
+  // Do up to WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK(currently 10) per round, starting with oldest.
+  const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK, 0, [{ index: 'lastApproveBlock', descending: false }]);
   for (let i = 0; i < accounts.length; i += 1) {
     await expireAllUserApprovals(accounts[i]);
   }

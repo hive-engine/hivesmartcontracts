@@ -1885,7 +1885,7 @@ describe('witnesses', function () {
       });
   });
 
-  it.only('expires many votes', function (done) {
+  it('expires many votes', function (done) {
     this.timeout(120000); // 2 minutes
     new Promise(async (resolve) => {
       await fixture.setUp();
@@ -1973,8 +1973,8 @@ describe('witnesses', function () {
       assert.equal(params.round, 1);
       assert.equal(params.lastBlockRound, 7);
 
-      // generate 71 blocks
-      for (let index = 30; index < 102; index++) {
+      // generate 401 blocks
+      for (let index = 30; index < 432; index++) {
         transactions = [];
         transactions.push(new Transaction(100000001 + index, fixture.getNextTxId(), 'satoshi', 'whatever', 'whatever', ''));
 
@@ -1989,13 +1989,14 @@ describe('witnesses', function () {
         await fixture.sendBlock(block);
       }
 
-      // We should see expirations in 3 blocks, 1000 each max(1000,1000,999)
-      let expiringBlock = await fixture.database.getBlockInfo(54);
-      assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, 2000);
-      expiringBlock = await fixture.database.getBlockInfo(55);
-      assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, 2000);
-      expiringBlock = await fixture.database.getBlockInfo(56);
-      assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, 1998);
+      const witnessChangeBlocks = [63,83,103,123,143,163,183,203,223,243,263,283,303,323,343]; //We have an extra action in these blocks for witness change
+      // We should see expirations in multiple blocks
+      for (let i = 54; i < 353; i++){
+        let expiringBlock = await fixture.database.getBlockInfo(i);
+        assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, witnessChangeBlocks.includes(i) ? 21 : 20);
+      }
+      let expiringBlock = await fixture.database.getBlockInfo(353);
+      assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, 18);
 
       let accounts = await fixture.database.find({
         contract: 'witnesses',
