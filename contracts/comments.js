@@ -768,7 +768,7 @@ actions.updateRewardPool = async (payload) => {
   existingRewardPool.config.excludeTags = excludeTags;
 
   if (!api.assert(!rewardReductionIntervalSeconds || (Number.isInteger(rewardReductionIntervalSeconds) && rewardReductionIntervalSeconds >= rewardIntervalSeconds), 'rewardReductionIntervalSeconds should be an integer greater or equal to rewardIntervalSeconds')) return;
-  if (existingRewardPool.config.rewardReductionIntervalSeconds != rewardReductionIntervalSeconds) {
+  if (existingRewardPool.config.rewardReductionIntervalSeconds !== rewardReductionIntervalSeconds) {
     const blockDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
     const timestamp = blockDate.getTime();
     existingRewardPool.lastRewardReductionTimestamp = timestamp;
