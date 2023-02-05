@@ -302,6 +302,19 @@ class Database {
     }
   }
 
+  async getBlockRangeInfo(startBlockNumber, count) {
+    try {
+      const blocks = typeof startBlockNumber === 'number' && Number.isInteger(startBlockNumber) && typeof count === 'number' && Number.isInteger(count) 
+        ? await this.chain.find({ _id: { $gte :  startBlockNumber, $lt : startBlockNumber + count } }, { limit: 1000, session: this.session, sort: ['_id', 'asc'] }).toArray()
+        : null;
+      return EJSON.serialize(blocks);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      log.error(error);
+      return null;
+    }
+  }
+
   /**
    * Mark a block as verified by a witness
    * @param {Integer} blockNumber block umber to mark verified

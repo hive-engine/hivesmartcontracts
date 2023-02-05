@@ -106,6 +106,30 @@ function blockchainRPC() {
         callback(error, null);
       }
     },
+    getBlockRangeInfo: async (args, callback) => {
+      try {
+        const { startBlockNumber, count } = args;
+
+        if (!Number.isInteger(startBlockNumber)) {
+          callback({
+            code: 400,
+            message: 'missing or wrong parameters: blockNumber is required',
+          }, null);
+          return;
+        }
+        if (!Number.isInteger(count) || count > 1000) {
+          callback({
+            code: 400,
+            message: 'missing or wrong parameters: count is required',
+          }, null);
+          return;
+        }
+        const blocks = await database.getBlockRangeInfo(startBlockNumber, count);
+        callback(null, blocks);
+      } catch (error) {
+        callback(error, null);
+      }
+    },
     getTransactionInfo: async (args, callback) => {
       try {
         const { txid } = args;
@@ -238,10 +262,10 @@ function contractsRPC() {
 
 function dualRPC() {
   const methods = {};
-  for (const method in jayson.server(blockchainRPC())._methods){
+  for (const method in jayson.server(blockchainRPC())._methods) {
     methods['blockchain.' + method] = jayson.server(blockchainRPC())._methods[method]
   }
-  for (const method in jayson.server(contractsRPC())._methods){
+  for (const method in jayson.server(contractsRPC())._methods) {
     methods['contracts.' + method] = jayson.server(contractsRPC())._methods[method]
   }
   return methods
@@ -286,7 +310,7 @@ const init = async (conf, callback) => {
     });
 
 
-  if (rpcWebsockets.enabled){
+  if (rpcWebsockets.enabled) {
     const wssServer = new jayson.Server(dualRPC());
 
     wssServer.websocket({
