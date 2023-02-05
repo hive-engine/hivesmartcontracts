@@ -270,7 +270,7 @@ function contractsRPC() {
     },
   };
   for (const method in methods) {
-    if (config.rpcConfig.disabledMethod?.contracts?.includes(method)) {
+    if (config.rpcConfig.disabledMethods?.contracts?.includes(method)) {
       methods[method] = (args, callback) => {
         callback({
           code: 400,
