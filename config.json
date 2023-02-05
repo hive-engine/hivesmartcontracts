@@ -22,7 +22,11 @@
     "rpcConfig" : {
         "maxLimit" : 1000,
         "maxOffset" : -1,
-        "logRequests" : false
+        "logRequests" : false,
+        "disabledMethods" : {
+            "blockchain" : ["getBlockRangeInfo"],
+            "contracts" : []
+        }
     },
     "rpcWebsockets" : {
         "enabled" : true,

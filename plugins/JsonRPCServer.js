@@ -80,7 +80,7 @@ async function generateStatus() {
 }
 
 function blockchainRPC() {
-  return {
+  let methods = {
     getLatestBlockInfo: async (args, callback) => {
       try {
         const lastestBlock = await database.getLatestBlockInfo();
@@ -156,10 +156,21 @@ function blockchainRPC() {
       }
     },
   };
+  for (const method in methods) {
+    if (config.rpcConfig.disabledMethods?.blockchain?.includes(method)) {
+      methods[method] = (args, callback) => {
+        callback({
+          code: 400,
+          message: `method blockchain.${method} is disabled`,
+        }, null);
+      }
+    }
+  }
+  return methods;
 }
 
 function contractsRPC() {
-  return {
+  let methods = {
     getContract: async (args, callback) => {
       try {
         const { name } = args;
@@ -258,6 +269,17 @@ function contractsRPC() {
       }
     },
   };
+  for (const method in methods) {
+    if (config.rpcConfig.disabledMethod?.contracts?.includes(method)) {
+      methods[method] = (args, callback) => {
+        callback({
+          code: 400,
+          message: `method contracts.${method} is disabled`,
+        }, null);
+      }
+    }
+  }
+  return methods;
 }
 
 function dualRPC() {
