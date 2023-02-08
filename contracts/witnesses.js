@@ -190,11 +190,12 @@ actions.updateWitnessesApprovals = async (payload) => {
 
 actions.register = async (payload) => {
   const {
-    IP, RPCPort, P2PPort, signingKey, enabled, isSignedWithActiveKey,
+    domain, IP, RPCPort, P2PPort, signingKey, enabled, isSignedWithActiveKey,
   } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'active key required')
-    && api.assert(IP && typeof IP === 'string' && api.validator.isIP(IP), 'IP is invalid')
+    && api.assert(!(domain && IP), 'both domain and ip provided')
+    && ((domain && api.assert(domain && typeof domain === 'string' && api.validator.isFQDN(domain), 'domain is invalid')) || (IP && api.assert(IP && typeof IP === 'string' && api.validator.isIP(IP), 'IP is invalid')))
     && api.assert(RPCPort && Number.isInteger(RPCPort) && RPCPort >= 0 && RPCPort <= 65535, 'RPCPort must be an integer between 0 and 65535')
     && api.assert(P2PPort && Number.isInteger(P2PPort) && P2PPort >= 0 && P2PPort <= 65535, 'P2PPort must be an integer between 0 and 65535')
     && api.assert(api.validator.isAlphanumeric(signingKey) && signingKey.length === 53, 'invalid signing key')
@@ -203,15 +204,23 @@ actions.register = async (payload) => {
     let witness = await api.db.findOne('witnesses', { signingKey });
 
     if (api.assert(witness === null || witness.account === api.sender, 'a witness is already using this signing key')) {
-      // check if there is already a witness with the same IP/Port
-      witness = await api.db.findOne('witnesses', { IP, P2PPort });
-
-      if (api.assert(witness === null || witness.account === api.sender, 'a witness is already using this IP/Port')) {
+      // check if there is already a witness with the same IP/Port or domain
+      if (IP){
+        witness = await api.db.findOne('witnesses', { IP, P2PPort });
+      } else {
+        witness = await api.db.findOne('witnesses', { domain, P2PPort });
+      }
+      
+      if (api.assert(witness === null || witness.account === api.sender, `a witness is already using this ${IP ? 'IP' : 'domain'}/Port`)) {
         witness = await api.db.findOne('witnesses', { account: api.sender });
 
         // if the witness is already registered
         if (witness) {
-          witness.IP = IP;
+          if (IP){
+            witness.IP = IP;
+          } else {
+            witness.domain = domain;
+          }
           witness.RPCPort = RPCPort;
           witness.P2PPort = P2PPort;
           witness.signingKey = signingKey;
@@ -222,6 +231,7 @@ actions.register = async (payload) => {
             account: api.sender,
             approvalWeight: { $numberDecimal: '0' },
             signingKey,
+            domain,
             IP,
             RPCPort,
             P2PPort,

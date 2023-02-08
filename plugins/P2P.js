@@ -223,11 +223,11 @@ const proposeRound = async (witness, round, retry = 0) => {
         round,
       },
     };
-    let witIP = witnessRec.IP;
-    if (net.isIPv6(witIP)) {
-      witIP = `[${witIP}]`;
+    let witHost = witnessRec.IP || witnessRec.domain;
+    if (net.isIPv6(witHost)) {
+      witHost = `[${witHost}]`;
     }
-    const url = `http://${witIP}:${witnessRec.P2PPort}/p2p`;
+    const url = `http://${witHost}:${witnessRec.P2PPort}/p2p`;
 
     console.log(url);
     const response = await axios({
