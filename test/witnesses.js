@@ -259,7 +259,7 @@ describe('witnesses', function () {
       transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "example_", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //just not a domain
       transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "lol", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //no tls
       transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain": "example.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfaMwt9rimtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`));
-
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfaMwt9rimtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`));
 
       block = {
         refHiveBlockNumber: 37899121,
@@ -289,6 +289,7 @@ describe('witnesses', function () {
       TableAsserts.assertError(txs[12], 'domain is invalid');
       TableAsserts.assertError(txs[13], 'domain is invalid');
       TableAsserts.assertError(txs[14], 'a witness is already using this domain/Port');
+      TableAsserts.assertError(txs[15], 'neither domain and ip provided');
 
       res = await fixture.database.find({
         contract: 'witnesses',
