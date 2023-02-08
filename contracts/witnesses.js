@@ -216,16 +216,32 @@ actions.register = async (payload) => {
 
         // if the witness is already registered
         if (witness) {
+          let useUnsets = false;
+          let unsets = {};
           if (IP){
             witness.IP = IP;
+            if (witness.domain){
+              delete witness['domain'];
+              unsets.domain = '';
+              useUnsets = true;
+            }
           } else {
             witness.domain = domain;
+            if (witness.IP){
+              delete witness['IP'];
+              unsets.IP = '';
+              useUnsets = true;
+            }
           }
           witness.RPCPort = RPCPort;
           witness.P2PPort = P2PPort;
           witness.signingKey = signingKey;
           witness.enabled = enabled;
-          await api.db.update('witnesses', witness);
+          if (useUnsets){
+            await api.db.update('witnesses', witness, unsets);
+          } else {
+            await api.db.update('witnesses', witness);
+          }
         } else {
           witness = {
             account: api.sender,

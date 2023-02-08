@@ -110,6 +110,7 @@ describe('witnesses', function () {
       transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(witnessesContractPayload)));
       transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'vitalik', 'witnesses', 'register', `{ "IP": "123.255.123.253", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq", "enabled": false, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'bob', 'witnesses', 'register', `{ "domain": "example.com", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark", "enabled": true, "isSignedWithActiveKey": true }`));
 
       let block = {
         refHiveBlockNumber: 37899120,
@@ -132,6 +133,7 @@ describe('witnesses', function () {
 
       assert.equal(witnesses[0].account, 'dan');
       assert.equal(witnesses[0].IP, "123.255.123.254");
+      assert.equal(witnesses[0].domain, undefined);
       assert.equal(witnesses[0].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[0].RPCPort, 5000);
       assert.equal(witnesses[0].P2PPort, 6000);
@@ -140,16 +142,27 @@ describe('witnesses', function () {
 
       assert.equal(witnesses[1].account, 'vitalik');
       assert.equal(witnesses[1].IP, "123.255.123.253");
+      assert.equal(witnesses[1].domain, undefined);
       assert.equal(witnesses[1].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[1].RPCPort, 7000);
       assert.equal(witnesses[1].P2PPort, 8000);
       assert.equal(witnesses[1].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq');
       assert.equal(witnesses[1].enabled, false);
 
+      assert.equal(witnesses[2].account, 'bob');
+      assert.equal(witnesses[2].IP, undefined);
+      assert.equal(witnesses[2].domain, 'example.com');
+      assert.equal(witnesses[2].approvalWeight.$numberDecimal, '0');
+      assert.equal(witnesses[2].RPCPort, 7000);
+      assert.equal(witnesses[2].P2PPort, 8000);
+      assert.equal(witnesses[2].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark');
+      assert.equal(witnesses[2].enabled, true);
+
       transactions = [];
 
       transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.123", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": false, "isSignedWithActiveKey": true }`));
-      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'vitalik', 'witnesses', 'register', `{ "IP": "123.255.123.124", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'vitalik', 'witnesses', 'register', `{ "domain": "example2.com", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'bob', 'witnesses', 'register', `{ "IP": "2001:db8::1", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark", "enabled": false, "isSignedWithActiveKey": true }`));
 
       block = {
         refHiveBlockNumber: 37899121,
@@ -172,6 +185,7 @@ describe('witnesses', function () {
 
       assert.equal(witnesses[0].account, 'dan');
       assert.equal(witnesses[0].IP, "123.255.123.123");
+      assert.equal(witnesses[0].domain, undefined);
       assert.equal(witnesses[0].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[0].RPCPort, 5000);
       assert.equal(witnesses[0].P2PPort, 6000);
@@ -179,12 +193,22 @@ describe('witnesses', function () {
       assert.equal(witnesses[0].enabled, false);
 
       assert.equal(witnesses[1].account, 'vitalik');
-      assert.equal(witnesses[1].IP, "123.255.123.124");
+      assert.equal(witnesses[1].IP, undefined);
+      assert.equal(witnesses[1].domain, 'example2.com');
       assert.equal(witnesses[1].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[1].RPCPort, 7000);
       assert.equal(witnesses[1].P2PPort, 8000);
       assert.equal(witnesses[1].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq');
       assert.equal(witnesses[1].enabled, true);
+
+      assert.equal(witnesses[2].account, 'bob');
+      assert.equal(witnesses[2].IP, '2001:db8::1');
+      assert.equal(witnesses[2].domain, undefined);
+      assert.equal(witnesses[2].approvalWeight.$numberDecimal, '0');
+      assert.equal(witnesses[2].RPCPort, 7000);
+      assert.equal(witnesses[2].P2PPort, 8000);
+      assert.equal(witnesses[2].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark');
+      assert.equal(witnesses[2].enabled, false);
 
       resolve();
     })
