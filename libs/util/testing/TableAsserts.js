@@ -7,6 +7,12 @@ class TableAsserts {
     this.fixture = fixture;
   }
 
+  static assertError(tx, message) {
+    const logs = JSON.parse(tx.logs);
+    assert(logs.errors, `No error in logs. Error expected with message ${message}`);
+    assert.equal(logs.errors[0], message, `Error expected with message ${message}. Instead got ${logs.errors[0]}`);
+  }
+
   async assertUserBalances({
     account, symbol, balance, stake, pendingUnstake, delegationsOut, delegationsIn, pendingUndelegations,
   }) {
