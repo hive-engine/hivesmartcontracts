@@ -55,6 +55,9 @@ async function generateStatus() {
       // get the ssc chain id from config
       result.chainId = config.chainId;
 
+      //get the disabled methods from config
+      result.disabledMethods = config.rpcConfig.disabledMethods;
+
       // get light node config of the SSC node
       result.lightNode = config.lightNode;
       if (config.lightNode) {
@@ -117,10 +120,17 @@ function blockchainRPC() {
           }, null);
           return;
         }
-        if (!Number.isInteger(count) || count > 1000) {
+        if (!Number.isInteger(count)) {
           callback({
             code: 400,
             message: 'missing or wrong parameters: count is required',
+          }, null);
+          return;
+        }
+        if ( count > 1000){
+          callback({
+            code: 400,
+            message: 'count can not be over 1000',
           }, null);
           return;
         }
