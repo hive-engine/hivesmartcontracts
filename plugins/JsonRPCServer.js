@@ -167,7 +167,7 @@ function blockchainRPC() {
     },
   };
   for (const method in methods) {
-    if (config.rpcConfig.disabledMethods?.blockchain?.includes(method)) {
+    if (config.rpcConfig.disabledMethods?.blockchain?.includes(method) && method !== 'getStatus') {
       methods[method] = (args, callback) => {
         callback({
           code: 400,
