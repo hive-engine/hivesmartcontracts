@@ -708,8 +708,7 @@ class Database {
       let result = null;
       if (contract && typeof contract === 'string'
         && table && typeof table === 'string'
-        && query && typeof query === 'object'
-        && project && typeof project === 'object') {
+        && query && typeof query === 'object') {
         if (query.$loki) {
           query._id = query.$loki; // eslint-disable-line no-underscore-dangle
           delete query.$loki;
