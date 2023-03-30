@@ -203,6 +203,14 @@ function contractsRPC() {
       try {
         const { contract, table, query, project } = args;
 
+        if (!config.rpcConfig.allowArbitraryProject && project && typeof project === 'object' && !Object.values(project).every(x => (x === 0 || x === 1))) {
+          callback({
+            code: 400,
+            message: 'arbitrary key for project is not allowed, you may only include or exclude existing keys',
+          }, null);
+          return;
+        }
+
         if (contract && typeof contract === 'string'
           && table && typeof table === 'string'
           && query && typeof query === 'object') {
@@ -256,6 +264,14 @@ function contractsRPC() {
             callback({
               code: 400,
               message: `offset is too high, maximum offset is ${config.rpcConfig.maxOffset}`,
+            }, null);
+            return;
+          }
+
+          if (!config.rpcConfig.allowArbitraryProject && typeof prj === 'object' && !Object.values(prj).every(x => (x === 0 || x === 1))) {
+            callback({
+              code: 400,
+              message: 'arbitrary key for project is not allowed, you may only include or exclude existing keys',
             }, null);
             return;
           }
