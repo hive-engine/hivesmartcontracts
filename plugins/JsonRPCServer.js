@@ -343,7 +343,7 @@ const init = async (conf, callback) => {
 
 
   if (rpcWebsockets.enabled) {
-    const wssServer = new jayson.Server(dualRPC());
+    const wssServer = new jayson.Server(multiRPC());
 
     wssServer.websocket({
       port: rpcWebsockets.port,
