@@ -201,7 +201,7 @@ function contractsRPC() {
 
     findOne: async (args, callback) => {
       try {
-        const { contract, table, query } = args;
+        const { contract, table, query, project } = args;
 
         if (contract && typeof contract === 'string'
           && table && typeof table === 'string'
@@ -210,6 +210,7 @@ function contractsRPC() {
             contract,
             table,
             query,
+            project
           });
 
           callback(null, result);
@@ -233,6 +234,7 @@ function contractsRPC() {
           limit,
           offset,
           indexes,
+          project
         } = args;
 
         if (contract && typeof contract === 'string'
@@ -241,7 +243,7 @@ function contractsRPC() {
           const lim = limit || config.rpcConfig.maxLimit;
           const off = offset || 0;
           const ind = indexes || [];
-
+          const prj = project || {};
           if (lim > config.rpcConfig.maxLimit) {
             callback({
               code: 400,
@@ -265,6 +267,7 @@ function contractsRPC() {
             limit: lim,
             offset: off,
             indexes: ind,
+            project : prj,
           });
 
           callback(null, result);
