@@ -304,8 +304,8 @@ class Database {
 
   async getBlockRangeInfo(startBlockNumber, count) {
     try {
-      const blocks = typeof startBlockNumber === 'number' && Number.isInteger(startBlockNumber) && typeof count === 'number' && Number.isInteger(count) 
-        ? await this.chain.find({ _id: { $gte :  startBlockNumber, $lt : startBlockNumber + count } }, { limit: 1000, session: this.session, sort: ['_id', 'asc'] }).toArray()
+      const blocks = typeof startBlockNumber === 'number' && Number.isInteger(startBlockNumber) && typeof count === 'number' && Number.isInteger(count)
+        ? await this.chain.find({ _id: { $gte: startBlockNumber, $lt: startBlockNumber + count } }, { limit: 1000, session: this.session, sort: ['_id', 'asc'] }).toArray()
         : null;
       return EJSON.serialize(blocks);
     } catch (error) {
@@ -577,6 +577,7 @@ class Database {
    * @param {Integer} limit limit the number of records to retrieve
    * @param {Integer} offset offset applied to the records set
    * @param {Array<Object>} indexes array of index definitions { index: string, descending: boolean }
+   * @param {Array<String>} project mongodb project
    * @returns {Array<Object>} returns an array of objects if records found, an empty array otherwise
    */
   async find(payload) {
@@ -588,6 +589,7 @@ class Database {
         limit,
         offset,
         indexes,
+        project,
       } = payload;
 
       log.info('Find payload ', JSON.stringify(payload));
@@ -596,6 +598,7 @@ class Database {
       const lim = limit || 1000;
       const off = offset || 0;
       const ind = indexes || [];
+      const prj = project || [];
       let result = null;
 
       if (contract && typeof contract === 'string'
@@ -651,7 +654,7 @@ class Database {
               log.info(`Index ${JSON.stringify(ind)} not available for ${finalTableName}`); // eslint-disable-line no-console
             }
             if (sort.findIndex(el => el[0] === '_id') < 0) {
-                sort.push(['_id', 'asc']);
+              sort.push(['_id', 'asc']);
             }
             result = await tableData.find(EJSON.deserialize(query), {
               limit: lim,
@@ -1044,7 +1047,7 @@ class Database {
     }
     const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
     if (params && params.lastVerifiedBlockNumber) {
-      console.log(`cleaning up light node blocks and transactions`);
+      log.info('cleaning up light node blocks and transactions');
       const cleanupUntilBlock = params.lastVerifiedBlockNumber - 1 - this.blocksToKeep;
       await this.cleanupBlocks(cleanupUntilBlock);
       await this.cleanupTransactions(cleanupUntilBlock);
