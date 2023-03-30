@@ -265,7 +265,7 @@ function contractsRPC() {
             limit: lim,
             offset: off,
             indexes: ind,
-          });
+          }, true);
 
           callback(null, result);
         } else {
@@ -292,7 +292,7 @@ function contractsRPC() {
   return methods;
 }
 
-function dualRPC() {
+function multiRPC() {
   const methods = {};
   for (const method in jayson.server(blockchainRPC())._methods) {
     methods['blockchain.' + method] = jayson.server(blockchainRPC())._methods[method]
@@ -325,7 +325,7 @@ const init = async (conf, callback) => {
   }
   serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
-  serverRPC.post('/', jayson.server(dualRPC()).middleware());
+  serverRPC.post('/', jayson.server(multiRPC()).middleware());
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
