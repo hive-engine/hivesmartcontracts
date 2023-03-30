@@ -577,7 +577,7 @@ class Database {
    * @param {Integer} limit limit the number of records to retrieve
    * @param {Integer} offset offset applied to the records set
    * @param {Array<Object>} indexes array of index definitions { index: string, descending: boolean }
-   * @param {Array<String>} project mongodb project
+   * @param {JSON} project what fields to return using mongodb project format
    * @returns {Array<Object>} returns an array of objects if records found, an empty array otherwise
    */
   async find(payload) {
@@ -598,12 +598,13 @@ class Database {
       const lim = limit || 1000;
       const off = offset || 0;
       const ind = indexes || [];
-      const prj = project || [];
+      const prj = project || {};
       let result = null;
 
       if (contract && typeof contract === 'string'
         && table && typeof table === 'string'
         && query && typeof query === 'object'
+        && prj && typeof prj === 'object'
         && Array.isArray(ind)
         && (ind.length === 0
           || (ind.length > 0
@@ -661,6 +662,7 @@ class Database {
               skip: off,
               sort,
               session: this.session,
+              projection: prj,
             }).toArray();
 
             result = EJSON.serialize(result);
@@ -670,6 +672,7 @@ class Database {
               skip: off,
               sort: ['_id', 'asc'],
               session: this.session,
+              projection: prj,
             }).toArray();
             result = EJSON.serialize(result);
           }
@@ -689,16 +692,24 @@ class Database {
    * @param {String} contract contract name
    * @param {String} table table name
    * @param {JSON} query query to perform on the table
+   * @param {JSON} project what fields to return using mongodb project format
    * @returns {Object} returns a record if it exists, null otherwise
    */
   async findOne(payload) { // eslint-disable-line no-unused-vars
     try {
-      const { contract, table, query } = payload;
+      const {
+        contract,
+        table,
+        query,
+        project,
+      } = payload;
+
       log.info('findOne payload ', payload);
       let result = null;
       if (contract && typeof contract === 'string'
         && table && typeof table === 'string'
-        && query && typeof query === 'object') {
+        && query && typeof query === 'object'
+        && project && typeof project === 'object') {
         if (query.$loki) {
           query._id = query.$loki; // eslint-disable-line no-underscore-dangle
           delete query.$loki;
@@ -726,7 +737,7 @@ class Database {
             }
           }
 
-          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session });
+          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session, projection: project });
           if (result) {
             result = EJSON.serialize(result);
           }
