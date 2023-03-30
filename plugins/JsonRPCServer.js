@@ -116,7 +116,7 @@ function blockchainRPC() {
         if (!Number.isInteger(startBlockNumber)) {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: blockNumber is required',
+            message: 'missing or wrong parameters: startBlockNumber is required',
           }, null);
           return;
         }
@@ -191,7 +191,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract is required',
+            message: 'missing or wrong parameters: name is required',
           }, null);
         }
       } catch (error) {
@@ -216,7 +216,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract and tableName are required',
+            message: 'missing or wrong parameters: contract, table and query are required',
           }, null);
         }
       } catch (error) {
@@ -271,7 +271,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract and tableName are required',
+            message: 'missing or wrong parameters: contract, table and query are required',
           }, null);
         }
       } catch (error) {
