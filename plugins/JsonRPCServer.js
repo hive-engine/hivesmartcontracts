@@ -109,6 +109,23 @@ function blockchainRPC() {
         callback(error, null);
       }
     },
+    getHiveBlockInfo: async (args, callback) => {
+      try {
+        const { hiveBlockNumber } = args;
+
+        if (Number.isInteger(hiveBlockNumber)) {
+          const block = await database.getHiveBlockInfo(hiveBlockNumber);
+          callback(null, block);
+        } else {
+          callback({
+            code: 400,
+            message: 'missing or wrong parameters: hiveBlockNumber is required',
+          }, null);
+        }
+      } catch (error) {
+        callback(error, null);
+      }
+    },
     getBlockRangeInfo: async (args, callback) => {
       try {
         const { startBlockNumber, count } = args;

@@ -302,6 +302,20 @@ class Database {
     }
   }
 
+  async getHiveBlockInfo(blockNumber) {
+    try {
+      const block = typeof blockNumber === 'number' && Number.isInteger(blockNumber)
+        ? await this.chain.findOne({ refHiveBlockNumber: blockNumber }, { session: this.session })
+        : null;
+
+      return block;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      log.error(error);
+      return null;
+    }
+  }
+
   async getBlockRangeInfo(startBlockNumber, count) {
     try {
       const blocks = typeof startBlockNumber === 'number' && Number.isInteger(startBlockNumber) && typeof count === 'number' && Number.isInteger(count) 
