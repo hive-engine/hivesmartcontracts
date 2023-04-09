@@ -116,7 +116,7 @@ function blockchainRPC() {
         if (!Number.isInteger(startBlockNumber)) {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: blockNumber is required',
+            message: 'missing or wrong parameters: startBlockNumber is required',
           }, null);
           return;
         }
@@ -191,7 +191,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract is required',
+            message: 'missing or wrong parameters: name is required',
           }, null);
         }
       } catch (error) {
@@ -216,7 +216,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract and tableName are required',
+            message: 'missing or wrong parameters: contract, table and query are required',
           }, null);
         }
       } catch (error) {
@@ -265,13 +265,13 @@ function contractsRPC() {
             limit: lim,
             offset: off,
             indexes: ind,
-          });
+          }, true);
 
           callback(null, result);
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract and tableName are required',
+            message: 'missing or wrong parameters: contract, table and query are required',
           }, null);
         }
       } catch (error) {
@@ -292,7 +292,7 @@ function contractsRPC() {
   return methods;
 }
 
-function dualRPC() {
+function multiRPC() {
   const methods = {};
   for (const method in jayson.server(blockchainRPC())._methods) {
     methods['blockchain.' + method] = jayson.server(blockchainRPC())._methods[method]
@@ -325,7 +325,7 @@ const init = async (conf, callback) => {
   }
   serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
-  serverRPC.post('/', jayson.server(dualRPC()).middleware());
+  serverRPC.post('/', jayson.server(multiRPC()).middleware());
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
@@ -343,7 +343,7 @@ const init = async (conf, callback) => {
 
 
   if (rpcWebsockets.enabled) {
-    const wssServer = new jayson.Server(dualRPC());
+    const wssServer = new jayson.Server(multiRPC());
 
     wssServer.websocket({
       port: rpcWebsockets.port,
