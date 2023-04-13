@@ -4,6 +4,7 @@ const SHA256 = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
 const log = require('loglevel');
 const validator = require('validator');
+const config = require('../config.json');
 const { MongoClient } = require('mongodb');
 const { EJSON } = require('bson');
 const { CONSTANTS } = require('../libs/Constants');
@@ -578,9 +579,10 @@ class Database {
    * @param {Integer} offset offset applied to the records set
    * @param {Array<Object>} indexes array of index definitions { index: string, descending: boolean }
    * @param {JSON} project what fields to return using mongodb project format
+   * @param {Boolean} fromRPC if the call came from RPC
    * @returns {Array<Object>} returns an array of objects if records found, an empty array otherwise
    */
-  async find(payload) {
+  async find(payload, fromRPC = false) {
     try {
       const {
         contract,
@@ -612,7 +614,7 @@ class Database {
               && el.descending !== undefined && typeof el.descending === 'boolean')))
         && Number.isInteger(lim)
         && Number.isInteger(off)
-        && lim > 0 && lim <= 1000
+        && lim > 0 && lim <= fromRPC ? config.rpcConfig.maxLimit : 1000 // If the request came from the RPC, we use the max limit for that, otherwise we use 1000 since this is used internally too
         && off >= 0) {
         const finalTableName = `${contract}_${table}`;
         const contractInDb = await this.findContract({ name: contract });
