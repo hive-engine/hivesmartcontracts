@@ -207,7 +207,7 @@ class SmartContracts {
               }
               return condition;
             },
-            isValidAccountName: account => SmartContracts.isValidAccountName(account),
+            isValidAccountName: account => SmartContracts.isValidAccountName(account, refHiveBlockNumber),
           },
         };
 
@@ -466,7 +466,7 @@ class SmartContracts {
             }
             return condition;
           },
-          isValidAccountName: account => SmartContracts.isValidAccountName(account),
+          isValidAccountName: account => SmartContracts.isValidAccountName(account, refHiveBlockNumber),
         },
       };
 
@@ -676,7 +676,7 @@ class SmartContracts {
     await database.verifyBlock(block);
   }
 
-  static isValidAccountName(value) {
+  static isValidAccountName(value, refHiveBlockNumber) {
     if (!value) {
       // Account name should not be empty.
       return false;
@@ -716,7 +716,10 @@ class SmartContracts {
         return false;
       }
 
-      if (/--/.test(label)) {
+      // Hive block 74391382 is roughly Friday, April 28, 2023 early afternoon Japan time
+      // Hive account names such as my--name are valid now, so need to drop
+      // this validation.
+      if (refHiveBlockNumber < 74391382 && /--/.test(label)) {
         // Each account segment have only one dash in a row.
         return false;
       }
