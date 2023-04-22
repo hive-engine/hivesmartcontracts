@@ -10,6 +10,9 @@ const MAX_ROUNDS_MISSED_IN_A_ROW = 3; // after that the witness is disabled
 const MAX_ROUND_PROPOSITION_WAITING_PERIOD = 40; // number of blocks
 const NB_TOKENS_TO_REWARD = '0.01902586'; // inflation.js tokens per block
 const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.0951293'; // 5x to reward
+// eslint-disable-next-line max-len
+const WITNESS_APPROVE_EXPIRE_BLOCKS = 5184000; // Approximately half a year, 20 blocks a minute * 60 minutes an hour * 24 hours a day * 180 days
+const WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK = 10;
 // eslint-disable-next-line no-template-curly-in-string
 const UTILITY_TOKEN_SYMBOL = "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'";
 // eslint-disable-next-line no-template-curly-in-string
@@ -44,16 +47,36 @@ actions.createSSC = async () => {
       witnessSignaturesRequired: NB_WITNESSES_SIGNATURES_REQUIRED,
       maxRoundsMissedInARow: MAX_ROUNDS_MISSED_IN_A_ROW,
       maxRoundPropositionWaitingPeriod: MAX_ROUND_PROPOSITION_WAITING_PERIOD,
+      witnessApproveExpireBlocks: WITNESS_APPROVE_EXPIRE_BLOCKS,
     };
 
     await api.db.insert('params', params);
+  } else {
+    const params = await api.db.findOne('params', {});
+    // This should be removed after being deployed
+    if (!params.witnessApproveExpireBlocks) {
+      let offset = 0;
+      let accounts;
+      do {
+        accounts = await api.db.find('accounts', {}, 1000, offset, [{ index: '_id', descending: false }]);
+        for (let i = 0; i < accounts.length; i += 1) {
+          const account = accounts[i];
+          account.lastApproveBlock = api.blockNumber;
+          await api.db.update('accounts', account);
+        }
+        offset += 1000;
+      } while (accounts.length === 1000);
+      params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
+      await api.db.update('params', params);
+    }
+    // End block to remove
   }
 };
 
 actions.resetSchedule = async () => {
   if (api.sender !== api.owner) return;
 
-  const schedules = await api.db.find('schedules', { });
+  const schedules = await api.db.find('schedules', {});
 
   for (let index = 0; index < schedules.length; index += 1) {
     const schedule = schedules[index];
@@ -77,6 +100,7 @@ actions.updateParams = async (payload) => {
     witnessSignaturesRequired,
     maxRoundsMissedInARow,
     maxRoundPropositionWaitingPeriod,
+    witnessApproveExpireBlocks,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -89,7 +113,7 @@ actions.updateParams = async (payload) => {
     params.numberOfTopWitnesses = numberOfTopWitnesses;
   }
   if (numberOfWitnessSlots && Number.isInteger(numberOfWitnessSlots)
-      && params.numberOfWitnessSlots !== numberOfWitnessSlots) {
+    && params.numberOfWitnessSlots !== numberOfWitnessSlots) {
     shouldResetSchedule = true;
     params.numberOfWitnessSlots = numberOfWitnessSlots;
   }
@@ -104,6 +128,10 @@ actions.updateParams = async (payload) => {
   }
   if (!api.assert(params.numberOfTopWitnesses + 1 === params.numberOfWitnessSlots, 'only 1 backup allowed')) {
     return;
+  }
+  if (witnessApproveExpireBlocks && Number.isInteger(witnessApproveExpireBlocks)
+    && api.assert(witnessApproveExpireBlocks > params.numberOfWitnessSlots, 'witnessApproveExpireBlocks should be greater than numberOfWitnessSlots')) {
+    params.witnessApproveExpireBlocks = witnessApproveExpireBlocks;
   }
   await api.db.update('params', params);
   if (shouldResetSchedule) {
@@ -123,6 +151,11 @@ const updateWitnessRank = async (witness, approvalWeight) => {
     )
       .plus(approvalWeight)
       .toFixed(GOVERNANCE_TOKEN_PRECISION);
+
+    // Don't allow witness to have negative approval weight.
+    if (api.BigNumber(witnessRec.approvalWeight.$numberDecimal).lt(0)) {
+      witnessRec.approvalWeight.$numberDecimal = api.BigNumber(0);
+    }
 
     await api.db.update('witnesses', witnessRec);
 
@@ -239,6 +272,45 @@ actions.register = async (payload) => {
   }
 };
 
+const removeApproval = async (approval, acct, blnce, manual = true) => {
+  // a user can only disapprove if it already approved a witness
+  if (api.assert(approval !== null, 'you have not approved this witness')) {
+    const { from, to } = approval;
+    let account = acct;
+    if (!acct || acct.account !== from) {
+      account = await api.db.findOne('accounts', { account: from });
+    }
+    await api.db.remove('approvals', approval);
+
+    let balance = blnce;
+    if (!balance) {
+      balance = await api.db.findOneInTable('tokens', 'balances', { account: from, symbol: GOVERNANCE_TOKEN_SYMBOL });
+    }
+    let approvalWeight = 0;
+    if (balance && balance.stake) {
+      approvalWeight = balance.stake;
+    }
+
+    if (balance && balance.delegationsIn) {
+      approvalWeight = api.BigNumber(approvalWeight)
+        .plus(balance.delegationsIn)
+        .toFixed(GOVERNANCE_TOKEN_PRECISION);
+    }
+
+    if (manual) {
+      account.approvals -= 1;
+      account.approvalWeight = approvalWeight;
+      account.lastApproveBlock = api.blockNumber;
+      await api.db.update('accounts', account);
+    }
+
+    // update the rank of the witness that received the disapproval
+    await updateWitnessRank(to, `-${approvalWeight}`);
+
+    api.emit('witnessApprovalRemoved', { account: from, to, approvalWeight });
+  }
+};
+
 actions.approve = async (payload) => {
   const { witness } = payload;
   const params = await api.db.findOne('params', {});
@@ -255,6 +327,7 @@ actions.approve = async (payload) => {
           account: api.sender,
           approvals: 0,
           approvalWeight: { $numberDecimal: '0' },
+          lastApproveBlock: api.blockNumber,
         };
 
         acct = await api.db.insert('accounts', acct);
@@ -285,10 +358,13 @@ actions.approve = async (payload) => {
 
           acct.approvals += 1;
           acct.approvalWeight = approvalWeight;
+          acct.lastApproveBlock = api.blockNumber;
 
           await api.db.update('accounts', acct);
 
           await updateWitnessRank(witness, approvalWeight);
+
+          api.emit('witnessApprovalAdded', { account: api.sender, to: witness, approvalWeight });
         }
       }
     }
@@ -311,40 +387,50 @@ actions.disapprove = async (payload) => {
           account: api.sender,
           approvals: 0,
           approvalWeight: { $numberDecimal: '0' },
+          lastApproveBlock: api.blockNumber,
         };
 
         await api.db.insert('accounts', acct);
       }
 
-      // a user can only disapprove if it already approved a witness
       if (api.assert(acct.approvals > 0, 'no approvals found')) {
-        const approval = await api.db.findOne('approvals', { from: api.sender, to: witness });
-
-        if (api.assert(approval !== null, 'you have not approved this witness')) {
-          await api.db.remove('approvals', approval);
-
-          const balance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: GOVERNANCE_TOKEN_SYMBOL });
-          let approvalWeight = 0;
-          if (balance && balance.stake) {
-            approvalWeight = balance.stake;
-          }
-
-          if (balance && balance.delegationsIn) {
-            approvalWeight = api.BigNumber(approvalWeight)
-              .plus(balance.delegationsIn)
-              .toFixed(GOVERNANCE_TOKEN_PRECISION);
-          }
-
-          acct.approvals -= 1;
-          acct.approvalWeight = approvalWeight;
-
-          await api.db.update('accounts', acct);
-
-          // update the rank of the witness that received the disapproval
-          await updateWitnessRank(witness, `-${approvalWeight}`);
-        }
+        const approval = await api.db.findOne('approvals', { from: acct.account, to: witness });
+        const balance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: GOVERNANCE_TOKEN_SYMBOL });
+        await removeApproval(approval, acct, balance, true);
       }
     }
+  }
+};
+
+const expireAllUserApprovals = async (acct) => {
+  const approvals = await api.db.find('approvals', { from: acct.account });
+  const balance = await api.db.findOneInTable('tokens', 'balances', { account: acct.account, symbol: GOVERNANCE_TOKEN_SYMBOL });
+  for (let i = 0; i < approvals.length; i += 1) {
+    const approval = approvals[i];
+    await removeApproval(approval, acct, balance, false);
+  }
+  let approvalWeight = 0;
+  if (balance && balance.stake) {
+    approvalWeight = balance.stake;
+  }
+
+  if (balance && balance.delegationsIn) {
+    approvalWeight = api.BigNumber(approvalWeight)
+      .plus(balance.delegationsIn)
+      .toFixed(GOVERNANCE_TOKEN_PRECISION);
+  }
+  const account = acct;
+  account.approvals = 0;
+  account.approvalWeight = approvalWeight;
+  await api.db.update('accounts', account);
+  api.emit('witnessApprovalsExpired', { account: acct.account });
+};
+
+const findAndExpireApprovals = async (witnessApproveExpireBlocks) => {
+  // Do up to WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK(currently 10) per round, starting with oldest.
+  const accounts = await api.db.find('accounts', { lastApproveBlock: { $lt: api.blockNumber - witnessApproveExpireBlocks }, approvals: { $gt: 0 } }, WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK, 0, [{ index: 'lastApproveBlock', descending: false }]);
+  for (let i = 0; i < accounts.length; i += 1) {
+    await expireAllUserApprovals(accounts[i]);
   }
 };
 
@@ -431,7 +517,7 @@ const changeCurrentWitness = async () => {
 
         await api.db.update('witnesses', scheduledWitness);
         witnessFound = true;
-        api.emit('currentWitnessChanged', { });
+        api.emit('currentWitnessChanged', {});
         break;
       }
     }
@@ -485,7 +571,7 @@ const changeCurrentWitness = async () => {
         }
 
         await api.db.update('witnesses', scheduledWitness);
-        api.emit('currentWitnessChanged', { });
+        api.emit('currentWitnessChanged', {});
         break;
       }
     }
@@ -505,7 +591,11 @@ const manageWitnessesSchedule = async () => {
     numberOfTopWitnesses,
     numberOfWitnessSlots,
     maxRoundPropositionWaitingPeriod,
+    witnessApproveExpireBlocks,
   } = params;
+
+  // remove expired approvals before changing
+  await findAndExpireApprovals(witnessApproveExpireBlocks);
 
   // check the current schedule
   const currentBlock = lastVerifiedBlockNumber + 1;
@@ -683,7 +773,7 @@ const manageWitnessesSchedule = async () => {
       params.blockNumberWitnessChange = api.blockNumber
         + maxRoundPropositionWaitingPeriod;
       await api.db.update('params', params);
-      api.emit('newSchedule', { });
+      api.emit('newSchedule', {});
     }
   } else if (api.blockNumber >= blockNumberWitnessChange) {
     if (api.blockNumber > lastBlockRound) {
@@ -693,7 +783,7 @@ const manageWitnessesSchedule = async () => {
       params.blockNumberWitnessChange = api.blockNumber
         + maxRoundPropositionWaitingPeriod;
       await api.db.update('params', params);
-      api.emit('awaitingRoundEnd', { });
+      api.emit('awaitingRoundEnd', {});
     }
   }
 };
