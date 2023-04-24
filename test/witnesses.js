@@ -289,7 +289,7 @@ describe('witnesses', function () {
       TableAsserts.assertError(txs[12], 'domain is invalid');
       TableAsserts.assertError(txs[13], 'domain is invalid');
       TableAsserts.assertError(txs[14], 'a witness is already using this domain/Port');
-      TableAsserts.assertError(txs[15], 'neither domain and ip provided');
+      TableAsserts.assertError(txs[15], 'neither domain nor ip provided');
 
       res = await fixture.database.find({
         contract: 'witnesses',
@@ -1212,7 +1212,7 @@ describe('witnesses', function () {
       for (let index = 0; index < 100; index++) {
         const witnessAccount = `witness${index}`;
         const wif = dhive.PrivateKey.fromLogin(witnessAccount, 'testnet', 'active');
-        transactions.push(new Transaction(37899128, fixture.getNextTxId(), witnessAccount, 'witnesses', 'register', `{ "IP": "123.123.123.${index}", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "${wif.createPublic('TST').toString()}", "enabled": true, "isSignedWithActiveKey": true }`));
+        transactions.push(new Transaction(37899128, fixture.getNextTxId(), witnessAccount, 'witnesses', 'register', `{ "domain": "${witnessAccount}.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "${wif.createPublic('TST').toString()}", "enabled": true, "isSignedWithActiveKey": true }`));
       }
 
       let block = {

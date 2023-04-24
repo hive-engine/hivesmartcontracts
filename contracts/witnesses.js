@@ -227,7 +227,7 @@ actions.register = async (payload) => {
   } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'active key required')
-    && api.assert(domain || IP, 'neither domain and ip provided')
+    && api.assert(domain || IP, 'neither domain nor ip provided')
     && api.assert(!(domain && IP), 'both domain and ip provided')
     && ((domain && api.assert(domain && typeof domain === 'string' && api.validator.isFQDN(domain), 'domain is invalid')) || (IP && api.assert(IP && typeof IP === 'string' && api.validator.isIP(IP), 'IP is invalid')))
     && api.assert(RPCPort && Number.isInteger(RPCPort) && RPCPort >= 0 && RPCPort <= 65535, 'RPCPort must be an integer between 0 and 65535')
@@ -281,8 +281,6 @@ actions.register = async (payload) => {
             account: api.sender,
             approvalWeight: { $numberDecimal: '0' },
             signingKey,
-            domain,
-            IP,
             RPCPort,
             P2PPort,
             enabled,
@@ -292,6 +290,11 @@ actions.register = async (payload) => {
             lastRoundVerified: null,
             lastBlockVerified: null,
           };
+          if (IP){
+            witness.IP = IP;
+          } else {
+            witness.domain = domain;
+          }
           await api.db.insert('witnesses', witness);
         }
       }
