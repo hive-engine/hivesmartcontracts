@@ -1,6 +1,6 @@
 {
   "name": "hivesmartcontracts",
-  "version": "1.8.3",
+  "version": "1.9.0",
   "description": "",
   "main": "app.js",
   "scripts": {
@@ -55,8 +55,6 @@
     "mongodb": "^3.6.3",
     "read-last-lines": "^1.8.0",
     "seedrandom": "^3.0.5",
-    "socket.io": "^2.4.1",
-    "socket.io-client": "^2.4.0",
     "validator": "^10.11.0",
     "vm2": "^3.9.2",
     "winston": "^3.3.3"

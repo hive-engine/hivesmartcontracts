@@ -55,6 +55,9 @@ async function generateStatus() {
       // get the ssc chain id from config
       result.chainId = config.chainId;
 
+      //get the disabled methods from config
+      result.disabledMethods = config.rpcConfig.disabledMethods;
+
       // get light node config of the SSC node
       result.lightNode = config.lightNode.enabled;
       if (result.lightNode) {
@@ -80,7 +83,7 @@ async function generateStatus() {
 }
 
 function blockchainRPC() {
-  return {
+  let methods = {
     getLatestBlockInfo: async (args, callback) => {
       try {
         const lastestBlock = await database.getLatestBlockInfo();
@@ -102,6 +105,37 @@ function blockchainRPC() {
             message: 'missing or wrong parameters: blockNumber is required',
           }, null);
         }
+      } catch (error) {
+        callback(error, null);
+      }
+    },
+    getBlockRangeInfo: async (args, callback) => {
+      try {
+        const { startBlockNumber, count } = args;
+
+        if (!Number.isInteger(startBlockNumber)) {
+          callback({
+            code: 400,
+            message: 'missing or wrong parameters: startBlockNumber is required',
+          }, null);
+          return;
+        }
+        if (!Number.isInteger(count)) {
+          callback({
+            code: 400,
+            message: 'missing or wrong parameters: count is required',
+          }, null);
+          return;
+        }
+        if ( count > 1000){
+          callback({
+            code: 400,
+            message: 'count can not be over 1000',
+          }, null);
+          return;
+        }
+        const blocks = await database.getBlockRangeInfo(startBlockNumber, count);
+        callback(null, blocks);
       } catch (error) {
         callback(error, null);
       }
@@ -132,10 +166,21 @@ function blockchainRPC() {
       }
     },
   };
+  for (const method in methods) {
+    if (config.rpcConfig.disabledMethods?.blockchain?.includes(method) && method !== 'getStatus') {
+      methods[method] = (args, callback) => {
+        callback({
+          code: 400,
+          message: `method blockchain.${method} is disabled`,
+        }, null);
+      }
+    }
+  }
+  return methods;
 }
 
 function contractsRPC() {
-  return {
+  let methods = {
     getContract: async (args, callback) => {
       try {
         const { name } = args;
@@ -146,7 +191,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract is required',
+            message: 'missing or wrong parameters: name is required',
           }, null);
         }
       } catch (error) {
@@ -171,7 +216,7 @@ function contractsRPC() {
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract and tableName are required',
+            message: 'missing or wrong parameters: contract, table and query are required',
           }, null);
         }
       } catch (error) {
@@ -220,13 +265,13 @@ function contractsRPC() {
             limit: lim,
             offset: off,
             indexes: ind,
-          });
+          }, true);
 
           callback(null, result);
         } else {
           callback({
             code: 400,
-            message: 'missing or wrong parameters: contract and tableName are required',
+            message: 'missing or wrong parameters: contract, table and query are required',
           }, null);
         }
       } catch (error) {
@@ -234,14 +279,25 @@ function contractsRPC() {
       }
     },
   };
+  for (const method in methods) {
+    if (config.rpcConfig.disabledMethods?.contracts?.includes(method)) {
+      methods[method] = (args, callback) => {
+        callback({
+          code: 400,
+          message: `method contracts.${method} is disabled`,
+        }, null);
+      }
+    }
+  }
+  return methods;
 }
 
-function dualRPC() {
+function multiRPC() {
   const methods = {};
-  for (const method in jayson.server(blockchainRPC())._methods){
+  for (const method in jayson.server(blockchainRPC())._methods) {
     methods['blockchain.' + method] = jayson.server(blockchainRPC())._methods[method]
   }
-  for (const method in jayson.server(contractsRPC())._methods){
+  for (const method in jayson.server(contractsRPC())._methods) {
     methods['contracts.' + method] = jayson.server(contractsRPC())._methods[method]
   }
   return methods
@@ -269,7 +325,7 @@ const init = async (conf, callback) => {
   }
   serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
-  serverRPC.post('/', jayson.server(dualRPC()).middleware());
+  serverRPC.post('/', jayson.server(multiRPC()).middleware());
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
@@ -286,8 +342,8 @@ const init = async (conf, callback) => {
     });
 
 
-  if (rpcWebsockets.enabled){
-    const wssServer = new jayson.Server(dualRPC());
+  if (rpcWebsockets.enabled) {
+    const wssServer = new jayson.Server(multiRPC());
 
     wssServer.websocket({
       port: rpcWebsockets.port,
