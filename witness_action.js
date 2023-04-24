@@ -7,6 +7,7 @@ const packagejson = require('./package.json');
 const config = require('./config.json');
 
 const ip = process.env.NODE_IP;
+const domain = process.env.NODE_DOMAIN;
 const witnessAccount = process.env.ACCOUNT;
 const privateSigningKey = dhive.PrivateKey.fromString(process.env.ACTIVE_SIGNING_KEY);
 const publicSigningKey = privateSigningKey.createPublic().toString();
@@ -103,6 +104,21 @@ program
 program
   .command('register')
   .action(() => {
+    const registerJSON = {
+      RPCPort: extRPCNodePort,
+      P2PPort: extP2PPort,
+      signingKey: publicSigningKey,
+      enabled: true,
+    }
+    if (ip) {
+      registerJSON.IP = ip;
+    } else if (domain) {
+      registerJSON.domain = domain;
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('Missing domain or IP, please add it to your .env file');
+      return;
+    }
     if (!skipDiverganceCheck) {
       exec(`node find_divergent_block.js -h -n ${engineNode}`).on('exit', (code) => {
         if (code != 0) {
@@ -110,34 +126,33 @@ program
           console.log(`A divergent block was found, not registering. Run node find_divergent -n ${engineNode} to learn where.`)
           return
         } else {
-          broadcastWitnessAction('register', {
-            IP: ip,
-            RPCPort: extRPCNodePort,
-            P2PPort: extP2PPort,
-            signingKey: publicSigningKey,
-            enabled: true,
-          })
+          broadcastWitnessAction('register', registerJSON);
         }
       })
     } else {
-      broadcastWitnessAction('register', {
-        IP: ip,
-        RPCPort: extRPCNodePort,
-        P2PPort: extP2PPort,
-        signingKey: publicSigningKey,
-        enabled: true,
-      })
+      broadcastWitnessAction('register', registerJSON)
     }
   });
 
 program
   .command('unregister')
-  .action(() => broadcastWitnessAction('register', {
-    IP: ip,
-    RPCPort: extRPCNodePort,
-    P2PPort: extP2PPort,
-    signingKey: publicSigningKey,
-    enabled: false,
-  }));
+  .action(() => {
+    const registerJSON = {
+      RPCPort: extRPCNodePort,
+      P2PPort: extP2PPort,
+      signingKey: publicSigningKey,
+      enabled: false,
+    }
+    if (ip) {
+      registerJSON.IP = ip;
+    } else if (domain) {
+      registerJSON.domain = domain;
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('Missing domain or IP, please add it to your .env file');
+      return;
+    }
+    broadcastWitnessAction('register', registerJSON)
+  });
 
 program.parse(process.argv);
