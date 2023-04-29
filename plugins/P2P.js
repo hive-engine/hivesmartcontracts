@@ -503,7 +503,7 @@ const init = async (conf, callback) => {
       serverP2P.use(bodyParser.json());
       serverP2P.set('trust proxy', true);
       serverP2P.set('trust proxy', 'loopback');
-      serverP2P.post('/p2p', jayson.server(p2p()).middleware());
+      serverP2P.post('/p2p', jayson.server(p2p()).middleware(), { maxBatchLength: 0 }); // Batch is disabled for P2P as it is not used by the P2P layer at all right now. If in the future requests are batched, this should be updated
 
       server = http.createServer(serverP2P)
         .listen(p2pPort, () => {
