@@ -504,7 +504,10 @@ const init = async (conf, callback) => {
       serverP2P.set('trust proxy', true);
       serverP2P.set('trust proxy', 'loopback');
       serverP2P.post('/p2p', jayson.server(p2p()).middleware());
-
+      serverP2P.use((err, _, res) => {
+        console.error(err);
+        res.status(500).json({ error: 'Error processing requests' });
+      });
       server = http.createServer(serverP2P)
         .listen(p2pPort, () => {
           console.log(`P2P server now listening on port ${p2pPort}`); // eslint-disable-line

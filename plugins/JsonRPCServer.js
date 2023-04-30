@@ -326,6 +326,10 @@ const init = async (conf, callback) => {
   serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
   serverRPC.post('/', jayson.server(multiRPC()).middleware());
+  serverRPC.use((err, _, res) => {
+    console.error(err);
+    res.status(500).json({ error: 'Error processing requests' });
+  });
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
