@@ -36,5 +36,7 @@ jobs:
         run: npm ci
 #      - name: Run lint
 #        run: npm run lint
+      - name: Copy config file
+        run: cp config.example.json config.json
       - name: Run tests
         run: npm run test
