@@ -302,7 +302,7 @@ class Database {
     }
   }
 
-  async getHiveBlockInfo(blockNumber) {
+  async getBlockInfoByHiveBlock(blockNumber) {
     try {
       const block = typeof blockNumber === 'number' && Number.isInteger(blockNumber)
         ? await this.chain.findOne({ refHiveBlockNumber: blockNumber }, { session: this.session })

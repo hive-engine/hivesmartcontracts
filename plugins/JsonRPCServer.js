@@ -109,12 +109,12 @@ function blockchainRPC() {
         callback(error, null);
       }
     },
-    getHiveBlockInfo: async (args, callback) => {
+    getBlockInfoByHiveBlock: async (args, callback) => {
       try {
         const { hiveBlockNumber } = args;
 
         if (Number.isInteger(hiveBlockNumber)) {
-          const block = await database.getHiveBlockInfo(hiveBlockNumber);
+          const block = await database.getBlockInfoByHiveBlock(hiveBlockNumber);
           callback(null, block);
         } else {
           callback({
