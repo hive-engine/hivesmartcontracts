@@ -323,9 +323,9 @@ const init = async (conf, callback) => {
   if (config.rpcConfig.logRequests) {
     serverRPC.use(requestLogger);
   }
-  serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
-  serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
-  serverRPC.post('/', jayson.server(multiRPC()).middleware());
+  serverRPC.post('/blockchain', jayson.server(blockchainRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
+  serverRPC.post('/contracts', jayson.server(contractsRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
+  serverRPC.post('/', jayson.server(multiRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
   serverRPC.use((err, _req, res, _next) => {
     console.error(err);
     res.status(500).json({ error: 'Error processing requests' });
@@ -347,7 +347,7 @@ const init = async (conf, callback) => {
 
 
   if (rpcWebsockets.enabled) {
-    const wssServer = new jayson.Server(multiRPC());
+    const wssServer = new jayson.Server(multiRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength });
 
     wssServer.websocket({
       port: rpcWebsockets.port,
