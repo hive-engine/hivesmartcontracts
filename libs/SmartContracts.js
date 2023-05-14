@@ -244,8 +244,14 @@ class SmartContracts {
       }
       return { logs: { errors: ['parameters name and code are mandatory and they must be strings'] } };
     } catch (e) {
-      // console.error('ERROR DURING CONTRACT DEPLOYMENT: ', name, e);
-      return { logs: { errors: [`${e.name}: ${e.message}`] } };
+      log.error('ERROR DURING CONTRACT DEPLOYMENT: ', e);
+      if (refHiveBlockNumber <= 75656718) { // Approximately Sunday June 11 UTC
+        if (e.message.includes('Unexpected identifier')) {
+          e.message = 'Unexpected identifier';
+        }
+        return { logs: { errors: [`${e.name}: ${e.message}`] } };
+      }
+      return { logs: { errors: ['A node.js error occoured during deployment'] } };
     }
   }
 
