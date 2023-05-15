@@ -20,7 +20,12 @@ let server = null;
 let database = null;
 
 const requestLogger = function (req, _, next) {
-  console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(req.body)}`);
+  let truncatedBody = req.body;
+  if (Array.isArray(req.body) && req.body.length > 10) {
+    console.log(`Incoming batch request truncated to length 10 from ${req.body.length}`);
+    truncatedBody = req.body.slice(0, 10);
+  }
+  console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(truncatedBody)}`);
   next();
 }
 
