@@ -331,6 +331,10 @@ const init = async (conf, callback) => {
   serverRPC.post('/blockchain', jayson.server(blockchainRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
   serverRPC.post('/', jayson.server(multiRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
+  serverRPC.use((err, _req, res, _next) => {
+    console.error(err);
+    res.status(500).json({ error: 'Error processing requests' });
+  });
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
