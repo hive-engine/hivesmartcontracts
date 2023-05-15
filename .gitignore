@@ -9,4 +9,4 @@ blocks.log
 .env
 *.log
 app.*.js
-config.*.json
+config.json
