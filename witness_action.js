@@ -110,7 +110,10 @@ program
       signingKey: publicSigningKey,
       enabled: true,
     }
-    if (ip) {
+    if (ip && domain){
+      console.log('Both domain and IP specified in your .env file, please only use one');
+      return;
+    } else if (ip) {
       registerJSON.IP = ip;
     } else if (domain) {
       registerJSON.domain = domain;
@@ -143,7 +146,10 @@ program
       signingKey: publicSigningKey,
       enabled: false,
     }
-    if (ip) {
+    if (ip && domain){
+      console.log('Both domain and IP specified in your .env file, please only use one');
+      return;
+    } else if (ip) {
       registerJSON.IP = ip;
     } else if (domain) {
       registerJSON.domain = domain;
