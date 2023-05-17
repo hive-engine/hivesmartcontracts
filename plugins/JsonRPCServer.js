@@ -207,8 +207,8 @@ function contractsRPC() {
     findOne: async (args, callback) => {
       try {
         const { contract, table, query, project } = args;
-
-        if (!config.rpcConfig.allowArbitraryProject && project && typeof project === 'object' && !Object.values(project).every(x => (x === 0 || x === 1))) {
+        const prj = project || {};
+        if (!config.rpcConfig.allowArbitraryProject && prj && typeof prj === 'object' && !Object.values(prj).every(x => (x === 0 || x === 1))) {
           callback({
             code: 400,
             message: 'arbitrary key for project is not allowed, you may only include or exclude existing keys',
@@ -218,12 +218,13 @@ function contractsRPC() {
 
         if (contract && typeof contract === 'string'
           && table && typeof table === 'string'
-          && query && typeof query === 'object') {
+          && query && typeof query === 'object'
+          && prj && typeof prj === 'object') {
           const result = await database.findOne({
             contract,
             table,
             query,
-            project
+            project : prj
           });
 
           callback(null, result);

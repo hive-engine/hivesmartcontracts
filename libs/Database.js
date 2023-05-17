@@ -706,11 +706,14 @@ class Database {
         project,
       } = payload;
 
+      const prj = project || {};
+
       log.info('findOne payload ', payload);
       let result = null;
       if (contract && typeof contract === 'string'
         && table && typeof table === 'string'
-        && query && typeof query === 'object') {
+        && query && typeof query === 'object'
+        && prj && typeof prj === 'object') {
         if (query.$loki) {
           query._id = query.$loki; // eslint-disable-line no-underscore-dangle
           delete query.$loki;
@@ -738,7 +741,7 @@ class Database {
             }
           }
 
-          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session, projection: project });
+          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session, projection: prj });
           if (result) {
             result = EJSON.serialize(result);
           }
