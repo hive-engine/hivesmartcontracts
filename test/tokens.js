@@ -865,7 +865,7 @@ describe('Tokens smart contract', function () {
       
       await fixture.setUp();
 
-      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let refBlockNumber = 74391382; // trigger block to change account name validation to accept multiple consecutive dashes in account names
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "1000", "isSignedWithActiveKey": true }`));
@@ -876,6 +876,8 @@ describe('Tokens smart contract', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', `{ "isSignedWithActiveKey": true, "name": "token", "symbol": "NTK", "precision": 8, "maxSupply": "${Number.MAX_SAFE_INTEGER}" }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', `{ "symbol": "NTK", "quantity": "${Number.MAX_SAFE_INTEGER}", "to": "satoshi", "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'tokens', 'transfer', '{ "symbol": "NTK", "quantity": "0.00000001", "to": "vitalik", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'tokens', 'transfer', '{ "symbol": "NTK", "quantity": "3", "to": "john--wesley", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'tokens', 'transfer', '{ "symbol": "NTK", "quantity": "2", "to": "john---wesley", "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -924,7 +926,7 @@ describe('Tokens smart contract', function () {
 
       const balNTKsatoshi = res;
 
-      assert.equal(balNTKsatoshi.balance, BigNumber(Number.MAX_SAFE_INTEGER).minus("0.00000001").toFixed(8));
+      assert.equal(balNTKsatoshi.balance, BigNumber(Number.MAX_SAFE_INTEGER).minus("5.00000001").toFixed(8));
 
       res = await fixture.database.findOne({
           contract: 'tokens',
@@ -938,6 +940,32 @@ describe('Tokens smart contract', function () {
       const balNTKvitalik = res;
 
       assert.equal(balNTKvitalik.balance, "0.00000001");
+
+      res = await fixture.database.findOne({
+          contract: 'tokens',
+          table: 'balances',
+          query: {
+            account: 'john--wesley',
+            symbol: "NTK"
+          }
+        });
+
+      const balNTKjohn = res;
+
+      assert.equal(balNTKjohn.balance, 3);
+
+      res = await fixture.database.findOne({
+          contract: 'tokens',
+          table: 'balances',
+          query: {
+            account: 'john---wesley',
+            symbol: "NTK"
+          }
+        });
+
+      const balNTKjohn2 = res;
+
+      assert.equal(balNTKjohn2.balance, 2);
 
       // verify tokens can't be sent to a blacklisted account
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -985,7 +1013,9 @@ describe('Tokens smart contract', function () {
       
       await fixture.setUp();
 
-      let refBlockNumber = fixture.getNextRefBlockNumber();
+      // one less than the trigger block to change account name validation to accept multiple
+      // consecutive dashes in account names (so that john--wesley is an invalid account here)
+      let refBlockNumber = 74391381;
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "1000", "isSignedWithActiveKey": true }`));
@@ -1000,6 +1030,7 @@ describe('Tokens smart contract', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'tokens', 'transfer', '{ "symbol": "TKN.TEST", "quantity": "101", "to": "satoshi", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'tokens', 'transfer', '{ "symbol": "TKN.TEST", "quantity": "101", "to": "vitalik", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'tokens', 'transfer', '{ "symbol": "TKN.TEST", "quantity": "100", "to": "binance-hot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'tokens', 'transfer', '{ "symbol": "TKN.TEST", "quantity": "100", "to": "john--wesley", "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1025,6 +1056,7 @@ describe('Tokens smart contract', function () {
       console.log(JSON.parse(transactionsBlock1[10].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[11].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[12].logs).errors[0]);
+      console.log(JSON.parse(transactionsBlock1[13].logs).errors[0]);
 
       assert.equal(JSON.parse(transactionsBlock1[4].logs).errors[0], 'you must use a custom_json signed with your active key');
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'cannot transfer to self');
@@ -1035,6 +1067,7 @@ describe('Tokens smart contract', function () {
       assert.equal(JSON.parse(transactionsBlock1[10].logs).errors[0], 'balance does not exist');
       assert.equal(JSON.parse(transactionsBlock1[11].logs).errors[0], 'overdrawn balance');
       assert.equal(JSON.parse(transactionsBlock1[12].logs).errors[0], 'not allowed to send to binance-hot');
+      assert.equal(JSON.parse(transactionsBlock1[13].logs).errors[0], 'invalid to');
 
       resolve();
     })

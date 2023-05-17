@@ -20,7 +20,12 @@ let server = null;
 let database = null;
 
 const requestLogger = function (req, _, next) {
-  console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(req.body)}`);
+  let truncatedBody = req.body;
+  if (Array.isArray(req.body) && req.body.length > 10) {
+    console.log(`Incoming batch request truncated to length 10 from ${req.body.length}`);
+    truncatedBody = req.body.slice(0, 10);
+  }
+  console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(truncatedBody)}`);
   next();
 }
 
@@ -341,9 +346,13 @@ const init = async (conf, callback) => {
   if (config.rpcConfig.logRequests) {
     serverRPC.use(requestLogger);
   }
-  serverRPC.post('/blockchain', jayson.server(blockchainRPC()).middleware());
-  serverRPC.post('/contracts', jayson.server(contractsRPC()).middleware());
-  serverRPC.post('/', jayson.server(multiRPC()).middleware());
+  serverRPC.post('/blockchain', jayson.server(blockchainRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
+  serverRPC.post('/contracts', jayson.server(contractsRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
+  serverRPC.post('/', jayson.server(multiRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
+  serverRPC.use((err, _req, res, _next) => {
+    console.error(err);
+    res.status(500).json({ error: 'Error processing requests' });
+  });
   serverRPC.get('/', async (_, res) => {
     try {
       const status = await generateStatus();
@@ -361,7 +370,7 @@ const init = async (conf, callback) => {
 
 
   if (rpcWebsockets.enabled) {
-    const wssServer = new jayson.Server(multiRPC());
+    const wssServer = new jayson.Server(multiRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength });
 
     wssServer.websocket({
       port: rpcWebsockets.port,
