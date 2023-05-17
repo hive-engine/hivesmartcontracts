@@ -25,6 +25,7 @@
     "rpcConfig" : {
         "maxLimit" : 1000,
         "maxOffset" : -1,
+        "maxBatchLength" : 1,
         "logRequests" : false,
         "disabledMethods" : {
             "blockchain" : ["getBlockRangeInfo"],
