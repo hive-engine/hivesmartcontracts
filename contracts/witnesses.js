@@ -803,10 +803,8 @@ actions.proposeRound = async (payload) => {
     round,
     lastBlockRound,
     currentWitness,
-    numberOfTopWitnesses
   } = params;
 
-  const blocksToRewardFor = numberOfTopWitnesses + 1;
   const schedules = await api.db.find('schedules', { round }, 1000, 0, [{ index: '_id', descending: false }]);
 
   const numberOfWitnessSlots = schedules.length;
@@ -885,7 +883,7 @@ actions.proposeRound = async (payload) => {
           const contractBalance = await api.db.findOneInTable('tokens', 'contractsBalances', { account: 'witnesses', symbol: UTILITY_TOKEN_SYMBOL });
           if (contractBalance
             && api.BigNumber(contractBalance.balance).gte(NB_TOKENS_NEEDED_BEFORE_REWARDING)) {
-              const rewardAmount =  api.BigNumber(NB_TOKENS_TO_REWARD_PER_BLOCK).multipliedBy(blocksToRewardFor).toFixed(UTILITY_TOKEN_PRECISION);
+              const rewardAmount =  api.BigNumber(NB_TOKENS_TO_REWARD_PER_BLOCK).multipliedBy(numberOfWitnessSlots).toFixed(UTILITY_TOKEN_PRECISION);
               await api.executeSmartContract('tokens', 'stakeFromContract', {
                 to: currentWitness, symbol: UTILITY_TOKEN_SYMBOL, quantity: rewardAmount,
               });
