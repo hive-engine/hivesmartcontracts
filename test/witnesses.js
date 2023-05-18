@@ -1366,10 +1366,15 @@ describe('witnesses', function () {
         i += 1;
       }
 
-      for (i = 0; i < schedules.length; i += 1) {
-        await tableAsserts.assertUserBalances({ account: schedules[i].witness, symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, balance: "0", stake: "0.01902586" });
-      }
+      // Ensure witness who sent round got paid (last witness)
+      await tableAsserts.assertUserBalances({ account: schedules[schedules.length - 1].witness, symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, balance: "0", stake: "0.39954306" });
 
+
+      // Ensure all witnesses did not get paid
+      for (i = 0; i < schedules.length - 1; i += 1) {
+        await tableAsserts.assertUserBalances({ account: schedules[i].witness, symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL}); // Expecting no balance
+      }
+      
       resolve();
     })
       .then(() => {

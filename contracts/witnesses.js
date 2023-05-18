@@ -8,13 +8,15 @@ const NB_WITNESSES = NB_TOP_WITNESSES + NB_BACKUP_WITNESSES;
 const NB_WITNESSES_SIGNATURES_REQUIRED = 14;
 const MAX_ROUNDS_MISSED_IN_A_ROW = 3; // after that the witness is disabled
 const MAX_ROUND_PROPOSITION_WAITING_PERIOD = 40; // number of blocks
-const NB_TOKENS_TO_REWARD = '0.01902586'; // inflation.js tokens per block
-const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.0951293'; // 5x to reward
+const NB_TOKENS_TO_REWARD_PER_BLOCK = '0.01902586'; // inflation.js tokens per block
+const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.39954306'; // 21x to reward
 // eslint-disable-next-line max-len
 const WITNESS_APPROVE_EXPIRE_BLOCKS = 5184000; // Approximately half a year, 20 blocks a minute * 60 minutes an hour * 24 hours a day * 180 days
 const WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK = 10;
 // eslint-disable-next-line no-template-curly-in-string
 const UTILITY_TOKEN_SYMBOL = "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'";
+// eslint-disable-next-line no-template-curly-in-string
+const UTILITY_TOKEN_PRECISION = '${CONSTANTS.UTILITY_TOKEN_PRECISION}$';
 // eslint-disable-next-line no-template-curly-in-string
 const GOVERNANCE_TOKEN_SYMBOL = "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'";
 // eslint-disable-next-line no-template-curly-in-string
@@ -801,7 +803,10 @@ actions.proposeRound = async (payload) => {
     round,
     lastBlockRound,
     currentWitness,
+    numberOfTopWitnesses
   } = params;
+
+  const blocksToRewardFor = numberOfTopWitnesses + 1;
   const schedules = await api.db.find('schedules', { round }, 1000, 0, [{ index: '_id', descending: false }]);
 
   const numberOfWitnessSlots = schedules.length;
@@ -871,25 +876,19 @@ actions.proposeRound = async (payload) => {
             await api.verifyBlock(verifiedBlockInformation[index]);
           }
 
-          // get contract balance
-          const contractBalance = await api.db.findOneInTable('tokens', 'contractsBalances', { account: 'witnesses', symbol: UTILITY_TOKEN_SYMBOL });
-          let rewardWitnesses = false;
-
-          if (contractBalance
-            && api.BigNumber(contractBalance.balance).gte(NB_TOKENS_NEEDED_BEFORE_REWARDING)) {
-            rewardWitnesses = true;
-          }
-
           // remove the schedules
           for (let index = 0; index < schedules.length; index += 1) {
             const schedule = schedules[index];
-            // reward the witness that help verifying this round
-            if (rewardWitnesses === true) {
-              await api.executeSmartContract('tokens', 'stakeFromContract', {
-                to: schedule.witness, symbol: UTILITY_TOKEN_SYMBOL, quantity: NB_TOKENS_TO_REWARD,
-              });
-            }
             await api.db.remove('schedules', schedule);
+          }
+          // reward the current witness
+          const contractBalance = await api.db.findOneInTable('tokens', 'contractsBalances', { account: 'witnesses', symbol: UTILITY_TOKEN_SYMBOL });
+          if (contractBalance
+            && api.BigNumber(contractBalance.balance).gte(NB_TOKENS_NEEDED_BEFORE_REWARDING)) {
+              const rewardAmount =  api.BigNumber(NB_TOKENS_TO_REWARD_PER_BLOCK).multipliedBy(blocksToRewardFor).toFixed(UTILITY_TOKEN_PRECISION);
+              await api.executeSmartContract('tokens', 'stakeFromContract', {
+                to: currentWitness, symbol: UTILITY_TOKEN_SYMBOL, quantity: rewardAmount,
+              });
           }
 
           params.currentWitness = null;
