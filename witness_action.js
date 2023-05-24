@@ -107,7 +107,7 @@ program
       exec(`node find_divergent_block.js -h -n ${engineNode}`).on('exit', (code) => {
         if (code != 0) {
           // eslint-disable-next-line no-console
-          console.log(`A divergent block was found, not registering. Run node find_divergent -n ${engineNode} to learn where.`)
+          console.log(`A divergent block was found, not registering. Run node find_divergent_block.js -n ${engineNode} to learn where.`)
           return
         } else {
           broadcastWitnessAction('register', {
