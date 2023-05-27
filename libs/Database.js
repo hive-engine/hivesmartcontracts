@@ -739,9 +739,10 @@ class Database {
             }
           }
 
-          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session }).maxTimeMS(fromRPC ? config.rpcConfig.maxDBTimeMS : 60000);
+          result = await tableData.find(EJSON.deserialize(query), { session: this.session }).maxTimeMS(fromRPC ? config.rpcConfig.maxDBTimeMS : 60000);
           if (result) {
             result = EJSON.serialize(result);
+            result = result[0];
           }
         }
       }
