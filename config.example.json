@@ -26,6 +26,7 @@
         "maxLimit" : 1000,
         "maxOffset" : -1,
         "maxBatchLength" : 1,
+        "maxDBTimeMS" : 1000,
         "logRequests" : false,
         "disabledMethods" : {
             "blockchain" : ["getBlockRangeInfo"],

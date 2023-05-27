@@ -674,7 +674,7 @@ class Database {
               skip: off,
               sort,
               session: this.session,
-            }).toArray();
+            }).maxTimeMS(fromRPC ? config.rpcConfig.maxDBTimeMS : 60000).toArray();
 
             result = EJSON.serialize(result);
           } else {
@@ -683,7 +683,7 @@ class Database {
               skip: off,
               sort: ['_id', 'asc'],
               session: this.session,
-            }).toArray();
+            }).maxTimeMS(fromRPC ? config.rpcConfig.maxDBTimeMS : 60000).toArray();
             result = EJSON.serialize(result);
           }
         }
@@ -704,7 +704,7 @@ class Database {
    * @param {JSON} query query to perform on the table
    * @returns {Object} returns a record if it exists, null otherwise
    */
-  async findOne(payload) { // eslint-disable-line no-unused-vars
+  async findOne(payload, fromRPC = false) { // eslint-disable-line no-unused-vars
     try {
       const { contract, table, query } = payload;
       log.info('findOne payload ', payload);
@@ -739,7 +739,7 @@ class Database {
             }
           }
 
-          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session });
+          result = await tableData.findOne(EJSON.deserialize(query), { session: this.session }).maxTimeMS(fromRPC ? config.rpcConfig.maxDBTimeMS : 60000);
           if (result) {
             result = EJSON.serialize(result);
           }

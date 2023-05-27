@@ -232,7 +232,7 @@ function contractsRPC() {
             contract,
             table,
             query,
-          });
+          }, true);
 
           callback(null, result);
         } else {
