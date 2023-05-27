@@ -706,48 +706,12 @@ class Database {
    */
   async findOne(payload, fromRPC = false) { // eslint-disable-line no-unused-vars
     try {
-      const { contract, table, query } = payload;
-      log.info('findOne payload ', payload);
-      let result = null;
-      if (contract && typeof contract === 'string'
-        && table && typeof table === 'string'
-        && query && typeof query === 'object') {
-        if (query.$loki) {
-          query._id = query.$loki; // eslint-disable-line no-underscore-dangle
-          delete query.$loki;
-        }
-        const finalTableName = `${contract}_${table}`;
-        const contractInDb = await this.findContract({ name: contract });
-        let tableData = null;
-        if (contractInDb && contractInDb.tables[finalTableName] !== undefined) {
-          tableData = this.database.collection(finalTableName);
-        }
-        if (tableData) {
-          const customPrimaryKey = contractInDb.tables[finalTableName].primaryKey;
-          if (customPrimaryKey) {
-            adjustQueryForPrimaryKey(query, customPrimaryKey);
-          }
-
-          if (this.session) {
-            const cacheKey = objectCacheKey(contract, table, query);
-            if (cacheKey) {
-              if (this.objectCache[cacheKey]) {
-                return this.objectCache[cacheKey];
-              }
-            } else {
-              await this.flushCache();
-            }
-          }
-
-          result = await tableData.find(EJSON.deserialize(query), { session: this.session }).maxTimeMS(fromRPC ? config.rpcConfig.maxDBTimeMS : 60000);
-          if (result) {
-            result = EJSON.serialize(result);
-            result = result[0];
-          }
-        }
+      payload.limit = 1;
+      let res = await this.find(payload, fromRPC);
+      if (res[0]){
+        res = res[0];
       }
-
-      return result;
+      return res;
     } catch (error) {
       // eslint-disable-next-line no-console
       log.error(error);
