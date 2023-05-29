@@ -46,13 +46,13 @@ async function getBlock(blockNumber, tries = 1) {
   id += 1;
   try {
     return (await axios({
-      url: `${node}/blockchain`,
+      url: `${node}`,
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       data: {
-        jsonrpc: '2.0', id, method: 'getBlockInfo', params: { blockNumber },
+        jsonrpc: '2.0', id, method: 'blockchain.getBlockInfo', params: { blockNumber },
       },
     })).data.result;
   } catch (error) {
