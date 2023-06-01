@@ -462,11 +462,11 @@ class Database {
 
   /**
    * Update contracts configuration data.
-   * @param {Object} config data.
+   * @param {Object} newConfig data.
    */
-  async updateContractsConfig(config) {
+  async updateContractsConfig(newConfig) {
     const contractsConfig = await this.getCollection('contracts_config');
-    await contractsConfig.updateOne({}, { $set: config }, { session: this.session });
+    await contractsConfig.updateOne({}, { $set: newConfig }, { session: this.session });
   }
 
   /**
