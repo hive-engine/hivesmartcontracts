@@ -4,9 +4,9 @@ const SHA256 = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
 const log = require('loglevel');
 const validator = require('validator');
-const config = require('../config.json');
 const { MongoClient } = require('mongodb');
 const { EJSON } = require('bson');
+const config = require('../config.json');
 const { CONSTANTS } = require('../libs/Constants');
 
 // Change this to turn on hash logging.
@@ -319,8 +319,8 @@ class Database {
 
   async getBlockRangeInfo(startBlockNumber, count) {
     try {
-      const blocks = typeof startBlockNumber === 'number' && Number.isInteger(startBlockNumber) && typeof count === 'number' && Number.isInteger(count) 
-        ? await this.chain.find({ _id: { $gte :  startBlockNumber, $lt : startBlockNumber + count } }, { limit: 1000, session: this.session, sort: ['_id', 'asc'] }).toArray()
+      const blocks = typeof startBlockNumber === 'number' && Number.isInteger(startBlockNumber) && typeof count === 'number' && Number.isInteger(count)
+        ? await this.chain.find({ _id: { $gte: startBlockNumber, $lt: startBlockNumber + count } }, { limit: 1000, session: this.session, sort: ['_id', 'asc'] }).toArray()
         : null;
       return EJSON.serialize(blocks);
     } catch (error) {
@@ -667,7 +667,7 @@ class Database {
               log.info(`Index ${JSON.stringify(ind)} not available for ${finalTableName}`); // eslint-disable-line no-console
             }
             if (sort.findIndex(el => el[0] === '_id') < 0) {
-                sort.push(['_id', 'asc']);
+              sort.push(['_id', 'asc']);
             }
             result = await tableData.find(EJSON.deserialize(query), {
               limit: lim,
@@ -1060,7 +1060,7 @@ class Database {
     }
     const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
     if (params && params.lastVerifiedBlockNumber) {
-      console.log(`cleaning up light node blocks and transactions`);
+      console.log('cleaning up light node blocks and transactions');
       const cleanupUntilBlock = params.lastVerifiedBlockNumber - 1 - this.blocksToKeep;
       await this.cleanupBlocks(cleanupUntilBlock);
       await this.cleanupTransactions(cleanupUntilBlock);

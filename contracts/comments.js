@@ -448,7 +448,7 @@ async function tokenMaintenance() {
 
       const nextClaimDecayTimestamp = lastClaimDecayTimestamp + rewardIntervalDurationMillis;
       if (nextClaimDecayTimestamp >= nextRewardTimestamp) {
-        let rewardPerInterval = config.rewardPerInterval;
+        let { rewardPerInterval } = config;
         if (config.rewardReductionIntervalSeconds && config.rewardReductionPercentage) {
           const rewardReductionIntervalMillis = config.rewardReductionIntervalSeconds * 1000;
           const nextRewardReductionTimestamp = rewardPool.lastRewardReductionTimestamp + rewardReductionIntervalMillis;
@@ -565,7 +565,7 @@ actions.createRewardPool = async (payload) => {
     appTaxConfig,
     excludeTags,
     rewardReductionIntervalSeconds,
-    rewardReductionPercentage
+    rewardReductionPercentage,
   } = config;
 
   if (!api.assert(postRewardCurve && postRewardCurve === 'power', 'postRewardCurve should be one of: [power]')) return;
@@ -604,7 +604,7 @@ actions.createRewardPool = async (payload) => {
   if (!api.assert(!rewardReductionIntervalSeconds || (Number.isInteger(rewardReductionIntervalSeconds) && rewardReductionIntervalSeconds >= rewardIntervalSeconds), 'rewardReductionIntervalSeconds should be an integer greater or equal to rewardIntervalSeconds')) return;
   const rewardReductionPercentageDecimal = api.BigNumber(rewardReductionPercentage);
   if (!api.assert(!rewardReductionPercentage || (typeof rewardReductionPercentage === 'string' && rewardReductionPercentageDecimal.isFinite() && rewardReductionPercentageDecimal.gte('0') && rewardReductionPercentageDecimal.lte('100') && rewardReductionPercentageDecimal.dp() <= 1), 'rewardReductionPercentage should be between "0" and "100" with precision at most 1')) return;
-    
+
 
   // for now, restrict to 1 pool per symbol, and creator must be issuer.
   // eslint-disable-next-line no-template-curly-in-string
@@ -644,7 +644,7 @@ actions.createRewardPool = async (payload) => {
       appTaxConfig,
       excludeTags,
       rewardReductionIntervalSeconds,
-      rewardReductionPercentage
+      rewardReductionPercentage,
     },
     pendingClaims: '0',
     active: true,
@@ -704,7 +704,7 @@ actions.updateRewardPool = async (payload) => {
     appTaxConfig,
     excludeTags,
     rewardReductionIntervalSeconds,
-    rewardReductionPercentage
+    rewardReductionPercentage,
   } = config;
 
   const existingRewardPool = await api.db.findOne('rewardPools', { _id: rewardPoolId });
