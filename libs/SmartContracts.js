@@ -22,8 +22,8 @@ class SmartContracts {
   static async deploySmartContract(
     database, transaction, blockNumber, timestamp, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
   ) {
+    const { transactionId, refHiveBlockNumber, sender } = transaction;
     try {
-      const { transactionId, refHiveBlockNumber, sender } = transaction;
       const payload = JSON.parse(transaction.payload);
       const { name, params, code } = payload;
 
@@ -244,8 +244,14 @@ class SmartContracts {
       }
       return { logs: { errors: ['parameters name and code are mandatory and they must be strings'] } };
     } catch (e) {
-      // console.error('ERROR DURING CONTRACT DEPLOYMENT: ', name, e);
-      return { logs: { errors: [`${e.name}: ${e.message}`] } };
+      // log.error('ERROR DURING CONTRACT DEPLOYMENT: ', e);
+      if (refHiveBlockNumber <= 76149072) { // Approximately Sunday July 25 UTC
+        if (e.message.includes('Unexpected identifier')) {
+          e.message = 'Unexpected identifier';
+        }
+        return { logs: { errors: [`${e.name}: ${e.message}`] } };
+      }
+      return { logs: { errors: ['A node.js error occoured during deployment'] } };
     }
   }
 
