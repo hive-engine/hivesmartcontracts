@@ -1506,10 +1506,10 @@ describe('Smart Contracts', function ()  {
 
       let transactions = [];
       const crashTx = fixture.getNextTxId();
-      transactions.push(new Transaction(75656719, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
+      transactions.push(new Transaction(76149073, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
 
       let block = {
-        refHiveBlockNumber: 75656719,
+        refHiveBlockNumber: 76149073,
         refHiveBlockId: 'ABCD1',
         prevRefHiveBlockId: 'ABCD2',
         timestamp: '2018-06-01T00:00:00',
