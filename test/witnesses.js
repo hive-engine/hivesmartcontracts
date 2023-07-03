@@ -1618,6 +1618,10 @@ describe('witnesses', function () {
 
         await fixture.sendBlock(block);
       }
+  
+      const changeBlock = await fixture.database.getBlockInfo(22); // Witness changed on round 22
+      const vopLogs = JSON.parse(changeBlock.virtualTransactions[0].logs);
+      assert.equal(JSON.stringify(vopLogs.events[0]), '{"contract":"witnesses","event":"witnessMissedRound","data":{"witness":"witness6"}}');
 
       res = await fixture.database.findOne({
         contract: 'witnesses',

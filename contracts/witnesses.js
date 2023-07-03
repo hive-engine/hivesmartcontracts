@@ -509,6 +509,9 @@ const changeCurrentWitness = async () => {
         scheduledWitness.missedRounds += 1;
         scheduledWitness.missedRoundsInARow += 1;
 
+        // Emit that witness missed round
+        api.emit('witnessMissedRound', { witness: scheduledWitness.account });
+
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
@@ -563,6 +566,9 @@ const changeCurrentWitness = async () => {
         const scheduledWitness = await api.db.findOne('witnesses', { account: currentWitness });
         scheduledWitness.missedRounds += 1;
         scheduledWitness.missedRoundsInARow += 1;
+
+        // Emit that witness missed round
+        api.emit('witnessMissedRound', { witness: scheduledWitness.account });
 
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
