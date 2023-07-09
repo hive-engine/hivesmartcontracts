@@ -223,15 +223,25 @@ function contractsRPC() {
 
     findOne: async (args, callback) => {
       try {
-        const { contract, table, query } = args;
+        const { contract, table, query, project } = args;
+        const prj = project || {};
+        if (!config.rpcConfig.allowArbitraryProject && prj && typeof prj === 'object' && !Object.values(prj).every(x => (x === 0 || x === 1))) {
+          callback({
+            code: 400,
+            message: 'arbitrary key for project is not allowed, you may only include or exclude existing keys',
+          }, null);
+          return;
+        }
 
         if (contract && typeof contract === 'string'
           && table && typeof table === 'string'
-          && query && typeof query === 'object') {
+          && query && typeof query === 'object'
+          && prj && typeof prj === 'object') {
           const result = await database.findOne({
             contract,
             table,
             query,
+            project : prj
           });
 
           callback(null, result);
@@ -255,6 +265,7 @@ function contractsRPC() {
           limit,
           offset,
           indexes,
+          project
         } = args;
 
         if (contract && typeof contract === 'string'
@@ -263,7 +274,7 @@ function contractsRPC() {
           const lim = limit || config.rpcConfig.maxLimit;
           const off = offset || 0;
           const ind = indexes || [];
-
+          const prj = project || {};
           if (lim > config.rpcConfig.maxLimit) {
             callback({
               code: 400,
@@ -280,6 +291,14 @@ function contractsRPC() {
             return;
           }
 
+          if (!config.rpcConfig.allowArbitraryProject && typeof prj === 'object' && !Object.values(prj).every(x => (x === 0 || x === 1))) {
+            callback({
+              code: 400,
+              message: 'arbitrary key for project is not allowed, you may only include or exclude existing keys',
+            }, null);
+            return;
+          }
+
           const result = await database.find({
             contract,
             table,
@@ -287,8 +306,8 @@ function contractsRPC() {
             limit: lim,
             offset: off,
             indexes: ind,
+            project : prj,
           }, true);
-
           callback(null, result);
         } else {
           callback({
