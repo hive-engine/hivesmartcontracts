@@ -548,7 +548,7 @@ const changeCurrentWitness = async () => {
           scheduledWitness.enabled = false;
 
           // Emit that witness got disabled
-          api.emit('witnessDisabledForMissingTooManyRounds', { witness: scheduledWitness.account });
+          api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
 
         await api.db.update('witnesses', scheduledWitness);
@@ -609,7 +609,7 @@ const changeCurrentWitness = async () => {
           scheduledWitness.enabled = false;
 
           // Emit that witness got disabled
-          api.emit('witnessDisabledForMissingTooManyRounds', { witness: scheduledWitness.account });
+          api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
 
         await api.db.update('witnesses', scheduledWitness);

@@ -1847,7 +1847,7 @@ describe('witnesses', function () {
       const changeBlock = await fixture.database.getBlockInfo(22); // Witness changed on round 22
       const vopLogs = JSON.parse(changeBlock.virtualTransactions[0].logs);
       assert.equal(JSON.stringify(vopLogs.events[0]), '{"contract":"witnesses","event":"witnessMissedRound","data":{"witness":"witness6"}}');
-      assert.equal(JSON.stringify(vopLogs.events[1]), '{"contract":"witnesses","event":"witnessDisabledForMissingTooManyRounds","data":{"witness":"witness6"}}'); // Check for witness disabled log event
+      assert.equal(JSON.stringify(vopLogs.events[1]), '{"contract":"witnesses","event":"witnessDisabledForMissingTooManyRoundsInARow","data":{"witness":"witness6"}}'); // Check for witness disabled log event
 
       // Ensure witness got disabled
       const witnessWhoShouldBeDisabled = await fixture.database.findOne({
