@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node --max-old-space-size=8192 app.js",
     "lint": "eslint .gitignore .",
+    "lintfix": "eslint .gitignore . --fix",
     "test": "./node_modules/mocha/bin/mocha  --recursive --exit",
     "test0": "./node_modules/mocha/bin/mocha ./test/hivesmartcontracts.js --exit",
     "test1": "./node_modules/mocha/bin/mocha ./test/nft.js --exit",

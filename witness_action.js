@@ -104,30 +104,14 @@ program
 program
   .command('register')
   .action(() => {
-      exec(`node find_divergent_block.js -h -n ${engineNode}`).on('exit', (code) => {
-        if (code != 0) {
-          // eslint-disable-next-line no-console
-          console.log(`A divergent block was found, not registering. Run node find_divergent_block.js -n ${engineNode} to learn where.`)
-          return
-        } else {
-          broadcastWitnessAction('register', registerJSON);
-        }
-      });
-    } else {
-      broadcastWitnessAction('register', registerJSON)
-    }
-  });
-
-program
-  .command('unregister')
-  .action(() => {
     const registerJSON = {
       RPCPort: extRPCNodePort,
       P2PPort: extP2PPort,
       signingKey: publicSigningKey,
       enabled: false,
-    }
-    if (ip && domain){
+    };
+    if (ip && domain) {
+      // eslint-disable-next-line no-console
       console.log('Both domain and IP specified in your .env file, please only use one');
       return;
     } else if (ip) {
@@ -139,7 +123,44 @@ program
       console.log('Missing domain or IP, please add it to your .env file');
       return;
     }
-    broadcastWitnessAction('register', registerJSON)
+    if (diverganceCheck) {
+      exec(`node find_divergent_block.js -h -n ${engineNode}`).on('exit', (code) => {
+        if (code !== 0) {
+          // eslint-disable-next-line no-console
+          console.log(`A divergent block was found, not registering. Run node find_divergent_block.js -n ${engineNode} to learn where.`);
+          return;
+        } else {
+          broadcastWitnessAction('register', registerJSON);
+        }
+      });
+    } else {
+      broadcastWitnessAction('register', registerJSON);
+    }
+  });
+
+program
+  .command('unregister')
+  .action(() => {
+    const registerJSON = {
+      RPCPort: extRPCNodePort,
+      P2PPort: extP2PPort,
+      signingKey: publicSigningKey,
+      enabled: false,
+    };
+    if (ip && domain) {
+      // eslint-disable-next-line no-console
+      console.log('Both domain and IP specified in your .env file, please only use one');
+      return;
+    } else if (ip) {
+      registerJSON.IP = ip;
+    } else if (domain) {
+      registerJSON.domain = domain;
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('Missing domain or IP, please add it to your .env file');
+      return;
+    }
+    broadcastWitnessAction('register', registerJSON);
   });
 
 program.parse(process.argv);
