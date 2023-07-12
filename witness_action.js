@@ -108,7 +108,7 @@ program
       RPCPort: extRPCNodePort,
       P2PPort: extP2PPort,
       signingKey: publicSigningKey,
-      enabled: false,
+      enabled: true,
     };
     if (ip && domain) {
       // eslint-disable-next-line no-console
