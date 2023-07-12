@@ -112,6 +112,7 @@ describe('witnesses', function () {
       transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(witnessesContractPayload)));
       transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'vitalik', 'witnesses', 'register', `{ "IP": "123.255.123.253", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq", "enabled": false, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'bob', 'witnesses', 'register', `{ "domain": "example.com", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark", "enabled": true, "isSignedWithActiveKey": true }`));
 
       let block = {
         refHiveBlockNumber: 37899120,
@@ -134,6 +135,7 @@ describe('witnesses', function () {
 
       assert.equal(witnesses[0].account, 'dan');
       assert.equal(witnesses[0].IP, "123.255.123.254");
+      assert.equal(witnesses[0].domain, undefined);
       assert.equal(witnesses[0].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[0].RPCPort, 5000);
       assert.equal(witnesses[0].P2PPort, 6000);
@@ -142,16 +144,27 @@ describe('witnesses', function () {
 
       assert.equal(witnesses[1].account, 'vitalik');
       assert.equal(witnesses[1].IP, "123.255.123.253");
+      assert.equal(witnesses[1].domain, undefined);
       assert.equal(witnesses[1].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[1].RPCPort, 7000);
       assert.equal(witnesses[1].P2PPort, 8000);
       assert.equal(witnesses[1].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq');
       assert.equal(witnesses[1].enabled, false);
 
+      assert.equal(witnesses[2].account, 'bob');
+      assert.equal(witnesses[2].IP, undefined);
+      assert.equal(witnesses[2].domain, 'example.com');
+      assert.equal(witnesses[2].approvalWeight.$numberDecimal, '0');
+      assert.equal(witnesses[2].RPCPort, 7000);
+      assert.equal(witnesses[2].P2PPort, 8000);
+      assert.equal(witnesses[2].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark');
+      assert.equal(witnesses[2].enabled, true);
+
       transactions = [];
 
       transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.123", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": false, "isSignedWithActiveKey": true }`));
-      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'vitalik', 'witnesses', 'register', `{ "IP": "123.255.123.124", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'vitalik', 'witnesses', 'register', `{ "domain": "example2.com", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'bob', 'witnesses', 'register', `{ "IP": "2001:db8::1", "RPCPort": 7000, "P2PPort": 8000, "signingKey": "STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark", "enabled": false, "isSignedWithActiveKey": true }`));
 
       block = {
         refHiveBlockNumber: 37899121,
@@ -174,6 +187,7 @@ describe('witnesses', function () {
 
       assert.equal(witnesses[0].account, 'dan');
       assert.equal(witnesses[0].IP, "123.255.123.123");
+      assert.equal(witnesses[0].domain, undefined);
       assert.equal(witnesses[0].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[0].RPCPort, 5000);
       assert.equal(witnesses[0].P2PPort, 6000);
@@ -181,13 +195,110 @@ describe('witnesses', function () {
       assert.equal(witnesses[0].enabled, false);
 
       assert.equal(witnesses[1].account, 'vitalik');
-      assert.equal(witnesses[1].IP, "123.255.123.124");
+      assert.equal(witnesses[1].IP, undefined);
+      assert.equal(witnesses[1].domain, 'example2.com');
       assert.equal(witnesses[1].approvalWeight.$numberDecimal, '0');
       assert.equal(witnesses[1].RPCPort, 7000);
       assert.equal(witnesses[1].P2PPort, 8000);
       assert.equal(witnesses[1].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBabq');
       assert.equal(witnesses[1].enabled, true);
 
+      assert.equal(witnesses[2].account, 'bob');
+      assert.equal(witnesses[2].IP, '2001:db8::1');
+      assert.equal(witnesses[2].domain, undefined);
+      assert.equal(witnesses[2].approvalWeight.$numberDecimal, '0');
+      assert.equal(witnesses[2].RPCPort, 7000);
+      assert.equal(witnesses[2].P2PPort, 8000);
+      assert.equal(witnesses[2].signingKey, 'STM8T4zKJuXgjLiKbp6fcsTTUtDY7afwc4XT9Xpf6uakYxwxfBark');
+      assert.equal(witnesses[2].enabled, false);
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('should not register witnesses', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      let transactions = [];
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(witnessesContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(witnessesContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'other', 'witnesses', 'register', `{ "IP": "2001:db8::1", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), 'otherOne', 'witnesses', 'register', `{ "domain": "example.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`));
+
+      let block = {
+        refHiveBlockNumber: 37899120,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      transactions = [];
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": false }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "http://notip.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "RPCPort": 5000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.255", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pR", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "2001:db8::1", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pT", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "IP": "123.255.123.254", "domain" : "example.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsJbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "example.com/", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //non fqdn with trailing /
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "https://example.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //includes protocol
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "example.com.", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //trailing .
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "example_", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //just not a domain
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain" : "lol", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rpmtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`)); //no tls
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "domain": "example.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfaMwt9rimtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(37899121, fixture.getNextTxId(), 'dan', 'witnesses', 'register', `{ "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfaMwt9rimtk518dRzsR1f8Cgw52dQR1pS", "enabled": true, "isSignedWithActiveKey": true }`));
+
+      block = {
+        refHiveBlockNumber: 37899121,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.getLatestBlockInfo();
+      let txs = res.transactions;
+
+      TableAsserts.assertError(txs[0], 'active key required');
+      TableAsserts.assertError(txs[1], 'IP is invalid');
+      TableAsserts.assertError(txs[2], 'RPCPort must be an integer between 0 and 65535');
+      TableAsserts.assertError(txs[3], 'P2PPort must be an integer between 0 and 65535');
+      TableAsserts.assertError(txs[4], 'invalid signing key');
+      TableAsserts.assertError(txs[5], 'enabled must be a boolean');
+      TableAsserts.assertError(txs[6], 'a witness is already using this signing key');
+      TableAsserts.assertError(txs[7], 'a witness is already using this IP/Port');
+      TableAsserts.assertError(txs[8], 'both domain and ip provided');
+      TableAsserts.assertError(txs[9], 'domain is invalid');
+      TableAsserts.assertError(txs[10], 'domain is invalid');
+      TableAsserts.assertError(txs[11], 'domain is invalid');
+      TableAsserts.assertError(txs[12], 'domain is invalid');
+      TableAsserts.assertError(txs[13], 'domain is invalid');
+      TableAsserts.assertError(txs[14], 'a witness is already using this domain/Port');
+      TableAsserts.assertError(txs[15], 'neither domain nor ip provided');
+
+      res = await fixture.database.find({
+        contract: 'witnesses',
+        table: 'witnesses',
+        query: {
+        }
+      });
+      // Only the first two witness should exist.
+      assert(res.length === 2);
       resolve();
     })
       .then(() => {
@@ -1101,7 +1212,7 @@ describe('witnesses', function () {
       for (let index = 0; index < 100; index++) {
         const witnessAccount = `witness${index}`;
         const wif = dhive.PrivateKey.fromLogin(witnessAccount, 'testnet', 'active');
-        transactions.push(new Transaction(37899128, fixture.getNextTxId(), witnessAccount, 'witnesses', 'register', `{ "IP": "123.123.123.${index}", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "${wif.createPublic('TST').toString()}", "enabled": true, "isSignedWithActiveKey": true }`));
+        transactions.push(new Transaction(37899128, fixture.getNextTxId(), witnessAccount, 'witnesses', 'register', `{ "domain": "${witnessAccount}.com", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "${wif.createPublic('TST').toString()}", "enabled": true, "isSignedWithActiveKey": true }`));
       }
 
       let block = {
@@ -1618,6 +1729,10 @@ describe('witnesses', function () {
 
         await fixture.sendBlock(block);
       }
+  
+      const changeBlock = await fixture.database.getBlockInfo(22); // Witness changed on round 22
+      const vopLogs = JSON.parse(changeBlock.virtualTransactions[0].logs);
+      assert.equal(JSON.stringify(vopLogs.events[0]), '{"contract":"witnesses","event":"witnessMissedRound","data":{"witness":"witness6"}}');
 
       res = await fixture.database.findOne({
         contract: 'witnesses',
@@ -1630,6 +1745,131 @@ describe('witnesses', function () {
       params = res;
 
       assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+
+      let schedule = await fixture.database.find({
+        contract: 'witnesses',
+        table: 'schedules',
+        query: {}
+      });
+
+      assert.equal(JSON.stringify(schedule), '[{"_id":1,"witness":"witness8","blockNumber":2,"round":1},{"_id":2,"witness":"witness7","blockNumber":3,"round":1},{"_id":3,"witness":"witness9","blockNumber":4,"round":1},{"_id":4,"witness":"witness5","blockNumber":5,"round":1},{"_id":5,"witness":"witness10","blockNumber":6,"round":1}]');
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('disables witnesses missing more than maxRoundsMissedInARow', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+      let transactions = [];
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(tokenfundsContractPayload)));
+      transactions.push(new Transaction(37899120, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftauctionContractPayload)));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(witnessesContractPayload)));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(witnessesContractPayload)));
+      addGovernanceTokenTransactions(fixture, transactions, 37899120);
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'stake', `{ "to": "${CONSTANTS.HIVE_ENGINE_ACCOUNT}", "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "quantity": "100", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(99999999, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"maxRoundsMissedInARow": 1}')); // Change max miss in a row to just 1 so we don't have to generate a ton of fake blocks
+
+      // register 100 witnesses
+      for (let index = 0; index < 100; index++) {
+        const witnessAccount = `witness${index}`;
+        const wif = dhive.PrivateKey.fromLogin(witnessAccount, 'testnet', 'active');
+        transactions.push(new Transaction(99999999, fixture.getNextTxId(), witnessAccount, 'witnesses', 'register', `{ "IP": "123.123.123.${index}", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "${wif.createPublic('TST').toString()}", "enabled": true, "isSignedWithActiveKey": true }`));
+      }
+
+      let block = {
+        refHiveBlockNumber: 99999999,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      transactions = [];
+      for (let index = 0; index < 30; index++) {
+        transactions.push(new Transaction(100000000, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'approve', `{ "witness": "witness${index + 5}", "isSignedWithActiveKey": true }`));
+      }
+
+      block = {
+        refHiveBlockNumber: 100000000,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'params',
+        query: {
+
+        }
+      });
+
+      let params = res;
+
+      assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.numberOfApprovedWitnesses, 30);
+      assert.equal(params.lastVerifiedBlockNumber, 1);
+      assert.equal(params.currentWitness, 'witness6');
+      assert.equal(params.lastWitnesses.includes('witness6'), true);
+      assert.equal(params.round, 1);
+      assert.equal(params.lastBlockRound, 6);
+      assert.equal(params.maxRoundsMissedInARow, 1);
+
+      // generate 20 blocks
+      for (let index = 30; index < 51; index++) {
+        transactions = [];
+        transactions.push(new Transaction(100000001 + index, fixture.getNextTxId(), 'satoshi', 'whatever', 'whatever', ''));
+
+        block = {
+          refHiveBlockNumber: 100000001 + index,
+          refHiveBlockId: 'ABCD1',
+          prevRefHiveBlockId: 'ABCD2',
+          timestamp: '2018-07-14T00:02:00',
+          transactions,
+        };
+
+        await fixture.sendBlock(block);
+      }
+  
+      const changeBlock = await fixture.database.getBlockInfo(22); // Witness changed on round 22
+      const vopLogs = JSON.parse(changeBlock.virtualTransactions[0].logs);
+      assert.equal(JSON.stringify(vopLogs.events[0]), '{"contract":"witnesses","event":"witnessMissedRound","data":{"witness":"witness6"}}');
+      assert.equal(JSON.stringify(vopLogs.events[1]), '{"contract":"witnesses","event":"witnessDisabledForMissingTooManyRoundsInARow","data":{"witness":"witness6"}}'); // Check for witness disabled log event
+
+      // Ensure witness got disabled
+      const witnessWhoShouldBeDisabled = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'witnesses',
+        query: {
+          account : 'witness6'
+        }
+      });
+      assert.equal(false, witnessWhoShouldBeDisabled.enabled);
+
+      res = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'params',
+        query: {
+
+        }
+      });
+
+      params = res;
+
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
