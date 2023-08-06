@@ -390,6 +390,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "200.00000");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.00000");
 
       transactions = [];
       transactions.push(new Transaction(32713426, fixture.getNextTxId(), 'satoshi', 'witnesses', 'register', `{ "IP": "123.234.123.245", "RPCPort": 5000, "P2PPort": 6000, "signingKey": "STM7sw22HqsXbz7D2CmJfmMwt9rimtk518dRzsR1f8Cgw52dQR1pJ", "enabled": true, "isSignedWithActiveKey": true }`));
@@ -478,6 +479,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 3);
       assert.equal(params[0].totalApprovalWeight, "300.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "200.00002");
 
       resolve();
     })
@@ -593,6 +595,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 3);
       assert.equal(params[0].totalApprovalWeight, "300.00001");
+      assert.equal(params[0].totalEnabledApprovalWeight, "200.00001")
 
       transactions = [];
       transactions.push(new Transaction(37899123, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'disapprove', `{ "witness": "satoshi", "isSignedWithActiveKey": true }`));
@@ -665,6 +668,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "200.00001");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.00001")
 
       resolve();
     })
@@ -758,6 +762,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "200.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.00001")
 
       transactions = [];
       transactions.push(new Transaction(37899124, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'stake', `{ "to": "ned", "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "quantity": "1", "isSignedWithActiveKey": true }`));
@@ -878,6 +883,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "199.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "101.00001");
 
       transactions = [];
       transactions.push(new Transaction(37899126, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'undelegate', `{ "from": "ned", "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "quantity": "2", "isSignedWithActiveKey": true }`));
@@ -960,6 +966,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "197.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "99.00001");
 
       transactions = [];
       transactions.push(new Transaction(37899127, fixture.getNextTxId(), 'harpagon', 'whatever', 'whatever', ''));
@@ -1035,6 +1042,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "201.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "101.00001");
 
       transactions = [];
       transactions.push(new Transaction(37899128, fixture.getNextTxId(), 'ned', 'tokens', 'unstake', `{ "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "quantity": "1", "isSignedWithActiveKey": true }`));
@@ -1110,6 +1118,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "200.75002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.75001");
 
       transactions = [];
       transactions.push(new Transaction(37899129, fixture.getNextTxId(), 'harpagon', 'whatever', 'whatever', ''));
@@ -1185,6 +1194,7 @@ describe('witnesses', function () {
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
       assert.equal(params[0].totalApprovalWeight, "200.25002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.25001");
 
       resolve();
     })
@@ -1252,7 +1262,6 @@ describe('witnesses', function () {
       });
 
       let schedule = res;
-      console.log(schedule);
 
       assert.equal(schedule[0].witness, "witness5");
       assert.equal(schedule[0].blockNumber, 2);
@@ -1285,6 +1294,7 @@ describe('witnesses', function () {
       let params = res;
 
       assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
       assert.equal(params.lastVerifiedBlockNumber, 1);
       assert.equal(params.currentWitness, 'witness7');
@@ -1561,8 +1571,6 @@ describe('witnesses', function () {
         query: {}
       });
 
-      console.log(params);
-
       let blockNum = params.lastVerifiedBlockNumber + 1;
       const endBlockRound = params.lastBlockRound;
 
@@ -1598,7 +1606,6 @@ describe('witnesses', function () {
         signatures,
         isSignedWithActiveKey: true,
       };
-      console.log(json);
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1635,6 +1642,7 @@ describe('witnesses', function () {
       });
 
       assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
       assert.equal(params.lastVerifiedBlockNumber, 6);
       assert.equal(params.currentWitness, newSchedule[newSchedule.length - 1].witness);
@@ -1707,6 +1715,7 @@ describe('witnesses', function () {
       let params = res;
 
       assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
       assert.equal(params.lastVerifiedBlockNumber, 1);
       assert.equal(params.currentWitness, 'witness6');
@@ -1744,7 +1753,7 @@ describe('witnesses', function () {
 
       params = res;
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
@@ -1820,6 +1829,7 @@ describe('witnesses', function () {
       let params = res;
 
       assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
       assert.equal(params.lastVerifiedBlockNumber, 1);
       assert.equal(params.currentWitness, 'witness6');
@@ -1869,7 +1879,7 @@ describe('witnesses', function () {
 
       params = res;
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
@@ -1919,11 +1929,11 @@ describe('witnesses', function () {
         query: {}
       });
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"0","totalEnabledApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"witnessApproveExpireBlocks":100}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","totalEnabledApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"witnessApproveExpireBlocks":100}'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1942,13 +1952,13 @@ describe('witnesses', function () {
         query: {}
       });
 
-      const paramsString = '{"_id":1,"totalApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"maxRoundsMissedInARow":4,"maxRoundPropositionWaitingPeriod":21,"witnessApproveExpireBlocks":100}';
+      const paramsString = '{"_id":1,"totalApprovalWeight":"0","totalEnabledApprovalWeight":"0","numberOfApprovedWitnesses":0,"lastVerifiedBlockNumber":0,"round":0,"lastBlockRound":0,"currentWitness":null,"blockNumberWitnessChange":0,"lastWitnesses":[],"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"maxRoundsMissedInARow":4,"maxRoundPropositionWaitingPeriod":21,"witnessApproveExpireBlocks":100}';
       assert.equal(JSON.stringify(params), paramsString);
 
       // Verify 1 backup witness condition in setting
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"2","numberOfApprovedWitnesses":2,"lastVerifiedBlockNumber":2,"round":2,"lastBlockRound":2,"currentWitness":"ignore","blockNumberWitnessChange":2,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":22,"maxRoundsMissedInARow":5,"numberOfApprovalsPerAccount":32,"numberOfTopWitnesses":6,"numberOfWitnessSlots":6,"witnessSignaturesRequired":17}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"2","totalEnabledApprovalWeight":"2","numberOfApprovedWitnesses":2,"lastVerifiedBlockNumber":2,"round":2,"lastBlockRound":2,"currentWitness":"ignore","blockNumberWitnessChange":2,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":22,"maxRoundsMissedInARow":5,"numberOfApprovalsPerAccount":32,"numberOfTopWitnesses":6,"numberOfWitnessSlots":6,"witnessSignaturesRequired":17}'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -1977,7 +1987,7 @@ describe('witnesses', function () {
       // Verify witnessApproveExpireBlocks > numberOfWitnessSlots
       transactions = [];
       refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"witnessApproveExpireBlocks":1}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'witnesses', 'updateParams', '{"totalApprovalWeight":"1","totalEnabledApprovalWeight":"1","numberOfApprovedWitnesses":1,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":1,"currentWitness":"ignore","blockNumberWitnessChange":1,"lastWitnesses":["ignore"],"maxRoundPropositionWaitingPeriod":21,"maxRoundsMissedInARow":4,"numberOfApprovalsPerAccount":31,"numberOfTopWitnesses":5,"numberOfWitnessSlots":6,"witnessSignaturesRequired":16,"witnessApproveExpireBlocks":1}'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -2067,6 +2077,7 @@ describe('witnesses', function () {
       let params = res;
 
       assert.equal(params.totalApprovalWeight, '3000.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
       assert.equal(params.lastVerifiedBlockNumber, 1);
       assert.equal(params.currentWitness, 'witness6');
@@ -2113,10 +2124,20 @@ describe('witnesses', function () {
 
         }
       });
-
       for (const witness of res) {
         assert.match(witness.approvalWeight["$numberDecimal"], /(0.0000|0)/) //Ensure all votes are gone
       }
+
+      res = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'params',
+        query: {
+
+        }
+      });
+      params = res;
+      assert.equal(params.totalApprovalWeight, '0.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '0.00000');
       resolve();
     })
       .then(() => {
@@ -2206,6 +2227,7 @@ describe('witnesses', function () {
       let params = res;
 
       assert.equal(params.totalApprovalWeight, '299.90000');
+      assert.equal(params.totalEnabledApprovalWeight, '299.90000');
       assert.equal(params.numberOfApprovedWitnesses, 2999);
       assert.equal(params.lastVerifiedBlockNumber, 2);
       assert.equal(params.currentWitness, 'witness2');
@@ -2262,6 +2284,17 @@ describe('witnesses', function () {
       for (const witness of res) {
         assert.match(witness.approvalWeight["$numberDecimal"], /(0.0000|0)/) //Ensure all votes are gone
       }
+      res = await fixture.database.findOne({
+        contract: 'witnesses',
+        table: 'params',
+        query: {
+
+        }
+      });
+
+      params = res;
+      assert.equal(params.totalApprovalWeight, '0.00000');
+      assert.equal(params.totalEnabledApprovalWeight, '0.00000');
       resolve();
     })
       .then(() => {
