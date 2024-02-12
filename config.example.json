@@ -36,5 +36,6 @@
     "rpcWebsockets" : {
         "enabled" : true,
         "port" : 5002
-    }
+    },
+    "useBlockApi": false
 }
