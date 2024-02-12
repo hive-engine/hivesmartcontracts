@@ -244,7 +244,7 @@ class SmartContracts {
       }
       return { logs: { errors: ['parameters name and code are mandatory and they must be strings'] } };
     } catch (e) {
-      // log.error('ERROR DURING CONTRACT DEPLOYMENT: ', e);
+      log.error('ERROR DURING CONTRACT DEPLOYMENT: ', e);
       if (refHiveBlockNumber <= 76149072) { // Approximately Sunday July 25 UTC
         if (e.message.includes('Unexpected identifier')) {
           e.message = 'Unexpected identifier';
