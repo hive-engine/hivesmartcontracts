@@ -109,7 +109,6 @@ async function producePendingTransactions(
     try {
       await session.withTransaction(async (liveSession) => {
         log.info(`WithTransaction invoked for block ${newBlock.blockNumber}`);
-        await database.updateSessionIfNecessary(liveSession);
         try {
           await newBlock.produceBlock(database, javascriptVMTimeout, mainBlock);
           log.info(`ProduceBlock finished for block ${newBlock.blockNumber}`);
