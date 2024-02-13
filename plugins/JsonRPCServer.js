@@ -3,6 +3,7 @@ const http = require('http');
 const cors = require('cors');
 const express = require('express');
 const bodyParser = require('body-parser');
+const morgan = require('morgan');
 const { IPC } = require('../libs/IPC');
 const { Database } = require('../libs/Database');
 
@@ -18,16 +19,6 @@ const ipc = new IPC(PLUGIN_NAME);
 let serverRPC = null;
 let server = null;
 let database = null;
-
-const requestLogger = function (req, _, next) {
-  let truncatedBody = req.body;
-  if (Array.isArray(req.body) && req.body.length > 10) {
-    console.log(`Incoming batch request truncated to length 10 from ${req.body.length}`);
-    truncatedBody = req.body.slice(0, 10);
-  }
-  console.log(`Incoming request from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress} - ${JSON.stringify(truncatedBody)}`);
-  next();
-}
 
 async function generateStatus() {
   return new Promise(async (resolve, reject) => {
@@ -362,7 +353,9 @@ const init = async (conf, callback) => {
   serverRPC.set('trust proxy', true);
   serverRPC.set('trust proxy', 'loopback');
   if (config.rpcConfig.logRequests) {
-    serverRPC.use(requestLogger);
+    morgan.token('ip', (req, res) => req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress);
+    morgan.token('body', (req, res) => JSON.stringify(req.body));
+    serverRPC.use(morgan(':method | :status | :url | :ip | :response-time ms | :body'));
   }
   serverRPC.post('/blockchain', jayson.server(blockchainRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
   serverRPC.post('/contracts', jayson.server(contractsRPC(), { maxBatchLength : config.rpcConfig.maxBatchLength }).middleware());
