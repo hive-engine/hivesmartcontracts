@@ -11,7 +11,7 @@ const conf = require('./config');
 const { Database } = require('./libs/Database');
 
 program
-  .option('-n, --node [url]', 'compare with given node', 'https://api.hive-engine.com/rpc')
+  .option('-n, --node [url]', 'compare with given node', 'https://api.hive-engine.com/rpc/')
   .option('-h, --head-only', 'compare only the head block')
   .parse(process.argv);
 
