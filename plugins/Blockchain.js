@@ -16,7 +16,7 @@ let database = null;
 let javascriptVMTimeout = 0;
 let producing = false;
 let stopRequested = false;
-let enableHashVerification = false;
+let hashVerificationNode = false;
 
 const createGenesisBlock = async (payload) => {
   // check if genesis block hasn't been generated already
@@ -77,8 +77,8 @@ async function producePendingTransactions(
 
     const session = database.startSession();
 
-    const mainBlock = !enableHashVerification ? null : (await axios({
-      url: 'https://api.hive-engine.com/rpc/blockchain',
+    const mainBlock = !hashVerificationNode ? null : (await axios({
+      url: hashVerificationNode,
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -168,7 +168,7 @@ const init = async (conf, callback) => {
     databaseName,
   } = conf;
   javascriptVMTimeout = conf.javascriptVMTimeout; // eslint-disable-line prefer-destructuring
-  enableHashVerification = conf.enableHashVerification; // eslint-disable-line prefer-destructuring
+  hashVerificationNode = conf.hashVerificationNode; // eslint-disable-line prefer-destructuring
   log.setDefaultLevel(conf.defaultLogLevel ? conf.defaultLogLevel : 'warn');
 
   database = new Database();
