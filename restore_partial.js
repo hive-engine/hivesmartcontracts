@@ -25,7 +25,7 @@ const conf = require('./config');
 const { Database } = require('./libs/Database');
 
 program
-  .option('-n, --node [url]', 'compare with given node', 'https://api.hive-engine.com/rpc')
+  .option('-n, --node [url]', 'compare with given node', 'https://api.hive-engine.com/rpc/')
   .option('-a, --archive [archive]', 'archive to restore')
   .option('-s, --snapshot-url [url]', 'base directory of light node snapshots to download', 'https://snap.primersion.com/light/')
   .option('-d, --drop', 'drops the database instead of trying to repair')
@@ -46,13 +46,13 @@ async function getBlock(blockNumber, tries = 1) {
   id += 1;
   try {
     return (await axios({
-      url: `${node}/blockchain`,
+      url: `${node}`,
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       data: {
-        jsonrpc: '2.0', id, method: 'getBlockInfo', params: { blockNumber },
+        jsonrpc: '2.0', id, method: 'blockchain.getBlockInfo', params: { blockNumber },
       },
     })).data.result;
   } catch (error) {
