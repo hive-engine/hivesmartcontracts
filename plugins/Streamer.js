@@ -21,24 +21,32 @@ class ForkException {
   }
 }
 
+// Streamer config
+let antiForkBufferMaxSize = 2;
+let maxQps = 1;
+let lookaheadBufferSize = 5;
+let useBlockApi = false;
+// End Streamer config
+
 let currentHiveBlock = 0;
 let hiveHeadBlockNumber = 0;
 let stopStream = false;
-const antiForkBufferMaxSize = 2;
-const buffer = new Queue(antiForkBufferMaxSize);
+let buffer = null; // initialized by init()
 let chainIdentifier = '';
 let blockStreamerHandler = null;
 let updaterGlobalPropsHandler = null;
 let lastBlockSentToBlockchain = 0;
 
 // For block prefetch mechanism
-const maxQps = 1;
 let capacity = 0;
 let totalInFlightRequests = 0;
 const inFlightRequests = {};
 const pendingRequests = [];
 const totalRequests = {};
 const totalTime = {};
+let lookaheadStartIndex = 0;
+let lookaheadStartBlock = currentHiveBlock;
+let blockLookaheadBuffer = null; // initialized by init()
 
 const getCurrentBlock = () => currentHiveBlock;
 
@@ -60,7 +68,7 @@ const translateAsset = (asset) => {
 }
 
 // parse the transactions found in a Hive block
-const parseTransactions = (refBlockNumber, block, conf) => {
+const parseTransactions = (refBlockNumber, block) => {
   const newTransactions = [];
   const transactionsLength = block.transactions.length;
 
@@ -68,8 +76,8 @@ const parseTransactions = (refBlockNumber, block, conf) => {
     const nbOperations = block.transactions[i].operations.length;
     for (let indexOp = 0; indexOp < nbOperations; indexOp += 1) {
       const operation = block.transactions[i].operations[indexOp];
-      const operationType = conf.useBlockApi ? operation.type.replace('_operation', '') : operation[0];
-      const operationValue = conf.useBlockApi ? operation.value : operation[1];
+      const operationType = useBlockApi ? operation.type.replace('_operation', '') : operation[0];
+      const operationValue = useBlockApi ? operation.value : operation[1];
 
       if (operationType === 'custom_json'
         || operationType === 'transfer'
@@ -102,7 +110,7 @@ const parseTransactions = (refBlockNumber, block, conf) => {
             sender = operationValue.from;
             recipient = operationValue.to;
             amount = operationValue.amount; // eslint-disable-line prefer-destructuring
-            if (conf.useBlockApi) {
+            if (useBlockApi) {
               amount = translateAsset(amount);
             }
             const transferParams = JSON.parse(operationValue.memo);
@@ -164,7 +172,7 @@ const parseTransactions = (refBlockNumber, block, conf) => {
               beneficiaries = extensions[0].value.beneficiaries; // eslint-disable-line
             }
             let maxAcceptedPayout = operationValue.max_accepted_payout;
-            if (conf.useBlockApi) {
+            if (useBlockApi) {
               const fixBeneficiaries = [];
               beneficiaries.forEach((b) => fixBeneficiaries.push({ "account": b.account, "weight": b.weight }));
               beneficiaries = fixBeneficiaries;
@@ -300,7 +308,7 @@ const sendBlock = block => ipc.send(
 const getLatestBlockMetadata = () => database.getLatestBlockMetadata();
 
 // process Hive block
-const processBlock = async (block, conf) => {
+const processBlock = async (block) => {
   if (stopStream) return;
 
   await sendBlock(
@@ -313,7 +321,6 @@ const processBlock = async (block, conf) => {
       transactions: parseTransactions(
         block.blockNumber,
         block,
-        conf
       ),
     },
   );
@@ -341,7 +348,7 @@ const updateGlobalProps = async () => {
   updaterGlobalPropsHandler = setTimeout(() => updateGlobalProps(), 10000);
 };
 
-const addBlockToBuffer = async (block, conf) => {
+const addBlockToBuffer = async (block) => {
   const finalBlock = block;
   finalBlock.blockNumber = currentHiveBlock;
 
@@ -351,15 +358,15 @@ const addBlockToBuffer = async (block, conf) => {
 
     // we can send the oldest block of the buffer to the blockchain plugin
     if (lastBlock) {
-      await processBlock(lastBlock, conf);
+      await processBlock(lastBlock);
     }
   }
   buffer.push(finalBlock);
 };
 
-const doClientGetBlock = async (client, blockNumber, conf) => {
+const doClientGetBlock = async (client, blockNumber) => {
   let res = null;
-  if (conf.useBlockApi) {
+  if (useBlockApi) {
     res = await client.call('block_api', 'get_block', { "block_num": blockNumber});
     res = res.block;
     res.blockNumber = blockNumber;
@@ -369,14 +376,14 @@ const doClientGetBlock = async (client, blockNumber, conf) => {
   return res;
 }
 
-const throttledGetBlockFromNode = async (blockNumber, node, conf) => {
+const throttledGetBlockFromNode = async (blockNumber, node) => {
   if (inFlightRequests[node] < maxQps) {
     totalInFlightRequests += 1;
     inFlightRequests[node] += 1;
     let res = null;
     const timeStart = Date.now();
     try {
-      res = await doClientGetBlock(clients[node], blockNumber, conf);
+      res = await doClientGetBlock(clients[node], blockNumber);
       totalRequests[node] += 1;
       totalTime[node] += Date.now() - timeStart;
     } catch (err) {
@@ -394,7 +401,7 @@ const throttledGetBlockFromNode = async (blockNumber, node, conf) => {
   return null;
 };
 
-const throttledGetBlock = async (blockNumber, conf) => {
+const throttledGetBlock = async (blockNumber) => {
   const nodes = Object.keys(clients);
   nodes.forEach((n) => {
     if (inFlightRequests[n] === undefined) {
@@ -409,26 +416,21 @@ const throttledGetBlock = async (blockNumber, conf) => {
     for (let i = 0; i < nodes.length; i += 1) {
       const node = nodes[i];
       if (inFlightRequests[node] < maxQps) {
-        return throttledGetBlockFromNode(blockNumber, node, conf);
+        return throttledGetBlockFromNode(blockNumber, node);
       }
     }
   }
   await new Promise(resolve => pendingRequests.push(resolve));
-  return throttledGetBlock(blockNumber, conf);
+  return throttledGetBlock(blockNumber);
 };
 
 
-// start at index 1, and rotate.
-const lookaheadBufferSize = 100;
-let lookaheadStartIndex = 0;
-let lookaheadStartBlock = currentHiveBlock;
-let blockLookaheadBuffer = Array(lookaheadBufferSize);
-const getBlock = async (blockNumber, conf) => {
+const getBlock = async (blockNumber) => {
   // schedule lookahead block fetch
   let scanIndex = lookaheadStartIndex;
   for (let i = 0; i < lookaheadBufferSize; i += 1) {
     if (!blockLookaheadBuffer[scanIndex]) {
-      blockLookaheadBuffer[scanIndex] = throttledGetBlock(lookaheadStartBlock + i, conf);
+      blockLookaheadBuffer[scanIndex] = throttledGetBlock(lookaheadStartBlock + i);
     }
     scanIndex += 1;
     if (scanIndex >= lookaheadBufferSize) scanIndex -= lookaheadBufferSize;
@@ -444,13 +446,13 @@ const getBlock = async (blockNumber, conf) => {
     blockLookaheadBuffer[lookupIndex] = null;
     return null;
   }
-  return doClientGetBlock(client, blockNumber, conf);
+  return doClientGetBlock(client, blockNumber);
 };
 
-const streamBlocks = async (reject, conf) => {
+const streamBlocks = async (reject) => {
   if (stopStream) return;
   try {
-    const block = await getBlock(currentHiveBlock, conf);
+    const block = await getBlock(currentHiveBlock);
     let addBlockToBuf = false;
 
     if (block) {
@@ -467,7 +469,7 @@ const streamBlocks = async (reject, conf) => {
         }
       } else {
         // get the previous block
-        const prevBlock = await getBlock(currentHiveBlock - 1, conf);
+        const prevBlock = await getBlock(currentHiveBlock - 1);
 
         if (prevBlock && prevBlock.block_id === block.previous) {
           addBlockToBuf = true;
@@ -478,17 +480,17 @@ const streamBlocks = async (reject, conf) => {
 
       // add the block to the buffer
       if (addBlockToBuf === true) {
-        await addBlockToBuffer(block, conf);
+        await addBlockToBuffer(block);
       }
       currentHiveBlock += 1;
       blockLookaheadBuffer[lookaheadStartIndex] = null;
       lookaheadStartIndex += 1;
       if (lookaheadStartIndex >= lookaheadBufferSize) lookaheadStartIndex -= lookaheadBufferSize;
       lookaheadStartBlock += 1;
-      streamBlocks(reject, conf);
+      streamBlocks(reject);
     } else {
       blockStreamerHandler = setTimeout(() => {
-        streamBlocks(reject, conf);
+        streamBlocks(reject);
       }, 500);
     }
   } catch (err) {
@@ -522,7 +524,7 @@ const startStreaming = (conf) => {
 
   return new Promise((resolve, reject) => { // eslint-disable-line no-unused-vars
     console.log('Starting Hive streaming at ', node); // eslint-disable-line no-console
-    streamBlocks(reject, conf);
+    streamBlocks(reject);
   }).catch((err) => {
     console.error('Stream error:', err.message, 'with', node); // eslint-disable-line no-console
     streamNodes.push(streamNodes.shift());
@@ -542,7 +544,16 @@ const init = async (conf) => {
   const {
     databaseURL,
     databaseName,
+    streamerConfig,
   } = conf;
+  if (streamerConfig) {
+    antiForkBufferMaxSize = streamerConfig.antiForkBufferMaxSize; // eslint-disable-line prefer-destructuring
+    maxQps = streamerConfig.maxQps; // eslint-disable-line prefer-destructuring
+    lookaheadBufferSize = streamerConfig.lookaheadBufferSize; // eslint-disable-line prefer-destructuring
+    useBlockApi = streamerConfig.useBlockApi; // eslint-disable-line prefer-destructuring
+  }
+  buffer = new Queue(antiForkBufferMaxSize);
+  blockLookaheadBuffer = Array(lookaheadBufferSize);
   const finalConf = conf;
 
   database = new Database();

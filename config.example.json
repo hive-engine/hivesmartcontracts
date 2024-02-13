@@ -37,5 +37,10 @@
         "enabled" : true,
         "port" : 5002
     },
-    "useBlockApi": false
+    "streamerConfig": {
+        "antiForkBufferMaxSize": 2,
+        "maxQps": 1,
+        "lookaheadBufferSize": 5,
+        "useBlockApi": false
+    }
 }

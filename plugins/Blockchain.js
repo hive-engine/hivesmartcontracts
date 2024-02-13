@@ -75,7 +75,7 @@ async function getBlock(node, blockNumber, tries = 1) {
   }
   console.log(`Attempt #${tries} failed, retrying...`);
   await new Promise(r => setTimeout(() => r(), 500));
-  return await getBlock(blockNumber, tries + 1);
+  return await getBlock(node, blockNumber, tries + 1);
 }
   
 // produce all the pending transactions, that will result in the creation of a block
