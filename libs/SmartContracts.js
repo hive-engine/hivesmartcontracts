@@ -666,7 +666,7 @@ class SmartContracts {
         if (refHiveBlockNumber <= 99999998) {
           originalResults.executedCodeHash += res.executedCodeHash; // eslint-disable-line
         } else {
-          originalResults.executedCodeHash = SHA256(originalResults.executedCodeHash + res.executedCodeHash).toString(enchex); // eslint-disable-line
+          originalResults.executedCodeHash = SHA256FN(originalResults.executedCodeHash + res.executedCodeHash).toString(enchex); // eslint-disable-line
         }
       }
     } catch (error) {

@@ -1467,7 +1467,7 @@ describe('Smart Contracts', function ()  {
 
       assert.equal(logs.events[0].event, 'contract_create');
       assert.equal(logs.events[0].data.contractName, 'testcontract');
-      assert.equal(txs[0].executedCodeHash, '8f9127047c5d1b13db1d08452fc5de68fb0e787025a405a58a780e545bd21dab');
+      assert.equal(txs[0].executedCodeHash, 'defd36cc6c47126c8ca875bd1952a09bbf6d7baaab13f75252b0d717b0d07664');
 
       resolve();
     })
