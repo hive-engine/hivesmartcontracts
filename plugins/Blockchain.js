@@ -50,7 +50,7 @@ function getRefBlockNumber(block) {
   return block.refHiveBlockNumber;
 }
 
-var gbid = 1;
+let gbid = 1;
 async function getBlock(node, blockNumber, tries = 1) {
   gbid += 1;
   try {
