@@ -30,8 +30,8 @@
     "test20": "./node_modules/mocha/bin/mocha ./test/nftairdrops.js --exit"
   },
   "engines": {
-    "node": ">=16.15.0",
-    "npm": ">=6.13.6"
+    "node": ">=v18.17.0",
+    "npm": ">=10.4.0"
   },
   "keywords": [],
   "author": "Harpagon210 <harpagon210@gmail.com>",
