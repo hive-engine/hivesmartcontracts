@@ -539,10 +539,16 @@ const changeCurrentWitness = async () => {
         scheduledWitness.missedRounds += 1;
         scheduledWitness.missedRoundsInARow += 1;
 
+        // Emit that witness missed round
+        api.emit('witnessMissedRound', { witness: scheduledWitness.account });
+
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
           scheduledWitness.enabled = false;
+
+          // Emit that witness got disabled
+          api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
 
         await api.db.update('witnesses', scheduledWitness);
@@ -594,10 +600,16 @@ const changeCurrentWitness = async () => {
         scheduledWitness.missedRounds += 1;
         scheduledWitness.missedRoundsInARow += 1;
 
+        // Emit that witness missed round
+        api.emit('witnessMissedRound', { witness: scheduledWitness.account });
+
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
           scheduledWitness.enabled = false;
+
+          // Emit that witness got disabled
+          api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
 
         await api.db.update('witnesses', scheduledWitness);

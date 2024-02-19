@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         node-version: [18.x, 20.x]
-        mongodb-version: ['4.4', '5.0', '6.0']
+        mongodb-version: ['4.4', '5.0', '6.0', '7.0']
 
     steps:
       - name: Git checkout
@@ -27,7 +27,7 @@ jobs:
           node-version: '${{ matrix.node-version }}'
 
       - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.8.0
+        uses: supercharge/mongodb-github-action@1.10.0
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
           mongodb-replica-set: testssc

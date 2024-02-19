@@ -4,9 +4,9 @@ const SHA256 = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
 const log = require('loglevel');
 const validator = require('validator');
-const config = require('../config.json');
 const { MongoClient } = require('mongodb');
 const { EJSON } = require('bson');
+const config = require('../config.json');
 const { CONSTANTS } = require('../libs/Constants');
 
 // Change this to turn on hash logging.
@@ -462,11 +462,11 @@ class Database {
 
   /**
    * Update contracts configuration data.
-   * @param {Object} config data.
+   * @param {Object} newConfig data.
    */
-  async updateContractsConfig(config) {
+  async updateContractsConfig(newConfig) {
     const contractsConfig = await this.getCollection('contracts_config');
-    await contractsConfig.updateOne({}, { $set: config }, { session: this.session });
+    await contractsConfig.updateOne({}, { $set: newConfig }, { session: this.session });
   }
 
   /**

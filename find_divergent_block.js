@@ -11,7 +11,7 @@ const conf = require('./config');
 const { Database } = require('./libs/Database');
 
 program
-  .option('-n, --node [url]', 'compare with given node', 'https://api.hive-engine.com/rpc')
+  .option('-n, --node [url]', 'compare with given node', 'https://api.hive-engine.com/rpc/')
   .option('-h, --head-only', 'compare only the head block')
   .parse(process.argv);
 
@@ -19,28 +19,27 @@ const { node, headOnly } = program;
 
 let id = 1;
 
-async function getBlock(blockNumber, tries=1) {
+async function getBlock(blockNumber, tries = 1) {
   id += 1;
   try {
     return (await axios({
-      url: `${node}/blockchain`,
+      url: `${node}`,
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       data: {
-        jsonrpc: '2.0', id, method: 'getBlockInfo', params: { blockNumber },
+        jsonrpc: '2.0', id, method: 'blockchain.getBlockInfo', params: { blockNumber },
       },
     })).data.result;
   } catch (error) {
     if (tries >= 3) {
       console.error(error);
       return null;
-    } else {
-      console.log(`Attempt #${tries} failed, retrying...`);
-      await new Promise((r) => setTimeout(() => r(), 500));
-      return await getBlock(blockNumber, tries + 1);
     }
+    console.log(`Attempt #${tries} failed, retrying...`);
+    await new Promise(r => setTimeout(() => r(), 500));
+    return await getBlock(blockNumber, tries + 1);
   }
 }
 
@@ -55,7 +54,7 @@ const blockData = t => ({
 });
 function getCompareData(block) {
   return block;
-  //return block.transactions.map(blockData).concat( block.virtualTransactions.map(blockData),);
+  // return block.transactions.map(blockData).concat( block.virtualTransactions.map(blockData),);
 }
 function getCompareString(block) {
   return JSON.stringify(getCompareData(block));
@@ -64,33 +63,33 @@ function compareBlocks(block1, block2) {
   return getCompareString(block1) === getCompareString(block2);
 }
 function printBlockDiff(block, mainBlock) {
-    // go through transactions, then virtual transactions, then overall hash
-    if (!block) {
-        console.log('This node missing block');
-    } else if (!mainBlock) {
-        console.log('Comparison node missing block');
-    } else {
-        for (let i = 0; i < block.transactions.length; i += 1) {
-            const txString = JSON.stringify(block.transactions[i]);
-            const mainTxString = JSON.stringify(mainBlock.transactions[i]);
-            if (txString === mainTxString) {
-                console.log(`Transaction ${i} matches`);
-            } else {
-                console.log(`Transaction ${i} mismatch: This: ${txString}, Main: ${mainTxString}`);
-                return;
-            }
-        }
-        for (let i = 0; i < block.virtualTransactions.length; i += 1) {
-            const txString = JSON.stringify(block.virtualTransactions[i]);
-            const mainTxString = JSON.stringify(mainBlock.virtualTransactions[i]);
-            if (txString === mainTxString) {
-                console.log(`Virtual Transaction ${i} matches`);
-            } else {
-                console.log(`Virtual Transaction ${i} mismatch: This: ${txString}, Main: ${mainTxString}`);
-                return;
-            }
-        }
+  // go through transactions, then virtual transactions, then overall hash
+  if (!block) {
+    console.log('This node missing block');
+  } else if (!mainBlock) {
+    console.log('Comparison node missing block');
+  } else {
+    for (let i = 0; i < block.transactions.length; i += 1) {
+      const txString = JSON.stringify(block.transactions[i]);
+      const mainTxString = JSON.stringify(mainBlock.transactions[i]);
+      if (txString === mainTxString) {
+        console.log(`Transaction ${i} matches`);
+      } else {
+        console.log(`Transaction ${i} mismatch: This: ${txString}, Main: ${mainTxString}`);
+        return;
+      }
     }
+    for (let i = 0; i < block.virtualTransactions.length; i += 1) {
+      const txString = JSON.stringify(block.virtualTransactions[i]);
+      const mainTxString = JSON.stringify(mainBlock.virtualTransactions[i]);
+      if (txString === mainTxString) {
+        console.log(`Virtual Transaction ${i} matches`);
+      } else {
+        console.log(`Virtual Transaction ${i} mismatch: This: ${txString}, Main: ${mainTxString}`);
+        return;
+      }
+    }
+  }
 }
 
 async function findDivergentBlock() {
@@ -127,10 +126,10 @@ async function findDivergentBlock() {
   } else {
     let low = 0;
     if (lightNode.enabled) {
-        const firstBlock = await chain.findOne({ blockNumber: { $gt: 0 } });
-        if (firstBlock) {
-            low = firstBlock.blockNumber;
-        }
+      const firstBlock = await chain.findOne({ blockNumber: { $gt: 0 } });
+      if (firstBlock) {
+        low = firstBlock.blockNumber;
+      }
     }
     let high = block._id;
     const headBlock = high;
