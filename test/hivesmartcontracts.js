@@ -1478,7 +1478,7 @@ describe('Smart Contracts', function ()  {
   });
 
 
-  it('should log an error during the deployment of a smart contract if an error is thrown', (done) => {
+  it('should log an node error during the deployment of a smart contract if an error is thrown up to block 76149072', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -1499,13 +1499,12 @@ describe('Smart Contracts', function ()  {
         code: base64SmartContractCode,
       };
 
-      let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       const crashTx = fixture.getNextTxId();
-      transactions.push(new Transaction(refBlockNumber, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
+      transactions.push(new Transaction(76149072, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
 
       let block = {
-        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockNumber: 76149072,
         refHiveBlockId: 'ABCD1',
         prevRefHiveBlockId: 'ABCD2',
         timestamp: '2018-06-01T00:00:00',
@@ -1521,6 +1520,57 @@ describe('Smart Contracts', function ()  {
       const logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.errors[0], "SyntaxError: Unexpected identifier");
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('should log an custom error during the deployment of a smart contract if an error is thrown after block 76149072', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      const smartContractCode = `
+        actions.createSSC = async (payload) => {
+          // Initialize the smart contract via the create action
+          
+          THIS CODE CRASHES :)
+        }
+      `;
+
+      const base64SmartContractCode = Base64.encode(smartContractCode);
+
+      const contractPayload = {
+        name: 'testcontract',
+        params: '',
+        code: base64SmartContractCode,
+      };
+
+      let transactions = [];
+      const crashTx = fixture.getNextTxId();
+      transactions.push(new Transaction(76149073, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
+
+      let block = {
+        refHiveBlockNumber: 76149073,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      const latestBlock = await fixture.database.getLatestBlockInfo();
+
+      const txs = latestBlock.transactions.filter(transaction => transaction.transactionId === crashTx);
+
+      const logs = JSON.parse(txs[0].logs);
+
+      assert.equal(logs.errors[0], "A node.js error occoured during deployment");
 
       resolve();
     })
