@@ -67,6 +67,8 @@ const translateAsset = (asset) => {
   throw new Error("Unhandled asset: " + asset.nai);
 }
 
+const allowedJsonMetaFields = ['app', 'tags', 'ssc'];
+
 // parse the transactions found in a Hive block
 const parseTransactions = (refBlockNumber, block) => {
   const newTransactions = [];
@@ -124,6 +126,13 @@ const parseTransactions = (refBlockNumber, block) => {
           } else if (operationType === 'comment') {
             sender = operationValue.author;
             const commentMeta = operationValue.json_metadata !== '' ? JSON.parse(operationValue.json_metadata) : null;
+            if (refBlockNumber > 99999999 && commentMeta) {
+              Object.keys(commentMeta).forEach(k => {
+                if (allowedJsonMetaFields.indexOf(k) === -1) {
+                  delete commentMeta[k];
+                }
+              });
+            }
 
             if (commentMeta && commentMeta.ssc) {
               id = commentMeta.ssc.id; // eslint-disable-line prefer-destructuring
