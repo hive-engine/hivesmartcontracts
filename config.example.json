@@ -36,5 +36,12 @@
     "rpcWebsockets" : {
         "enabled" : true,
         "port" : 5002
+    },
+    "streamerConfig": {
+        "antiForkBufferMaxSize": 2,
+        "maxQps": 1,
+        "lookaheadBufferSize": 5,
+        "hashVerificationNode": false,
+        "useBlockApi": false
     }
 }

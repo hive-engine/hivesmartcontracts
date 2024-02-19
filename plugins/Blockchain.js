@@ -16,7 +16,7 @@ let database = null;
 let javascriptVMTimeout = 0;
 let producing = false;
 let stopRequested = false;
-let enableHashVerification = false;
+let hashVerificationNode = false;
 
 const createGenesisBlock = async (payload) => {
   // check if genesis block hasn't been generated already
@@ -50,6 +50,34 @@ function getRefBlockNumber(block) {
   return block.refHiveBlockNumber;
 }
 
+let gbid = 1;
+async function getBlock(node, blockNumber, tries = 1) {
+  gbid += 1;
+  try {
+    const block = (await axios({
+      url: node,
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: {
+        jsonrpc: '2.0', id: gbid, method: 'getBlockInfo', params: { blockNumber },
+      },
+    })).data.result;
+    if (block) {
+      return block;
+    }
+  } catch (error) {
+    if (tries >= 3) {
+      console.error(error);
+      return null;
+    }
+  }
+  console.log(`Attempt #${tries} failed, retrying...`);
+  await new Promise(r => setTimeout(() => r(), 500));
+  return await getBlock(node, blockNumber, tries + 1);
+}
+  
 // produce all the pending transactions, that will result in the creation of a block
 async function producePendingTransactions(
   refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, transactions, timestamp,
@@ -74,40 +102,41 @@ async function producePendingTransactions(
       previousBlock.hash,
       previousBlock.databaseHash,
     );
-
+    log.info(`Start session for block ${newBlock.blockNumber}`);
     const session = database.startSession();
 
-    const mainBlock = !enableHashVerification ? null : (await axios({
-      url: 'https://api.hive-engine.com/rpc/blockchain',
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: {
-        jsonrpc: '2.0', id: 10, method: 'getBlockInfo', params: { blockNumber: newBlock.blockNumber },
-      },
-    })).data.result;
+    const mainBlock = !hashVerificationNode ? null : (await getBlock(hashVerificationNode, newBlock.blockNumber));
     try {
-      await session.withTransaction(async () => {
-        await newBlock.produceBlock(database, javascriptVMTimeout, mainBlock);
+      await session.withTransaction(async (liveSession) => {
+        log.info(`WithTransaction invoked for block ${newBlock.blockNumber}`);
+        try {
+          await newBlock.produceBlock(database, javascriptVMTimeout, mainBlock);
+          log.info(`ProduceBlock finished for block ${newBlock.blockNumber}`);
 
-        if (newBlock.transactions.length > 0 || newBlock.virtualTransactions.length > 0) {
-          if (mainBlock && newBlock.hash) {
-            console.log(`Sidechain Block ${mainBlock.blockNumber}, Main db hash: ${mainBlock.databaseHash}, Main block hash: ${mainBlock.hash}, This db hash: ${newBlock.databaseHash}, This block hash: ${newBlock.hash}`); // eslint-disable-line no-console
+          if (newBlock.transactions.length > 0 || newBlock.virtualTransactions.length > 0) {
+            if (mainBlock && newBlock.hash) {
+              console.log(`Sidechain Block ${mainBlock.blockNumber}, Main db hash: ${mainBlock.databaseHash}, Main block hash: ${mainBlock.hash}, This db hash: ${newBlock.databaseHash}, This block hash: ${newBlock.hash}`); // eslint-disable-line no-console
 
-            if (mainBlock.databaseHash !== newBlock.databaseHash
-                || mainBlock.hash !== newBlock.hash) {
-              throw new Error(`Block mismatch with api \nMain: ${JSON.stringify(mainBlock, null, 2)}, \nThis: ${JSON.stringify(newBlock, null, 2)}`);
+              if (mainBlock.databaseHash !== newBlock.databaseHash
+                  || mainBlock.hash !== newBlock.hash) {
+                throw new Error(`Block mismatch with api \nMain: ${JSON.stringify(mainBlock, null, 2)}, \nThis: ${JSON.stringify(newBlock, null, 2)}`);
+              }
             }
-          }
 
-          await addBlock(newBlock);
+            await addBlock(newBlock);
+          } else if (mainBlock.refHiveBlockNumber === newBlock.refHiveBlockNumber) {
+            throw new Error(`Block mismatch with api \nMain: ${JSON.stringify(mainBlock, null, 2)}, \nThis: ${JSON.stringify(newBlock, null, 2)}`);
+          }
+        } catch (e) {
+          throw(e);
         }
+        log.info(`Transaction Callback finished for block ${newBlock.blockNumber}`);
       });
     } catch (e) {
-      console.error(e); // eslint-disable-line no-console
+      log.warn(e);
       throw e;
     } finally {
+      log.info(`End session for block ${newBlock.blockNumber}`);
       await database.endSession();
     }
   } else {
@@ -168,7 +197,7 @@ const init = async (conf, callback) => {
     databaseName,
   } = conf;
   javascriptVMTimeout = conf.javascriptVMTimeout; // eslint-disable-line prefer-destructuring
-  enableHashVerification = conf.enableHashVerification; // eslint-disable-line prefer-destructuring
+  hashVerificationNode = conf.hashVerificationNode; // eslint-disable-line prefer-destructuring
   log.setDefaultLevel(conf.defaultLogLevel ? conf.defaultLogLevel : 'warn');
 
   database = new Database();

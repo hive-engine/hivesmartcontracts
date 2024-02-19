@@ -122,9 +122,11 @@ class Block {
       currentDatabaseHash = transaction.databaseHash;
 
       if ((transaction.contract !== 'comments' || allowCommentContract) || transaction.logs === '{}') {
-        if (mainBlock && currentDatabaseHash !== mainBlock.transactions[relIndex].databaseHash) {
-          log.warn(mainBlock.transactions[relIndex]); // eslint-disable-line no-console
-          log.warn(transaction); // eslint-disable-line no-console
+        if (mainBlock && (
+          currentDatabaseHash !== mainBlock.transactions[relIndex].databaseHash
+          || transaction.payload !== mainBlock.transactions[relIndex].payload)) {
+          log.warn(mainBlock.transactions[relIndex]);
+          log.warn(transaction);
           throw new Error('tx hash mismatch with api');
         }
         relIndex += 1;
