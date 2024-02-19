@@ -197,7 +197,7 @@ class Block {
 
     // add odd blocks, consensus appended double virtual transactions
     if (this.refHiveBlockNumber === 59376574) {
-        this.virtualTransactions = this.virtualTransactions.concat(this.virtualTransactions);
+      this.virtualTransactions = this.virtualTransactions.concat(this.virtualTransactions);
     }
 
     if (this.transactions.length > 0 || this.virtualTransactions.length > 0) {

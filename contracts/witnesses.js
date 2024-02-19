@@ -35,7 +35,8 @@ actions.createSSC = async () => {
     await api.db.createTable('params');
 
     const params = {
-      totalApprovalWeight: '0',
+      totalApprovalWeight: '0', // deprecated in favor of totalEnabledApprovalWeight, but do not remove immediately in case we need to go back to using this if any major issue is found
+      totalEnabledApprovalWeight: '0',
       numberOfApprovedWitnesses: 0,
       lastVerifiedBlockNumber: 0,
       round: 0,
@@ -56,19 +57,22 @@ actions.createSSC = async () => {
   } else {
     const params = await api.db.findOne('params', {});
     // This should be removed after being deployed
-    if (!params.witnessApproveExpireBlocks) {
+    if (!params.totalEnabledApprovalWeight) {
+      let totalEnabledApprovalWeight = '0';
       let offset = 0;
-      let accounts;
+      let wits;
       do {
-        accounts = await api.db.find('accounts', {}, 1000, offset, [{ index: '_id', descending: false }]);
-        for (let i = 0; i < accounts.length; i += 1) {
-          const account = accounts[i];
-          account.lastApproveBlock = api.blockNumber;
-          await api.db.update('accounts', account);
+        wits = await api.db.find('witnesses', {}, 1000, offset, [{ index: '_id', descending: false }]);
+        for (let i = 0; i < wits.length; i += 1) {
+          const wit = wits[i];
+          if (wit.enabled) {
+            totalEnabledApprovalWeight = api.BigNumber(totalEnabledApprovalWeight)
+              .plus(wit.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          }
         }
         offset += 1000;
-      } while (accounts.length === 1000);
-      params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
+      } while (wits.length === 1000);
+      params.totalEnabledApprovalWeight = totalEnabledApprovalWeight;
       await api.db.update('params', params);
     }
     // End block to remove
@@ -168,6 +172,12 @@ const updateWitnessRank = async (witness, approvalWeight) => {
       .plus(approvalWeight)
       .toFixed(GOVERNANCE_TOKEN_PRECISION);
 
+    // if witness is enabled, add update  totalEnabledApprovalWeight
+    if (witnessRec.enabled) {
+      params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+        .plus(approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+    }
+
     // update numberOfApprovedWitnesses
     if (api.BigNumber(oldApprovalWeight).eq(0)
       && api.BigNumber(witnessRec.approvalWeight.$numberDecimal).gt(0)) {
@@ -225,11 +235,13 @@ actions.updateWitnessesApprovals = async (payload) => {
 
 actions.register = async (payload) => {
   const {
-    IP, RPCPort, P2PPort, signingKey, enabled, isSignedWithActiveKey,
+    domain, IP, RPCPort, P2PPort, signingKey, enabled, isSignedWithActiveKey,
   } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'active key required')
-    && api.assert(IP && typeof IP === 'string' && api.validator.isIP(IP), 'IP is invalid')
+    && api.assert(domain || IP, 'neither domain nor ip provided')
+    && api.assert(!(domain && IP), 'both domain and ip provided')
+    && ((domain && api.assert(domain && typeof domain === 'string' && api.validator.isFQDN(domain), 'domain is invalid')) || (IP && api.assert(IP && typeof IP === 'string' && api.validator.isIP(IP), 'IP is invalid')))
     && api.assert(RPCPort && Number.isInteger(RPCPort) && RPCPort >= 0 && RPCPort <= 65535, 'RPCPort must be an integer between 0 and 65535')
     && api.assert(P2PPort && Number.isInteger(P2PPort) && P2PPort >= 0 && P2PPort <= 65535, 'P2PPort must be an integer between 0 and 65535')
     && api.assert(api.validator.isAlphanumeric(signingKey) && signingKey.length === 53, 'invalid signing key')
@@ -238,26 +250,60 @@ actions.register = async (payload) => {
     let witness = await api.db.findOne('witnesses', { signingKey });
 
     if (api.assert(witness === null || witness.account === api.sender, 'a witness is already using this signing key')) {
-      // check if there is already a witness with the same IP/Port
-      witness = await api.db.findOne('witnesses', { IP, P2PPort });
+      // check if there is already a witness with the same IP/Port or domain
+      if (IP) {
+        witness = await api.db.findOne('witnesses', { IP, P2PPort });
+      } else {
+        witness = await api.db.findOne('witnesses', { domain, P2PPort });
+      }
 
-      if (api.assert(witness === null || witness.account === api.sender, 'a witness is already using this IP/Port')) {
+      if (api.assert(witness === null || witness.account === api.sender, `a witness is already using this ${IP ? 'IP' : 'domain'}/Port`)) {
         witness = await api.db.findOne('witnesses', { account: api.sender });
 
         // if the witness is already registered
         if (witness) {
-          witness.IP = IP;
+          const enabledChanged = witness.enabled !== enabled;
+          let useUnsets = false;
+          const unsets = {};
+          if (IP) {
+            witness.IP = IP;
+            if (witness.domain) {
+              delete witness.domain;
+              unsets.domain = '';
+              useUnsets = true;
+            }
+          } else {
+            witness.domain = domain;
+            if (witness.IP) {
+              delete witness.IP;
+              unsets.IP = '';
+              useUnsets = true;
+            }
+          }
           witness.RPCPort = RPCPort;
           witness.P2PPort = P2PPort;
           witness.signingKey = signingKey;
           witness.enabled = enabled;
-          await api.db.update('witnesses', witness);
+          if (useUnsets) {
+            await api.db.update('witnesses', witness, unsets);
+          } else {
+            await api.db.update('witnesses', witness);
+          }
+          const params = await api.db.findOne('params', {});
+          // update totalEnabledApprovalWeight if the witness' enable status changed
+          if (enabledChanged && witness.enabled) {
+            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+              .plus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          } else if (enabledChanged && !witness.enabled) {
+            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+              .minus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          }
+          await api.db.update('params', params);
         } else {
           witness = {
             account: api.sender,
             approvalWeight: { $numberDecimal: '0' },
             signingKey,
-            IP,
             RPCPort,
             P2PPort,
             enabled,
@@ -267,7 +313,13 @@ actions.register = async (payload) => {
             lastRoundVerified: null,
             lastBlockVerified: null,
           };
+          if (IP) {
+            witness.IP = IP;
+          } else {
+            witness.domain = domain;
+          }
           await api.db.insert('witnesses', witness);
+          // no need to update totalEnabledApprovalWeight here as the approvalWeight is always 0
         }
       }
     }
@@ -440,7 +492,7 @@ const changeCurrentWitness = async () => {
   const params = await api.db.findOne('params', {});
   const {
     currentWitness,
-    totalApprovalWeight,
+    totalEnabledApprovalWeight,
     lastWitnesses,
     lastBlockRound,
     round,
@@ -451,7 +503,7 @@ const changeCurrentWitness = async () => {
   let witnessFound = false;
   // get a deterministic random weight
   const random = api.random();
-  const randomWeight = api.BigNumber(totalApprovalWeight)
+  const randomWeight = api.BigNumber(totalEnabledApprovalWeight)
     .times(random)
     .toFixed(GOVERNANCE_TOKEN_PRECISION, 1);
 
@@ -466,6 +518,7 @@ const changeCurrentWitness = async () => {
           $numberDecimal: '0',
         },
       },
+      enabled: true,
     },
     100, // limit
     offset, // offset
@@ -511,10 +564,16 @@ const changeCurrentWitness = async () => {
         scheduledWitness.missedRounds += 1;
         scheduledWitness.missedRoundsInARow += 1;
 
+        // Emit that witness missed round
+        api.emit('witnessMissedRound', { witness: scheduledWitness.account });
+
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
           scheduledWitness.enabled = false;
+
+          // Emit that witness got disabled
+          api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
 
         await api.db.update('witnesses', scheduledWitness);
@@ -566,10 +625,16 @@ const changeCurrentWitness = async () => {
         scheduledWitness.missedRounds += 1;
         scheduledWitness.missedRoundsInARow += 1;
 
+        // Emit that witness missed round
+        api.emit('witnessMissedRound', { witness: scheduledWitness.account });
+
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
           scheduledWitness.enabled = false;
+
+          // Emit that witness got disabled
+          api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
 
         await api.db.update('witnesses', scheduledWitness);
@@ -586,7 +651,7 @@ const manageWitnessesSchedule = async () => {
   const params = await api.db.findOne('params', {});
   const {
     numberOfApprovedWitnesses,
-    totalApprovalWeight,
+    totalEnabledApprovalWeight,
     lastVerifiedBlockNumber,
     blockNumberWitnessChange,
     lastBlockRound,
@@ -641,6 +706,7 @@ const manageWitnessesSchedule = async () => {
               $numberDecimal: '0',
             },
           },
+          enabled: true,
         },
         100, // limit
         offset, // offset
@@ -658,7 +724,7 @@ const manageWitnessesSchedule = async () => {
             && randomWeight === null) {
             randomWeight = api.BigNumber(accWeight)
               .plus(GOVERNANCE_TOKEN_MIN_VALUE)
-              .plus(api.BigNumber(totalApprovalWeight)
+              .plus(api.BigNumber(totalEnabledApprovalWeight)
                 .minus(accWeight)
                 .times(random)
                 .toFixed(GOVERNANCE_TOKEN_PRECISION, 1))

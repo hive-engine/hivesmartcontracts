@@ -7,6 +7,7 @@ const packagejson = require('./package.json');
 const config = require('./config.json');
 
 const ip = process.env.NODE_IP;
+const domain = process.env.NODE_DOMAIN;
 const witnessAccount = process.env.ACCOUNT;
 const privateSigningKey = dhive.PrivateKey.fromString(process.env.ACTIVE_SIGNING_KEY);
 const publicSigningKey = privateSigningKey.createPublic().toString();
@@ -21,11 +22,11 @@ const extP2PPort = Number(String(process.env.P2PPORT)) || p2pPort;
 program
   .option('-v, --verify', 'verify transaction on hive-engine', false)
   .option('-e, --engineNode [url]', 'verify with given hive-engine node', 'https://engine.rishipanthee.com')
-  .option('-s, --skipDiverganceCheck', 'skips divergance check', false)
+  .option('-d, --diverganceCheck', 'check for divergance against the given hive-engine node', false)
   .parse(process.argv);
 
 let { engineNode } = program;
-const { verify, skipDiverganceCheck } = program;
+const { verify, diverganceCheck } = program;
 
 engineNode = engineNode.replace(/\/$/, '');
 
@@ -103,41 +104,63 @@ program
 program
   .command('register')
   .action(() => {
-    if (!skipDiverganceCheck) {
-      exec(`node find_divergent_block.js -h -n ${engineNode}`).on('exit', (code) => {
-        if (code != 0) {
-          // eslint-disable-next-line no-console
-          console.log(`A divergent block was found, not registering. Run node find_divergent -n ${engineNode} to learn where.`)
-          return
-        } else {
-          broadcastWitnessAction('register', {
-            IP: ip,
-            RPCPort: extRPCNodePort,
-            P2PPort: extP2PPort,
-            signingKey: publicSigningKey,
-            enabled: true,
-          })
-        }
-      })
+    const registerJSON = {
+      RPCPort: extRPCNodePort,
+      P2PPort: extP2PPort,
+      signingKey: publicSigningKey,
+      enabled: false,
+    };
+    if (ip && domain) {
+      // eslint-disable-next-line no-console
+      console.log('Both domain and IP specified in your .env file, please only use one');
+      return;
+    } else if (ip) {
+      registerJSON.IP = ip;
+    } else if (domain) {
+      registerJSON.domain = domain;
     } else {
-      broadcastWitnessAction('register', {
-        IP: ip,
-        RPCPort: extRPCNodePort,
-        P2PPort: extP2PPort,
-        signingKey: publicSigningKey,
-        enabled: true,
-      })
+      // eslint-disable-next-line no-console
+      console.log('Missing domain or IP, please add it to your .env file');
+      return;
+    }
+    if (diverganceCheck) {
+      exec(`node find_divergent_block.js -h -n ${engineNode}`).on('exit', (code) => {
+        if (code !== 0) {
+          // eslint-disable-next-line no-console
+          console.log(`A divergent block was found, not registering. Run node find_divergent_block.js -n ${engineNode} to learn where.`);
+          return;
+        } else {
+          broadcastWitnessAction('register', registerJSON);
+        }
+      });
+    } else {
+      broadcastWitnessAction('register', registerJSON);
     }
   });
 
 program
   .command('unregister')
-  .action(() => broadcastWitnessAction('register', {
-    IP: ip,
-    RPCPort: extRPCNodePort,
-    P2PPort: extP2PPort,
-    signingKey: publicSigningKey,
-    enabled: false,
-  }));
+  .action(() => {
+    const registerJSON = {
+      RPCPort: extRPCNodePort,
+      P2PPort: extP2PPort,
+      signingKey: publicSigningKey,
+      enabled: false,
+    };
+    if (ip && domain) {
+      // eslint-disable-next-line no-console
+      console.log('Both domain and IP specified in your .env file, please only use one');
+      return;
+    } else if (ip) {
+      registerJSON.IP = ip;
+    } else if (domain) {
+      registerJSON.domain = domain;
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('Missing domain or IP, please add it to your .env file');
+      return;
+    }
+    broadcastWitnessAction('register', registerJSON);
+  });
 
 program.parse(process.argv);
