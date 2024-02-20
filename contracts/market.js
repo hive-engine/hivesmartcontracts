@@ -243,7 +243,7 @@ actions.createSSC = async () => {
     await api.db.createTable('metrics', ['symbol']);
   } else {
     // remove stuck 0 quantity orders
-    let order = await api.db.findOne('buyBook', { txId: '1a83fe18932074d28ffa63311892f9f05b0195ad' });
+    let order = await api.db.findOne('buyBook', { txId: 'MM-P-33520024-80518873-3-9-0' });
     if (order) {
       await api.db.remove('buyBook', order);
       await updateBidMetric(order.symbol);
