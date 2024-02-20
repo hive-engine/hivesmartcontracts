@@ -37,11 +37,11 @@
         "enabled" : true,
         "port" : 5002
     },
+    "hashVerificationNode": false,
     "streamerConfig": {
         "antiForkBufferMaxSize": 2,
         "maxQps": 1,
         "lookaheadBufferSize": 5,
-        "hashVerificationNode": false,
         "useBlockApi": false
     }
 }
