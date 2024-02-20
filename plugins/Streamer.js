@@ -378,7 +378,9 @@ const doClientGetBlock = async (client, blockNumber) => {
   if (useBlockApi) {
     res = await client.call('block_api', 'get_block', { "block_num": blockNumber});
     res = res.block;
-    res.blockNumber = blockNumber;
+    if (res) {
+      res.blockNumber = blockNumber;
+    }
   } else {
     res = await client.database.getBlock(blockNumber);
   }
