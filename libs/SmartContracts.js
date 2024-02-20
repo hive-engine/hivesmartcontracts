@@ -245,7 +245,7 @@ class SmartContracts {
       return { logs: { errors: ['parameters name and code are mandatory and they must be strings'] } };
     } catch (e) {
       log.error('ERROR DURING CONTRACT DEPLOYMENT: ', e);
-      if (refHiveBlockNumber <= 76149072) { // Approximately Sunday July 25 UTC
+      if (refHiveBlockNumber <= 83680408) { // Approximately Saturday March 16, 2024, 2 am UTC
         if (e.message.includes('Unexpected identifier')) {
           e.message = 'Unexpected identifier';
         }
@@ -669,7 +669,7 @@ class SmartContracts {
 
       if (res && res.executedCodeHash) {
         results.executedCodeHash = res.executedCodeHash;
-        if (refHiveBlockNumber <= 99999998) {
+        if (refHiveBlockNumber <= 83680408) {
           originalResults.executedCodeHash += res.executedCodeHash; // eslint-disable-line
         } else {
           originalResults.executedCodeHash = SHA256FN(originalResults.executedCodeHash + res.executedCodeHash).toString(enchex); // eslint-disable-line

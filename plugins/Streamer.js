@@ -126,7 +126,7 @@ const parseTransactions = (refBlockNumber, block) => {
           } else if (operationType === 'comment') {
             sender = operationValue.author;
             const commentMeta = operationValue.json_metadata !== '' ? JSON.parse(operationValue.json_metadata) : null;
-            if (refBlockNumber > 99999999 && commentMeta) {
+            if (refBlockNumber > 83680408 && commentMeta) {
               Object.keys(commentMeta).forEach(k => {
                 if (allowedJsonMetaFields.indexOf(k) === -1) {
                   delete commentMeta[k];

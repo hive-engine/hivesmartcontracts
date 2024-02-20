@@ -1478,7 +1478,7 @@ describe('Smart Contracts', function ()  {
   });
 
 
-  it('should log an node error during the deployment of a smart contract if an error is thrown up to block 76149072', (done) => {
+  it('should log a node error during the deployment of a smart contract if an error is thrown up to block 83680408', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -1501,10 +1501,10 @@ describe('Smart Contracts', function ()  {
 
       let transactions = [];
       const crashTx = fixture.getNextTxId();
-      transactions.push(new Transaction(76149072, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
+      transactions.push(new Transaction(83680408, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
 
       let block = {
-        refHiveBlockNumber: 76149072,
+        refHiveBlockNumber: 83680408,
         refHiveBlockId: 'ABCD1',
         prevRefHiveBlockId: 'ABCD2',
         timestamp: '2018-06-01T00:00:00',
@@ -1529,7 +1529,7 @@ describe('Smart Contracts', function ()  {
       });
   });
 
-  it('should log an custom error during the deployment of a smart contract if an error is thrown after block 76149072', (done) => {
+  it('should log a custom error during the deployment of a smart contract if an error is thrown after block 83680408', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -1552,10 +1552,10 @@ describe('Smart Contracts', function ()  {
 
       let transactions = [];
       const crashTx = fixture.getNextTxId();
-      transactions.push(new Transaction(76149073, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
+      transactions.push(new Transaction(83680409, crashTx, CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
 
       let block = {
-        refHiveBlockNumber: 76149073,
+        refHiveBlockNumber: 83680409,
         refHiveBlockId: 'ABCD1',
         prevRefHiveBlockId: 'ABCD2',
         timestamp: '2018-06-01T00:00:00',
