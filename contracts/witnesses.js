@@ -57,7 +57,7 @@ actions.createSSC = async () => {
   } else {
     const params = await api.db.findOne('params', {});
     // This should be removed after being deployed
-    if (!params.totalEnabledApprovalWeight) {
+    if (!params.totalEnabledApprovalWeight || Number.isNaN(params.totalEnabledApprovalWeight)) {
       let totalEnabledApprovalWeight = '0';
       let offset = 0;
       let wits;
