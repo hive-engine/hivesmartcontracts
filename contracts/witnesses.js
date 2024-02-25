@@ -67,7 +67,7 @@ actions.createSSC = async () => {
           const wit = wits[i];
           if (wit.enabled) {
             totalEnabledApprovalWeight = api.BigNumber(totalEnabledApprovalWeight)
-              .plus(wit.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+              .plus(wit.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
           }
         }
         offset += 1000;
