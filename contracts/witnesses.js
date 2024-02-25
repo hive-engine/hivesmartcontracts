@@ -8,15 +8,13 @@ const NB_WITNESSES = NB_TOP_WITNESSES + NB_BACKUP_WITNESSES;
 const NB_WITNESSES_SIGNATURES_REQUIRED = 14;
 const MAX_ROUNDS_MISSED_IN_A_ROW = 3; // after that the witness is disabled
 const MAX_ROUND_PROPOSITION_WAITING_PERIOD = 40; // number of blocks
-const NB_TOKENS_TO_REWARD_PER_BLOCK = '0.01902586'; // inflation.js tokens per block
-const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.39954306'; // 21x to reward
+const NB_TOKENS_TO_REWARD = '0.01902586'; // inflation.js tokens per block
+const NB_TOKENS_NEEDED_BEFORE_REWARDING = '0.0951293'; // 5x to reward
 // eslint-disable-next-line max-len
 const WITNESS_APPROVE_EXPIRE_BLOCKS = 5184000; // Approximately half a year, 20 blocks a minute * 60 minutes an hour * 24 hours a day * 180 days
 const WITNESS_MAX_ACCOUNT_EXPIRE_PER_BLOCK = 10;
 // eslint-disable-next-line no-template-curly-in-string
 const UTILITY_TOKEN_SYMBOL = "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'";
-// eslint-disable-next-line no-template-curly-in-string
-const UTILITY_TOKEN_PRECISION = '${CONSTANTS.UTILITY_TOKEN_PRECISION}$';
 // eslint-disable-next-line no-template-curly-in-string
 const GOVERNANCE_TOKEN_SYMBOL = "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'";
 // eslint-disable-next-line no-template-curly-in-string
@@ -35,8 +33,7 @@ actions.createSSC = async () => {
     await api.db.createTable('params');
 
     const params = {
-      totalApprovalWeight: '0', // deprecated in favor of totalEnabledApprovalWeight, but do not remove immediately in case we need to go back to using this if any major issue is found
-      totalEnabledApprovalWeight: '0',
+      totalApprovalWeight: '0',
       numberOfApprovedWitnesses: 0,
       lastVerifiedBlockNumber: 0,
       round: 0,
@@ -57,22 +54,19 @@ actions.createSSC = async () => {
   } else {
     const params = await api.db.findOne('params', {});
     // This should be removed after being deployed
-    if (!params.totalEnabledApprovalWeight) {
-      let totalEnabledApprovalWeight = '0';
+    if (!params.witnessApproveExpireBlocks) {
       let offset = 0;
-      let wits;
+      let accounts;
       do {
-        wits = await api.db.find('witnesses', {}, 1000, offset, [{ index: '_id', descending: false }]);
-        for (let i = 0; i < wits.length; i += 1) {
-          const wit = wits[i];
-          if (wit.enabled) {
-            totalEnabledApprovalWeight = api.BigNumber(totalEnabledApprovalWeight)
-              .plus(wit.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
-          }
+        accounts = await api.db.find('accounts', {}, 1000, offset, [{ index: '_id', descending: false }]);
+        for (let i = 0; i < accounts.length; i += 1) {
+          const account = accounts[i];
+          account.lastApproveBlock = api.blockNumber;
+          await api.db.update('accounts', account);
         }
         offset += 1000;
-      } while (wits.length === 1000);
-      params.totalEnabledApprovalWeight = totalEnabledApprovalWeight;
+      } while (accounts.length === 1000);
+      params.witnessApproveExpireBlocks = WITNESS_APPROVE_EXPIRE_BLOCKS;
       await api.db.update('params', params);
     }
     // End block to remove
@@ -172,12 +166,6 @@ const updateWitnessRank = async (witness, approvalWeight) => {
       .plus(approvalWeight)
       .toFixed(GOVERNANCE_TOKEN_PRECISION);
 
-    // if witness is enabled, add update  totalEnabledApprovalWeight
-    if (witnessRec.enabled) {
-      params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-        .plus(approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
-    }
-
     // update numberOfApprovedWitnesses
     if (api.BigNumber(oldApprovalWeight).eq(0)
       && api.BigNumber(witnessRec.approvalWeight.$numberDecimal).gt(0)) {
@@ -251,31 +239,30 @@ actions.register = async (payload) => {
 
     if (api.assert(witness === null || witness.account === api.sender, 'a witness is already using this signing key')) {
       // check if there is already a witness with the same IP/Port or domain
-      if (IP) {
+      if (IP){
         witness = await api.db.findOne('witnesses', { IP, P2PPort });
       } else {
         witness = await api.db.findOne('witnesses', { domain, P2PPort });
       }
-
+      
       if (api.assert(witness === null || witness.account === api.sender, `a witness is already using this ${IP ? 'IP' : 'domain'}/Port`)) {
         witness = await api.db.findOne('witnesses', { account: api.sender });
 
         // if the witness is already registered
         if (witness) {
-          const enabledChanged = witness.enabled !== enabled;
           let useUnsets = false;
-          const unsets = {};
-          if (IP) {
+          let unsets = {};
+          if (IP){
             witness.IP = IP;
-            if (witness.domain) {
-              delete witness.domain;
+            if (witness.domain){
+              delete witness['domain'];
               unsets.domain = '';
               useUnsets = true;
             }
           } else {
             witness.domain = domain;
-            if (witness.IP) {
-              delete witness.IP;
+            if (witness.IP){
+              delete witness['IP'];
               unsets.IP = '';
               useUnsets = true;
             }
@@ -284,21 +271,11 @@ actions.register = async (payload) => {
           witness.P2PPort = P2PPort;
           witness.signingKey = signingKey;
           witness.enabled = enabled;
-          if (useUnsets) {
+          if (useUnsets){
             await api.db.update('witnesses', witness, unsets);
           } else {
             await api.db.update('witnesses', witness);
           }
-          const params = await api.db.findOne('params', {});
-          // update totalEnabledApprovalWeight if the witness' enable status changed
-          if (enabledChanged && witness.enabled) {
-            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-              .plus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
-          } else if (enabledChanged && !witness.enabled) {
-            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-              .minus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
-          }
-          await api.db.update('params', params);
         } else {
           witness = {
             account: api.sender,
@@ -313,13 +290,12 @@ actions.register = async (payload) => {
             lastRoundVerified: null,
             lastBlockVerified: null,
           };
-          if (IP) {
+          if (IP){
             witness.IP = IP;
           } else {
             witness.domain = domain;
           }
           await api.db.insert('witnesses', witness);
-          // no need to update totalEnabledApprovalWeight here as the approvalWeight is always 0
         }
       }
     }
@@ -492,7 +468,7 @@ const changeCurrentWitness = async () => {
   const params = await api.db.findOne('params', {});
   const {
     currentWitness,
-    totalEnabledApprovalWeight,
+    totalApprovalWeight,
     lastWitnesses,
     lastBlockRound,
     round,
@@ -503,7 +479,7 @@ const changeCurrentWitness = async () => {
   let witnessFound = false;
   // get a deterministic random weight
   const random = api.random();
-  const randomWeight = api.BigNumber(totalEnabledApprovalWeight)
+  const randomWeight = api.BigNumber(totalApprovalWeight)
     .times(random)
     .toFixed(GOVERNANCE_TOKEN_PRECISION, 1);
 
@@ -518,7 +494,6 @@ const changeCurrentWitness = async () => {
           $numberDecimal: '0',
         },
       },
-      enabled: true,
     },
     100, // limit
     offset, // offset
@@ -651,7 +626,7 @@ const manageWitnessesSchedule = async () => {
   const params = await api.db.findOne('params', {});
   const {
     numberOfApprovedWitnesses,
-    totalEnabledApprovalWeight,
+    totalApprovalWeight,
     lastVerifiedBlockNumber,
     blockNumberWitnessChange,
     lastBlockRound,
@@ -706,7 +681,6 @@ const manageWitnessesSchedule = async () => {
               $numberDecimal: '0',
             },
           },
-          enabled: true,
         },
         100, // limit
         offset, // offset
@@ -724,7 +698,7 @@ const manageWitnessesSchedule = async () => {
             && randomWeight === null) {
             randomWeight = api.BigNumber(accWeight)
               .plus(GOVERNANCE_TOKEN_MIN_VALUE)
-              .plus(api.BigNumber(totalEnabledApprovalWeight)
+              .plus(api.BigNumber(totalApprovalWeight)
                 .minus(accWeight)
                 .times(random)
                 .toFixed(GOVERNANCE_TOKEN_PRECISION, 1))
@@ -870,7 +844,6 @@ actions.proposeRound = async (payload) => {
     lastBlockRound,
     currentWitness,
   } = params;
-
   const schedules = await api.db.find('schedules', { round }, 1000, 0, [{ index: '_id', descending: false }]);
 
   const numberOfWitnessSlots = schedules.length;
@@ -940,19 +913,25 @@ actions.proposeRound = async (payload) => {
             await api.verifyBlock(verifiedBlockInformation[index]);
           }
 
+          // get contract balance
+          const contractBalance = await api.db.findOneInTable('tokens', 'contractsBalances', { account: 'witnesses', symbol: UTILITY_TOKEN_SYMBOL });
+          let rewardWitnesses = false;
+
+          if (contractBalance
+            && api.BigNumber(contractBalance.balance).gte(NB_TOKENS_NEEDED_BEFORE_REWARDING)) {
+            rewardWitnesses = true;
+          }
+
           // remove the schedules
           for (let index = 0; index < schedules.length; index += 1) {
             const schedule = schedules[index];
-            await api.db.remove('schedules', schedule);
-          }
-          // reward the current witness
-          const contractBalance = await api.db.findOneInTable('tokens', 'contractsBalances', { account: 'witnesses', symbol: UTILITY_TOKEN_SYMBOL });
-          if (contractBalance
-            && api.BigNumber(contractBalance.balance).gte(NB_TOKENS_NEEDED_BEFORE_REWARDING)) {
-              const rewardAmount =  api.BigNumber(NB_TOKENS_TO_REWARD_PER_BLOCK).multipliedBy(numberOfWitnessSlots).toFixed(UTILITY_TOKEN_PRECISION);
+            // reward the witness that help verifying this round
+            if (rewardWitnesses === true) {
               await api.executeSmartContract('tokens', 'stakeFromContract', {
-                to: currentWitness, symbol: UTILITY_TOKEN_SYMBOL, quantity: rewardAmount,
+                to: schedule.witness, symbol: UTILITY_TOKEN_SYMBOL, quantity: NB_TOKENS_TO_REWARD,
               });
+            }
+            await api.db.remove('schedules', schedule);
           }
 
           params.currentWitness = null;
