@@ -293,10 +293,10 @@ actions.register = async (payload) => {
           // update totalEnabledApprovalWeight if the witness' enable status changed
           if (enabledChanged && witness.enabled) {
             params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-              .plus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+              .plus(witness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
           } else if (enabledChanged && !witness.enabled) {
             params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-              .minus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+              .minus(witness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
           }
           await api.db.update('params', params);
         } else {
@@ -949,7 +949,7 @@ actions.proposeRound = async (payload) => {
           const contractBalance = await api.db.findOneInTable('tokens', 'contractsBalances', { account: 'witnesses', symbol: UTILITY_TOKEN_SYMBOL });
           if (contractBalance
             && api.BigNumber(contractBalance.balance).gte(NB_TOKENS_NEEDED_BEFORE_REWARDING)) {
-              const rewardAmount =  api.BigNumber(NB_TOKENS_TO_REWARD_PER_BLOCK).multipliedBy(numberOfWitnessSlots).toFixed(UTILITY_TOKEN_PRECISION);
+              const rewardAmount = api.BigNumber(NB_TOKENS_TO_REWARD_PER_BLOCK).multipliedBy(numberOfWitnessSlots).toFixed(UTILITY_TOKEN_PRECISION);
               await api.executeSmartContract('tokens', 'stakeFromContract', {
                 to: currentWitness, symbol: UTILITY_TOKEN_SYMBOL, quantity: rewardAmount,
               });
