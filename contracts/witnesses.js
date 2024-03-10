@@ -293,10 +293,10 @@ actions.register = async (payload) => {
           // update totalEnabledApprovalWeight if the witness' enable status changed
           if (enabledChanged && witness.enabled) {
             params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-              .plus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+              .plus(witness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
           } else if (enabledChanged && !witness.enabled) {
             params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-              .minus(witness.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+              .minus(witness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
           }
           await api.db.update('params', params);
         } else {
