@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node --max-old-space-size=8192 app.js",
+    "postinstall": "patch-package",
     "lint": "eslint .gitignore .",
     "lintfix": "eslint .gitignore . --fix",
     "test": "./node_modules/mocha/bin/mocha --forbid-only --recursive --exit",
@@ -38,8 +39,8 @@
   "author": "Harpagon210 <harpagon210@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@hiveio/dhive": "^1.2.4",
-    "axios": "^0.21.1",
+    "@hiveio/dhive": "^1.2.8",
+    "axios": "^1.6.8",
     "bignumber.js": "^8.1.1",
     "body-parser": "^1.20.2",
     "bson": "^4.2.2",
@@ -47,19 +48,19 @@
     "cors": "^2.8.5",
     "crypto-js": "^3.3.0",
     "dotenv": "^6.2.0",
-    "express": "^4.18.2",
+    "express": "^4.18.3",
     "fs-extra": "^6.0.1",
     "jayson": "^4.1.0",
     "js-base64": "^2.6.4",
     "line-by-line": "^0.1.6",
-    "loglevel": "^1.8.0",
+    "loglevel": "^1.9.1",
     "mongodb": "^3.6.3",
     "morgan": "^1.10.0",
     "read-last-lines": "^1.8.0",
     "seedrandom": "^3.0.5",
     "validator": "^10.11.0",
     "vm2": "^3.9.2",
-    "winston": "^3.3.3"
+    "winston": "^3.12.0"
   },
   "devDependencies": {
     "eslint": "^5.16.0",
@@ -67,6 +68,7 @@
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.22.0",
-    "mocha": "^7.2.0"
+    "mocha": "^7.2.0",
+    "patch-package": "^8.0.0"
   }
 }
