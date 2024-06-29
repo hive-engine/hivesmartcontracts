@@ -960,6 +960,9 @@ actions.setProperties = async (payload) => {
           }
           if (shouldUpdate) {
             await api.db.update(instanceTableName, nftInstance);
+            api.emit('setProperties', {
+              id,
+            });
           }
         }
       }
