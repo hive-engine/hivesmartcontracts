@@ -2161,7 +2161,7 @@ describe('witnesses', function () {
 
       params = res;
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"2900.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',

@@ -564,7 +564,6 @@ const changeCurrentWitness = async () => {
         params.lastWitnesses.push(witness.account);
         params.blockNumberWitnessChange = api.blockNumber
           + maxRoundPropositionWaitingPeriod;
-        await api.db.update('params', params);
 
         // update the current witness
         const scheduledWitness = await api.db.findOne('witnesses', { account: currentWitness });
@@ -579,9 +578,13 @@ const changeCurrentWitness = async () => {
           scheduledWitness.missedRoundsInARow = 0;
           scheduledWitness.enabled = false;
 
+          params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+            .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+
           // Emit that witness got disabled
           api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
+        await api.db.update('params', params);
 
         await api.db.update('witnesses', scheduledWitness);
         witnessFound = true;
@@ -625,7 +628,6 @@ const changeCurrentWitness = async () => {
         params.lastWitnesses.push(newWitness);
         params.blockNumberWitnessChange = api.blockNumber
           + maxRoundPropositionWaitingPeriod;
-        await api.db.update('params', params);
 
         // update the current witness
         const scheduledWitness = await api.db.findOne('witnesses', { account: currentWitness });
@@ -640,9 +642,13 @@ const changeCurrentWitness = async () => {
           scheduledWitness.missedRoundsInARow = 0;
           scheduledWitness.enabled = false;
 
+          params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+            .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+
           // Emit that witness got disabled
           api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
+        await api.db.update('params', params);
 
         await api.db.update('witnesses', scheduledWitness);
         api.emit('currentWitnessChanged', {});
