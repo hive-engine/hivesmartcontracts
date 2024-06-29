@@ -1,0 +1,13 @@
+diff --git a/node_modules/axios/dist/node/axios.cjs b/node_modules/axios/dist/node/axios.cjs
+index f6fedeb..f46a26d 100644
+--- a/node_modules/axios/dist/node/axios.cjs
++++ b/node_modules/axios/dist/node/axios.cjs
+@@ -2894,7 +2894,7 @@ const httpAdapter = isHttpAdapterSupported && function httpAdapter(config) {
+     if (config.socketPath) {
+       options.socketPath = config.socketPath;
+     } else {
+-      options.hostname = parsed.hostname;
++      options.hostname = parsed.hostname.startsWith("[") ? parsed.hostname.slice(1, -1) : parsed.hostname;
+       options.port = parsed.port;
+       setProxy(options, config.proxy, protocol + '//' + parsed.hostname + (parsed.port ? ':' + parsed.port : '') + options.path);
+     }
