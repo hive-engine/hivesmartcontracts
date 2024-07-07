@@ -576,10 +576,13 @@ const changeCurrentWitness = async () => {
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
-          scheduledWitness.enabled = false;
 
-          params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-            .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          if (scheduledWitness.enabled) {
+            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+              .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          }
+
+          scheduledWitness.enabled = false;
 
           // Emit that witness got disabled
           api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
@@ -640,10 +643,13 @@ const changeCurrentWitness = async () => {
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
-          scheduledWitness.enabled = false;
 
-          params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
-            .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          if (scheduledWitness.enabled) {
+            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+              .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          }
+
+          scheduledWitness.enabled = false;
 
           // Emit that witness got disabled
           api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
