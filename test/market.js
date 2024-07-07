@@ -872,9 +872,11 @@ describe('Market', function() {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "1000", "isSignedWithActiveKey": true }`));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "TKN.TEST", "precision": 5, "maxSupply": "1000", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'tokens', 'transfer', '{ "symbol": "SWAP.HIVE", "to": "satoshi", "quantity": "123.456", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'tokens', 'transfer', '{ "symbol": "SWAP.HIVE", "to": "sunsetjesus", "quantity": "123.456", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, 'TXID1235', 'satoshi', 'market', 'buy', '{ "symbol": "TKN.TEST", "quantity": "1", "price": "0.00000001", "expiration": 2592000, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, 'TXID1236', 'satoshi', 'market', 'buy', '{ "symbol": "TKN.TEST", "quantity": "2", "price": "0.00000001", "expiration": 10, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, 'TXID1237', 'satoshi', 'market', 'buy', '{ "symbol": "TKN.TEST", "quantity": "3", "price": "0.00000001", "expiration": 30000000, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, 'TXID1238', 'sunsetjesus', 'market', 'buy', '{ "symbol": "TKN.TEST", "quantity": "4", "price": "0.00000001", "expiration": 30000000, "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -890,7 +892,6 @@ describe('Market', function() {
         contract: 'market',
         table: 'buyBook',
         query: {
-          account: 'satoshi',
           symbol: 'TKN.TEST'
         }
       });
@@ -918,6 +919,22 @@ describe('Market', function() {
       assert.equal(buyOrders[2].quantity, 3);
       assert.equal(buyOrders[2].timestamp, 1527811200);
       assert.equal(buyOrders[2].expiration, 1527811200 + 2592000);
+
+      // the order from sunsetjesus should be ignored as this account is on the blacklist
+      assert.equal(buyOrders.length, 3);
+
+      // no tokens should have left the blacklisted account
+      const accountBalances = await fixture.database.find({
+        contract: 'tokens',
+        table: 'balances',
+        query: {
+          account: 'sunsetjesus',
+          symbol: 'SWAP.HIVE'
+        }
+      });
+
+      assert.equal(accountBalances.length, 1);
+      assert.equal(accountBalances[0].balance, '123.456');
 
       resolve();
     })

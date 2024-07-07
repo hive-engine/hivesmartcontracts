@@ -1,10 +1,16 @@
 /* eslint-disable no-await-in-loop */
+/* eslint-disable quote-props */
 /* eslint-disable max-len */
 /* eslint-disable object-curly-newline */
 /* global actions, api */
 const HIVE_PEGGED_SYMBOL = 'SWAP.HIVE';
 const HIVE_PEGGED_SYMBOL_PRESICION = 8;
 const CONTRACT_NAME = 'market';
+
+// trading by these accounts is blocked
+const ACCOUNT_BLACKLIST = {
+  'sunsetjesus': 1,
+};
 
 const getMetric = async (symbol) => {
   let metric = await api.db.findOne('metrics', { symbol });
@@ -171,6 +177,90 @@ const updateTradesHistory = async (type, buyer, seller, symbol, quantity, price,
 
 const countDecimals = value => api.BigNumber(value).dp();
 
+const removeBadOrders = async () => {
+  let nbOrdersToDelete = 0;
+  let nbOrdersDeleted = 0;
+  let ordersToDelete = await api.db.find(
+    'buyBook',
+    {
+      tokensLocked: {
+        $in: ['0.00000000'],
+      },
+    },
+    1000,
+    0,
+    [{ index: '_id', descending: false }],
+  );
+
+  nbOrdersToDelete = ordersToDelete.length;
+  while (nbOrdersToDelete > 0 && nbOrdersDeleted < 5000) {
+    for (let index = 0; index < nbOrdersToDelete; index += 1) {
+      nbOrdersDeleted += 1;
+      const order = ordersToDelete[index];
+
+      await api.db.remove('buyBook', order);
+      await updateBidMetric(order.symbol);
+    }
+
+    ordersToDelete = await api.db.find(
+      'buyBook',
+      {
+        tokensLocked: {
+          $in: ['0.00000000'],
+        },
+      },
+      1000,
+      0,
+      [{ index: '_id', descending: false }],
+    );
+
+    nbOrdersToDelete = ordersToDelete.length;
+  }
+};
+
+const removeBlacklistedOrders = async (type, targetAccount) => {
+  const table = type === 'buy' ? 'buyBook' : 'sellBook';
+  let nbOrdersToDelete = 0;
+  let nbOrdersDeleted = 0;
+  let ordersToDelete = await api.db.find(
+    table,
+    {
+      account: targetAccount,
+    },
+    1000,
+    0,
+    [{ index: '_id', descending: false }],
+  );
+
+  nbOrdersToDelete = ordersToDelete.length;
+  while (nbOrdersToDelete > 0 && nbOrdersDeleted < 5000) {
+    for (let index = 0; index < nbOrdersToDelete; index += 1) {
+      nbOrdersDeleted += 1;
+      const order = ordersToDelete[index];
+
+      await api.db.remove(table, order);
+
+      if (type === 'sell') {
+        await updateAskMetric(order.symbol);
+      } else {
+        await updateBidMetric(order.symbol);
+      }
+    }
+
+    ordersToDelete = await api.db.find(
+      table,
+      {
+        account: targetAccount,
+      },
+      1000,
+      0,
+      [{ index: '_id', descending: false }],
+    );
+
+    nbOrdersToDelete = ordersToDelete.length;
+  }
+};
+
 const removeExpiredOrders = async (table) => {
   const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
     .dividedBy(1000)
@@ -242,12 +332,10 @@ actions.createSSC = async () => {
     await api.db.createTable('tradesHistory', ['symbol']);
     await api.db.createTable('metrics', ['symbol']);
   } else {
-    // remove stuck 0 quantity orders
-    let order = await api.db.findOne('buyBook', { txId: 'MM-P-33520024-80518873-3-9-0' });
-    if (order) {
-      await api.db.remove('buyBook', order);
-      await updateBidMetric(order.symbol);
-    }
+    // remove stuck 0 quantity orders and any that have been blacklisted
+    await removeBadOrders();
+    await removeBlacklistedOrders('buy', 'sunsetjesus');
+    await removeBlacklistedOrders('sell', 'sunsetjesus');
   }
 };
 
@@ -724,6 +812,11 @@ actions.buy = async (payload) => {
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
   const finalTxId = (txId === undefined || api.sender !== 'null') ? api.transactionId : txId;
 
+  // ignore any actions coming from blacklisted accounts
+  if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
+    return;
+  }
+
   // buy (quantity) of (symbol) at (price)(HIVE_PEGGED_SYMBOL) per (symbol)
   if (api.assert(isSignedWithActiveKey === true || api.sender === 'null', 'you must use a custom_json signed with your active key')
     && api.assert(price && typeof price === 'string' && !api.BigNumber(price).isNaN()
@@ -794,6 +887,11 @@ actions.sell = async (payload) => {
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
   const finalTxId = (txId === undefined || api.sender !== 'null') ? api.transactionId : txId;
 
+  // ignore any actions coming from blacklisted accounts
+  if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
+    return;
+  }
+
   // sell (quantity) of (symbol) at (price)(HIVE_PEGGED_SYMBOL) per (symbol)
   if (api.assert(isSignedWithActiveKey === true || api.sender === 'null', 'you must use a custom_json signed with your active key')
     && api.assert(price && typeof price === 'string' && !api.BigNumber(price).isNaN()
@@ -856,6 +954,11 @@ actions.marketBuy = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
+
+  // ignore any actions coming from blacklisted accounts
+  if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
+    return;
+  }
 
   if (api.assert(isSignedWithActiveKey === true || api.sender === 'null', 'you must use a custom_json signed with your active key')
     && symbol && typeof symbol === 'string' && symbol !== HIVE_PEGGED_SYMBOL
@@ -1042,6 +1145,11 @@ actions.marketSell = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
+
+  // ignore any actions coming from blacklisted accounts
+  if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
+    return;
+  }
 
   if (api.assert(isSignedWithActiveKey === true || api.sender === 'null', 'you must use a custom_json signed with your active key')
     && symbol && typeof symbol === 'string' && symbol !== HIVE_PEGGED_SYMBOL
