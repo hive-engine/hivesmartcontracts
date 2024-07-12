@@ -10,6 +10,7 @@ const CONTRACT_NAME = 'market';
 // trading by these accounts is blocked
 const ACCOUNT_BLACKLIST = {
   'sunsetjesus': 1,
+  'waitingforlove': 1,
 };
 
 const getMetric = async (symbol) => {
@@ -334,8 +335,8 @@ actions.createSSC = async () => {
   } else {
     // remove stuck 0 quantity orders and any that have been blacklisted
     await removeBadOrders();
-    await removeBlacklistedOrders('buy', 'sunsetjesus');
-    await removeBlacklistedOrders('sell', 'sunsetjesus');
+    await removeBlacklistedOrders('buy', 'waitingforlove');
+    await removeBlacklistedOrders('sell', 'waitingforlove');
   }
 };
 
