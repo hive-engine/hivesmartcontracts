@@ -11,6 +11,8 @@ const CONTRACT_NAME = 'market';
 const ACCOUNT_BLACKLIST = {
   'sunsetjesus': 1,
   'waitingforlove': 1,
+  'thenights': 1,
+  'thedays': 1,
 };
 
 const getMetric = async (symbol) => {
