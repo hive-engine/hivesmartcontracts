@@ -13,6 +13,7 @@ const ACCOUNT_BLACKLIST = {
   'waitingforlove': 1,
   'thenights': 1,
   'thedays': 1,
+  'temp': 1,
 };
 
 const getMetric = async (symbol) => {
