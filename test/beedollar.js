@@ -193,8 +193,24 @@ describe('beedollar', function () {
 
       assert.equal(res.balance, '990.00000000');
 
+      // confirm that BEED was bootstrapped into existence OK
+      const token = await fixture.database.findOne({
+        contract: 'tokens',
+        table: 'tokens',
+        query: {
+          symbol: 'BEED',
+        }
+      });
+      console.log(token);
+      assert.equal(token.issuer, 'null');
+      assert.equal(token.symbol, 'BEED');
+      assert.equal(token.name, 'BeeD');
+      assert.equal(token.metadata, '{"url":"https://tribaldex.com","icon":"https://cdn.tribaldex.com/tribaldex/token-icons/BEE.png","desc":"BEED is the native stablecoin for the Hive Engine platform. You can mint new BEED by burning BEE."}');
+      assert.equal(token.precision, 4);
+      assert.equal(token.maxSupply, '9007199254740991.0000');
+
       const latestBlock = await fixture.database.getLatestBlockInfo();
-      console.log(latestBlock.transactions);
+      //console.log(latestBlock.transactions);
 
       resolve();
     })

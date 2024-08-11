@@ -78,6 +78,17 @@ actions.createSSC = async () => {
     params.feePercentage = '0.01';
     await api.db.insert('params', params);
   }
+  const token = await api.db.findOneInTable('tokens', 'tokens', { symbol: 'BEED' });
+  if (!token) {
+    // bootstrap the BEED token into existence
+    await api.executeSmartContract('tokens', 'create',
+      { name: 'BeeD', symbol: 'BEED', url: 'https://tribaldex.com', precision: 4, maxSupply: `${Number.MAX_SAFE_INTEGER}` });
+    await api.executeSmartContract('tokens', 'updateMetadata',
+      { symbol: 'BEED', metadata:
+        { url: 'https://tribaldex.com',
+          icon: 'https://cdn.tribaldex.com/tribaldex/token-icons/BEE.png',
+          desc: 'BEED is the native stablecoin for the Hive Engine platform. You can mint new BEED by burning BEE.' } });
+  }
 };
 
 actions.convert = async (payload) => {

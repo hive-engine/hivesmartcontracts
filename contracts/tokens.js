@@ -270,9 +270,10 @@ actions.updateUrl = async (payload) => {
 };
 
 actions.updateMetadata = async (payload) => {
-  const { metadata, symbol } = payload;
+  const { metadata, symbol, callingContractInfo } = payload;
 
-  const fromVerifiedContract = (api.sender === 'null'
+  const fromVerifiedContract = (api.sender === 'hive-engine'
+      && callingContractInfo
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
 
   if (api.assert(symbol && typeof symbol === 'string'
@@ -341,13 +342,15 @@ actions.transferOwnership = async (payload) => {
 actions.create = async (payload) => {
   const {
     name, symbol, url, precision, maxSupply, isSignedWithActiveKey,
+    callingContractInfo,
   } = payload;
 
   // get contract params
   const params = await api.db.findOne('params', {});
   const { tokenCreationFee, heAccounts } = params;
 
-  const fromVerifiedContract = (api.sender === 'null'
+  const fromVerifiedContract = (api.sender === 'hive-engine'
+      && callingContractInfo
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
 
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
@@ -401,7 +404,7 @@ actions.create = async (payload) => {
 
         metadata = JSON.stringify(metadata);
         const newToken = {
-          issuer: api.sender,
+          issuer: fromVerifiedContract ? 'null' : api.sender,
           symbol,
           name,
           metadata,
