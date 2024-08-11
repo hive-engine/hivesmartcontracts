@@ -48,6 +48,7 @@ const VERIFIED_ISSUERS = [
   'comments',
   'mining',
   'tokenfunds',
+  'beedollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
@@ -271,13 +272,16 @@ actions.updateUrl = async (payload) => {
 actions.updateMetadata = async (payload) => {
   const { metadata, symbol } = payload;
 
+  const fromVerifiedContract = (api.sender === 'null'
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
+
   if (api.assert(symbol && typeof symbol === 'string'
     && metadata && typeof metadata === 'object', 'invalid params')) {
     // check if the token exists
     const token = await api.db.findOne('tokens', { symbol });
 
     if (token) {
-      if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
+      if (api.assert(fromVerifiedContract || (token.issuer === api.sender), 'must be the issuer')) {
         try {
           const finalMetadata = JSON.stringify(metadata);
 
@@ -343,16 +347,21 @@ actions.create = async (payload) => {
   const params = await api.db.findOne('params', {});
   const { tokenCreationFee, heAccounts } = params;
 
+  const fromVerifiedContract = (api.sender === 'null'
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
+
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
   // eslint-disable-next-line no-template-curly-in-string
-  const utilityTokenBalance = await api.db.findOne('balances', { account: api.sender, symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'" });
+  const utilityTokenBalance = fromVerifiedContract
+    ? null
+    : await api.db.findOne('balances', { account: api.sender, symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'" });
 
-  const authorizedCreation = (api.BigNumber(tokenCreationFee).lte(0) || heAccounts[api.sender] === 1)
+  const authorizedCreation = (fromVerifiedContract || api.BigNumber(tokenCreationFee).lte(0) || heAccounts[api.sender] === 1)
     ? true
     : utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(tokenCreationFee);
 
   if (api.assert(authorizedCreation, 'you must have enough tokens to cover the creation fees')
-    && api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
+    && api.assert(fromVerifiedContract || (isSignedWithActiveKey === true), 'you must use a custom_json signed with your active key')
     && api.assert(name && typeof name === 'string'
       && symbol && typeof symbol === 'string'
       && (url === undefined || (url && typeof url === 'string'))
@@ -409,7 +418,7 @@ actions.create = async (payload) => {
         await api.db.insert('tokens', newToken);
 
         // burn the token creation fees
-        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined) {
+        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract) {
           await actions.transfer({
             // eslint-disable-next-line no-template-curly-in-string
             to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: tokenCreationFee, isSignedWithActiveKey,
