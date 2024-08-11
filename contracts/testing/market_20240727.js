@@ -424,10 +424,12 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
       if (api.BigNumber(buyOrder.quantity).lte(sellOrder.quantity)) {
         let qtyTokensToSend = api.BigNumber(sellOrder.price)
           .multipliedBy(buyOrder.quantity)
-          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
+          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
         if (api.BigNumber(qtyTokensToSend).gt(buyOrder.tokensLocked)) {
-          qtyTokensToSend = buyOrder.tokensLocked;
+          qtyTokensToSend = api.BigNumber(sellOrder.price)
+            .multipliedBy(buyOrder.quantity)
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
         }
 
         if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
@@ -458,10 +460,9 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
           const qtyLeftSellOrder = api.BigNumber(sellOrder.quantity)
             .minus(buyOrder.quantity)
             .toFixed(tokenPrecision);
-          // round down here so we don't leave dust orders on the book
           const nbTokensToFillOrder = api.BigNumber(sellOrder.price)
             .multipliedBy(qtyLeftSellOrder)
-            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
           if (api.BigNumber(qtyLeftSellOrder).gt(0)
             && (api.BigNumber(nbTokensToFillOrder).gte('0.00000001'))) {
@@ -498,10 +499,12 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
       } else {
         let qtyTokensToSend = api.BigNumber(sellOrder.price)
           .multipliedBy(sellOrder.quantity)
-          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
+          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
         if (api.BigNumber(qtyTokensToSend).gt(buyOrder.tokensLocked)) {
-          qtyTokensToSend = buyOrder.tokensLocked;
+          qtyTokensToSend = api.BigNumber(sellOrder.price)
+            .multipliedBy(sellOrder.quantity)
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
         }
 
         if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
@@ -541,15 +544,12 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
             .toFixed(tokenPrecision);
 
           // check if the order can still be filled
-          // round down here so we don't leave dust orders on the book
           const nbTokensToFillOrder = api.BigNumber(buyOrder.price)
             .multipliedBy(buyOrder.quantity)
-            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
           if (api.BigNumber(nbTokensToFillOrder).lt('0.00000001')) {
-            if (api.BigNumber(buyOrder.tokensLocked).gt(0)) {
-              await api.transferTokens(account, HIVE_PEGGED_SYMBOL, buyOrder.tokensLocked, 'user');
-            }
+            await api.transferTokens(account, HIVE_PEGGED_SYMBOL, buyOrder.tokensLocked, 'user');
 
             buyOrder.quantity = '0';
             await api.db.remove('buyBook', buyOrder);
@@ -629,10 +629,12 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
       if (api.BigNumber(sellOrder.quantity).lte(buyOrder.quantity)) {
         let qtyTokensToSend = api.BigNumber(buyOrder.price)
           .multipliedBy(sellOrder.quantity)
-          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
         if (api.BigNumber(qtyTokensToSend).gt(buyOrder.tokensLocked)) {
-          qtyTokensToSend = buyOrder.tokensLocked;
+          qtyTokensToSend = api.BigNumber(buyOrder.price)
+            .multipliedBy(sellOrder.quantity)
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
         }
 
         if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
@@ -669,7 +671,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
             .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
           const nbTokensToFillOrder = api.BigNumber(buyOrder.price)
             .multipliedBy(qtyLeftBuyOrder)
-            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
           if (api.BigNumber(qtyLeftBuyOrder).gt(0)
             && (api.BigNumber(nbTokensToFillOrder).gte('0.00000001'))) {
@@ -698,10 +700,12 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
       } else {
         let qtyTokensToSend = api.BigNumber(buyOrder.price)
           .multipliedBy(buyOrder.quantity)
-          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+          .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
-        if (api.BigNumber(qtyTokensToSend).gt(buyOrder.tokensLocked)) {
-          qtyTokensToSend = buyOrder.tokensLocked;
+        if (qtyTokensToSend > buyOrder.tokensLocked) {
+          qtyTokensToSend = api.BigNumber(buyOrder.price)
+            .multipliedBy(buyOrder.quantity)
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
         }
 
         if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
@@ -748,12 +752,10 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
           // check if the order can still be filled
           const nbTokensToFillOrder = api.BigNumber(sellOrder.price)
             .multipliedBy(sellOrder.quantity)
-            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+            .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
           if (api.BigNumber(nbTokensToFillOrder).lt('0.00000001')) {
-            if (api.BigNumber(sellOrder.quantity).gt(0)) {
-              await api.transferTokens(account, symbol, sellOrder.quantity, 'user');
-            }
+            await api.transferTokens(account, symbol, sellOrder.quantity, 'user');
 
             sellOrder.quantity = '0';
             await api.db.remove('sellBook', sellOrder);
@@ -837,11 +839,12 @@ actions.buy = async (payload) => {
       && countDecimals(quantity) <= token.precision, 'invalid params')) {
       // initiate a transfer from sender to contract balance
 
-      const nbTokensToLockRaw = api.BigNumber(price).multipliedBy(quantity);
+      const nbTokensToLock = api.BigNumber(price)
+        .multipliedBy(quantity)
+        .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
-      if (api.assert(nbTokensToLockRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
+      if (api.assert(api.BigNumber(nbTokensToLock).gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
         // lock HIVE_PEGGED_SYMBOL tokens
-        const nbTokensToLock = nbTokensToLockRaw.toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
         const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity: nbTokensToLock, to: CONTRACT_NAME });
 
         if (res.errors === undefined
@@ -908,9 +911,11 @@ actions.sell = async (payload) => {
       && api.BigNumber(price).gt(0)
       && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
       && countDecimals(quantity) <= token.precision, 'invalid params')) {
-      const nbTokensToFillOrderRaw = api.BigNumber(price).multipliedBy(quantity);
+      const nbTokensToFillOrder = api.BigNumber(price)
+        .multipliedBy(quantity)
+        .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
-      if (api.assert(nbTokensToFillOrderRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
+      if (api.assert(api.BigNumber(nbTokensToFillOrder).gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
         // initiate a transfer from sender to contract balance
         // lock symbol tokens
         const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
@@ -1029,10 +1034,9 @@ actions.marketBuy = async (payload) => {
                 const qtyLeftSellOrder = api.BigNumber(sellOrder.quantity)
                   .minus(qtyTokensToSend)
                   .toFixed(token.precision);
-                // round down here so we don't leave dust orders on the book
                 const nbTokensToFillOrder = api.BigNumber(sellOrder.price)
                   .multipliedBy(qtyLeftSellOrder)
-                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
                 if (api.BigNumber(qtyLeftSellOrder).gt(0)
                   && (api.BigNumber(nbTokensToFillOrder).gte('0.00000001'))) {
@@ -1057,10 +1061,12 @@ actions.marketBuy = async (payload) => {
             } else if (api.BigNumber(qtyTokensToSend).gt(0)) {
               let qtyHiveToSend = api.BigNumber(sellOrder.price)
                 .multipliedBy(sellOrder.quantity)
-                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
+                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
               if (api.BigNumber(qtyHiveToSend).gt(hiveRemaining)) {
-                qtyHiveToSend = hiveRemaining;
+                qtyHiveToSend = api.BigNumber(sellOrder.price)
+                  .multipliedBy(sellOrder.quantity)
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
               }
 
               if (api.assert(api.BigNumber(qtyHiveToSend).gt(0)
@@ -1188,10 +1194,12 @@ actions.marketSell = async (payload) => {
             if (api.BigNumber(tokensRemaining).lte(buyOrder.quantity)) {
               let qtyTokensToSend = api.BigNumber(buyOrder.price)
                 .multipliedBy(tokensRemaining)
-                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
               if (api.BigNumber(qtyTokensToSend).gt(buyOrder.tokensLocked)) {
-                qtyTokensToSend = buyOrder.tokensLocked;
+                qtyTokensToSend = api.BigNumber(buyOrder.price)
+                  .multipliedBy(tokensRemaining)
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
               }
 
               if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
@@ -1228,7 +1236,7 @@ actions.marketSell = async (payload) => {
                   .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
                 const nbTokensToFillOrder = api.BigNumber(buyOrder.price)
                   .multipliedBy(qtyLeftBuyOrder)
-                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
                 if (api.BigNumber(qtyLeftBuyOrder).gt(0)
                   && (api.BigNumber(nbTokensToFillOrder).gte('0.00000001'))) {
@@ -1254,10 +1262,12 @@ actions.marketSell = async (payload) => {
             } else {
               let qtyTokensToSend = api.BigNumber(buyOrder.price)
                 .multipliedBy(buyOrder.quantity)
-                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
 
-              if (api.BigNumber(qtyTokensToSend).gt(buyOrder.tokensLocked)) {
-                qtyTokensToSend = buyOrder.tokensLocked;
+              if (qtyTokensToSend > buyOrder.tokensLocked) {
+                qtyTokensToSend = api.BigNumber(buyOrder.price)
+                  .multipliedBy(buyOrder.quantity)
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
               }
 
               if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
