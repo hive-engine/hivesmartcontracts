@@ -439,7 +439,9 @@ actions.issue = async (payload) => {
   } = payload;
 
   const fromVerifiedContract = (api.sender === 'null'
-      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
+      || (callingContractInfo && callingContractInfo.name === 'beedollar');
+
   if (fromVerifiedContract
     || (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
       && api.assert(to && typeof to === 'string'

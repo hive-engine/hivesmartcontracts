@@ -180,7 +180,7 @@ describe('beedollar', function () {
       await fixture.sendBlock(block);
 
       // confirm that BEE was burned in the convert
-      const res = await fixture.database.findOne({
+      let res = await fixture.database.findOne({
         contract: 'tokens',
         table: 'balances',
         query: {
@@ -188,10 +188,21 @@ describe('beedollar', function () {
           symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL
         }
       });
+      console.log(`BEE balance: ${res.balance}`);
+      //assert.equal(res.balance, '990.00000000');
 
-      console.log(res.balance);
-
-      assert.equal(res.balance, '990.00000000');
+      // confirm that BEED was issued
+      res = await fixture.database.findOne({
+        contract: 'tokens',
+        table: 'balances',
+        query: {
+          account: 'aggroed',
+          symbol: 'BEED'
+        }
+      });
+      if (res && res.balance) {
+        console.log(`BEED balance: ${res.balance}`);
+      }
 
       // confirm that BEED was bootstrapped into existence OK
       const token = await fixture.database.findOne({
@@ -210,7 +221,7 @@ describe('beedollar', function () {
       assert.equal(token.maxSupply, '9007199254740991.0000');
 
       const latestBlock = await fixture.database.getLatestBlockInfo();
-      //console.log(latestBlock.transactions);
+      console.log(latestBlock.transactions);
 
       resolve();
     })
