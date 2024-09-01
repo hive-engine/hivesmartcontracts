@@ -24,6 +24,26 @@ const GOVERNANCE_TOKEN_PRECISION = '${CONSTANTS.GOVERNANCE_TOKEN_PRECISION}$';
 // eslint-disable-next-line no-template-curly-in-string
 const GOVERNANCE_TOKEN_MIN_VALUE = '${CONSTANTS.GOVERNANCE_TOKEN_MIN_VALUE}$';
 
+const recalcTotalEnabledApprovalWeight = async () => {
+  let totalEnabledApprovalWeight = '0';
+  let offset = 0;
+  let wits;
+
+  do {
+    wits = await api.db.find('witnesses', {}, 1000, offset, [{ index: '_id', descending: false }]);
+    for (let i = 0; i < wits.length; i += 1) {
+      const wit = wits[i];
+      if (wit.enabled) {
+        totalEnabledApprovalWeight = api.BigNumber(totalEnabledApprovalWeight)
+          .plus(wit.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+      }
+    }
+    offset += 1000;
+  } while (wits.length === 1000);
+
+  return totalEnabledApprovalWeight;
+};
+
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('witnesses');
 
@@ -58,21 +78,7 @@ actions.createSSC = async () => {
     const params = await api.db.findOne('params', {});
     // This should be removed after being deployed
     if (!params.totalEnabledApprovalWeight || params.totalEnabledApprovalWeight === 'NaN') {
-      let totalEnabledApprovalWeight = '0';
-      let offset = 0;
-      let wits;
-      do {
-        wits = await api.db.find('witnesses', {}, 1000, offset, [{ index: '_id', descending: false }]);
-        for (let i = 0; i < wits.length; i += 1) {
-          const wit = wits[i];
-          if (wit.enabled) {
-            totalEnabledApprovalWeight = api.BigNumber(totalEnabledApprovalWeight)
-              .plus(wit.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
-          }
-        }
-        offset += 1000;
-      } while (wits.length === 1000);
-      params.totalEnabledApprovalWeight = totalEnabledApprovalWeight;
+      params.totalEnabledApprovalWeight = await recalcTotalEnabledApprovalWeight();
       await api.db.update('params', params);
     }
     // End block to remove
@@ -93,6 +99,7 @@ actions.resetSchedule = async () => {
   params.currentWitness = null;
   params.blockNumberWitnessChange = 0;
   params.lastWitnesses = [];
+  params.totalEnabledApprovalWeight = await recalcTotalEnabledApprovalWeight();
   await api.db.update('params', params);
 };
 
@@ -557,7 +564,6 @@ const changeCurrentWitness = async () => {
         params.lastWitnesses.push(witness.account);
         params.blockNumberWitnessChange = api.blockNumber
           + maxRoundPropositionWaitingPeriod;
-        await api.db.update('params', params);
 
         // update the current witness
         const scheduledWitness = await api.db.findOne('witnesses', { account: currentWitness });
@@ -570,11 +576,18 @@ const changeCurrentWitness = async () => {
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
+
+          if (scheduledWitness.enabled) {
+            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+              .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          }
+
           scheduledWitness.enabled = false;
 
           // Emit that witness got disabled
           api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
+        await api.db.update('params', params);
 
         await api.db.update('witnesses', scheduledWitness);
         witnessFound = true;
@@ -618,7 +631,6 @@ const changeCurrentWitness = async () => {
         params.lastWitnesses.push(newWitness);
         params.blockNumberWitnessChange = api.blockNumber
           + maxRoundPropositionWaitingPeriod;
-        await api.db.update('params', params);
 
         // update the current witness
         const scheduledWitness = await api.db.findOne('witnesses', { account: currentWitness });
@@ -631,11 +643,18 @@ const changeCurrentWitness = async () => {
         // disable the witness if missed maxRoundsMissedInARow
         if (scheduledWitness.missedRoundsInARow >= maxRoundsMissedInARow) {
           scheduledWitness.missedRoundsInARow = 0;
+
+          if (scheduledWitness.enabled) {
+            params.totalEnabledApprovalWeight = api.BigNumber(params.totalEnabledApprovalWeight)
+              .minus(scheduledWitness.approvalWeight.$numberDecimal).toFixed(GOVERNANCE_TOKEN_PRECISION);
+          }
+
           scheduledWitness.enabled = false;
 
           // Emit that witness got disabled
           api.emit('witnessDisabledForMissingTooManyRoundsInARow', { witness: scheduledWitness.account });
         }
+        await api.db.update('params', params);
 
         await api.db.update('witnesses', scheduledWitness);
         api.emit('currentWitnessChanged', {});
