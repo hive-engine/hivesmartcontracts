@@ -82,13 +82,27 @@ actions.createSSC = async () => {
   const token = await api.db.findOneInTable('tokens', 'tokens', { symbol: 'BEED' });
   if (!token) {
     // bootstrap the BEED token into existence
-    await api.executeSmartContract('tokens', 'create',
-      { name: 'BeeD', symbol: 'BEED', url: 'https://tribaldex.com', precision: BEED_PRECISION, maxSupply: `${Number.MAX_SAFE_INTEGER}` });
-    await api.executeSmartContract('tokens', 'updateMetadata',
-      { symbol: 'BEED', metadata:
-        { url: 'https://tribaldex.com',
-          icon: 'https://cdn.tribaldex.com/tribaldex/token-icons/BEE.png',
-          desc: 'BEED is the native stablecoin for the Hive Engine platform. You can mint new BEED by burning BEE.' } });
+    const tokenProps = {
+      name: 'BeeD',
+      symbol: 'BEED',
+      url: 'https://tribaldex.com',
+      precision: BEED_PRECISION,
+      maxSupply: `${Number.MAX_SAFE_INTEGER}`,
+    };
+
+    const meta = {
+      url: 'https://tribaldex.com',
+      icon: 'https://cdn.tribaldex.com/tribaldex/token-icons/BEE.png',
+      desc: 'BEED is the native stablecoin for the Hive Engine platform. You can mint new BEED by burning BEE.',
+    };
+
+    const updateData = {
+      symbol: 'BEED',
+      metadata: meta,
+    };
+
+    await api.executeSmartContract('tokens', 'create', tokenProps);
+    await api.executeSmartContract('tokens', 'updateMetadata', updateData);
   }
 };
 
@@ -147,7 +161,7 @@ actions.convert = async (payload) => {
       });
 
       api.emit('beeConversion', {
-        to: api.sender, fee, bee: finalQty.toFixed(UTILITY_TOKEN_PRECISION), beed: beedToIssue, beePriceInUSD: beePriceInDollars
+        to: api.sender, fee, bee: finalQty.toFixed(UTILITY_TOKEN_PRECISION), beed: beedToIssue, beePriceInUSD: beePriceInDollars,
       });
 
       return true;
