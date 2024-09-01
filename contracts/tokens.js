@@ -1,6 +1,7 @@
 /* eslint-disable no-await-in-loop */
 /* eslint-disable quote-props */
 /* eslint-disable max-len */
+/* eslint-disable no-template-curly-in-string */
 /* global actions, api */
 
 // transfers to these accounts are blocked
@@ -48,6 +49,7 @@ const VERIFIED_ISSUERS = [
   'comments',
   'mining',
   'tokenfunds',
+  'beedollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
@@ -269,7 +271,11 @@ actions.updateUrl = async (payload) => {
 };
 
 actions.updateMetadata = async (payload) => {
-  const { metadata, symbol } = payload;
+  const { metadata, symbol, callingContractInfo } = payload;
+
+  const fromVerifiedContract = (api.sender === 'hive-engine'
+      && callingContractInfo
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
 
   if (api.assert(symbol && typeof symbol === 'string'
     && metadata && typeof metadata === 'object', 'invalid params')) {
@@ -277,7 +283,7 @@ actions.updateMetadata = async (payload) => {
     const token = await api.db.findOne('tokens', { symbol });
 
     if (token) {
-      if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
+      if (api.assert(fromVerifiedContract || (token.issuer === api.sender), 'must be the issuer')) {
         try {
           const finalMetadata = JSON.stringify(metadata);
 
@@ -337,22 +343,28 @@ actions.transferOwnership = async (payload) => {
 actions.create = async (payload) => {
   const {
     name, symbol, url, precision, maxSupply, isSignedWithActiveKey,
+    callingContractInfo,
   } = payload;
 
   // get contract params
   const params = await api.db.findOne('params', {});
   const { tokenCreationFee, heAccounts } = params;
 
-  // get api.sender's UTILITY_TOKEN_SYMBOL balance
-  // eslint-disable-next-line no-template-curly-in-string
-  const utilityTokenBalance = await api.db.findOne('balances', { account: api.sender, symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'" });
+  const fromVerifiedContract = (api.sender === 'hive-engine'
+      && callingContractInfo
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
 
-  const authorizedCreation = (api.BigNumber(tokenCreationFee).lte(0) || heAccounts[api.sender] === 1)
+  // get api.sender's UTILITY_TOKEN_SYMBOL balance
+  const utilityTokenBalance = fromVerifiedContract
+    ? null
+    : await api.db.findOne('balances', { account: api.sender, symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'" });
+
+  const authorizedCreation = (fromVerifiedContract || api.BigNumber(tokenCreationFee).lte(0) || heAccounts[api.sender] === 1)
     ? true
     : utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(tokenCreationFee);
 
   if (api.assert(authorizedCreation, 'you must have enough tokens to cover the creation fees')
-    && api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
+    && api.assert(fromVerifiedContract || (isSignedWithActiveKey === true), 'you must use a custom_json signed with your active key')
     && api.assert(name && typeof name === 'string'
       && symbol && typeof symbol === 'string'
       && (url === undefined || (url && typeof url === 'string'))
@@ -392,7 +404,7 @@ actions.create = async (payload) => {
 
         metadata = JSON.stringify(metadata);
         const newToken = {
-          issuer: api.sender,
+          issuer: fromVerifiedContract ? 'null' : api.sender,
           symbol,
           name,
           metadata,
@@ -409,9 +421,8 @@ actions.create = async (payload) => {
         await api.db.insert('tokens', newToken);
 
         // burn the token creation fees
-        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined) {
+        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract) {
           await actions.transfer({
-            // eslint-disable-next-line no-template-curly-in-string
             to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: tokenCreationFee, isSignedWithActiveKey,
           });
         }
@@ -427,7 +438,9 @@ actions.issue = async (payload) => {
   } = payload;
 
   const fromVerifiedContract = (api.sender === 'null'
-      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
+      || (callingContractInfo && callingContractInfo.name === 'beedollar');
+
   if (fromVerifiedContract
     || (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
       && api.assert(to && typeof to === 'string'
@@ -750,7 +763,6 @@ const processUnstake = async (unstake) => {
           );
 
           // update witnesses rank
-          // eslint-disable-next-line no-template-curly-in-string
           if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
             await api.executeSmartContract('witnesses', 'updateWitnessesApprovals', { account });
           }
@@ -823,7 +835,6 @@ actions.enableStaking = async (payload) => {
   const { enableStakingFee } = params;
 
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
-  // eslint-disable-next-line no-template-curly-in-string
   const utilityTokenBalance = await api.db.findOne('balances', { account: api.sender, symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'" });
   const enoughFunds = utilityTokenBalance
     && api.BigNumber(utilityTokenBalance.balance).gte(enableStakingFee);
@@ -850,7 +861,6 @@ actions.enableStaking = async (payload) => {
       // burn the fees
       if (api.BigNumber(enableStakingFee).gt(0)) {
         await actions.transfer({
-          // eslint-disable-next-line no-template-curly-in-string
           to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: enableStakingFee, isSignedWithActiveKey,
         });
       }
@@ -891,7 +901,6 @@ actions.stake = async (payload) => {
           api.emit('stake', { account: finalTo, symbol, quantity });
 
           // update witnesses rank
-          // eslint-disable-next-line no-template-curly-in-string
           if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
             await api.executeSmartContract(
               'witnesses', 'updateWitnessesApprovals', { account: finalTo },
@@ -938,7 +947,6 @@ actions.stakeFromContract = async (payload) => {
           api.emit('stakeFromContract', { account: finalTo, symbol, quantity });
 
           // update witnesses rank
-          // eslint-disable-next-line no-template-curly-in-string
           if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
             await api.executeSmartContract('witnesses', 'updateWitnessesApprovals',
               { account: finalTo });
@@ -996,7 +1004,6 @@ const startUnstake = async (account, token, quantity) => {
       );
       await api.db.update('tokens', token);
       // update witnesses rank
-      // eslint-disable-next-line no-template-curly-in-string
       if (token.symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
         await api.executeSmartContract('witnesses', 'updateWitnessesApprovals', { account });
       }
@@ -1096,7 +1103,6 @@ const processCancelUnstake = async (unstake) => {
       api.emit('unstakeCancel', { account, symbol, quantity: quantityLeft });
 
       // update witnesses rank
-      // eslint-disable-next-line no-template-curly-in-string
       if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
         await api.executeSmartContract(
           'witnesses', 'updateWitnessesApprovals', { account },
@@ -1141,7 +1147,6 @@ actions.enableDelegation = async (payload) => {
   const { enableDelegationFee } = params;
 
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
-  // eslint-disable-next-line no-template-curly-in-string
   const utilityTokenBalance = await api.db.findOne('balances', { account: api.sender, symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'" });
   const enoughFunds = utilityTokenBalance
     && api.BigNumber(utilityTokenBalance.balance).gte(enableDelegationFee);
@@ -1166,7 +1171,6 @@ actions.enableDelegation = async (payload) => {
       // burn the fees
       if (api.BigNumber(enableDelegationFee).gt(0)) {
         await actions.transfer({
-          // eslint-disable-next-line no-template-curly-in-string
           to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: enableDelegationFee, isSignedWithActiveKey,
         });
       }
@@ -1282,7 +1286,6 @@ actions.delegate = async (payload) => {
             api.emit('delegate', { to: finalTo, symbol, quantity });
 
             // update witnesses rank
-            // eslint-disable-next-line no-template-curly-in-string
             if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
               await api.executeSmartContract('witnesses',
                 'updateWitnessesApprovals', { account: api.sender });
@@ -1329,7 +1332,6 @@ actions.delegate = async (payload) => {
             api.emit('delegate', { to: finalTo, symbol, quantity });
 
             // update witnesses rank
-            // eslint-disable-next-line no-template-curly-in-string
             if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
               await api.executeSmartContract(
                 'witnesses', 'updateWitnessesApprovals', { account: api.sender },
@@ -1435,7 +1437,6 @@ actions.undelegate = async (payload) => {
               api.emit('undelegateStart', { from: finalFrom, symbol, quantity });
 
               // update witnesses rank
-              // eslint-disable-next-line no-template-curly-in-string
               if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
                 await api.executeSmartContract(
                   'witnesses', 'updateWitnessesApprovals', { account: finalFrom },
@@ -1489,7 +1490,6 @@ const processUndelegation = async (undelegation) => {
       api.emit('undelegateDone', { account, symbol, quantity });
 
       // update witnesses rank
-      // eslint-disable-next-line no-template-curly-in-string
       if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
         await api.executeSmartContract(
           'witnesses', 'updateWitnessesApprovals', { account },

@@ -28,7 +28,8 @@
     "test17": "./node_modules/mocha/bin/mocha ./test/comments.js --exit",
     "test18": "./node_modules/mocha/bin/mocha ./test/ticks.js --exit",
     "test19": "./node_modules/mocha/bin/mocha ./test/hivepegged.js --exit",
-    "test20": "./node_modules/mocha/bin/mocha ./test/nftairdrops.js --exit"
+    "test20": "./node_modules/mocha/bin/mocha ./test/nftairdrops.js --exit",
+    "test21": "./node_modules/mocha/bin/mocha ./test/beedollar.js --exit"
   },
   "engines": {
     "node": ">=v18.17.0",
