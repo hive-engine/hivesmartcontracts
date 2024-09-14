@@ -43,6 +43,7 @@ const RESERVED_SYMBOLS = {
   EM: 'steem-eng',
   EMFOUR: 'steem-eng',
   HIVEP: 'steem-tokens',
+  GLINT: 'steemmonsters',
 };
 
 const VERIFIED_ISSUERS = [
