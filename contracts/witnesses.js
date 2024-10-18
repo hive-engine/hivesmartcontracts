@@ -103,6 +103,28 @@ actions.resetSchedule = async () => {
   await api.db.update('params', params);
 };
 
+actions.recalculateApprovals = async (payload) => {
+  if (api.sender !== api.owner) return;
+ 
+  const witnessRec = await api.db.findOne('witnesses', { account: payload.witness });
+  if (!witnessRec) return;
+
+  let newApprovalWeight = api.BigNumber(0); 
+  const approvals = await api.db.find('approvals', { to: payload.witness });
+  for (let i = 0; i < approvals.length; i += 1) {
+    const approval = approvals[i];
+    const account = await api.db.findOne('accounts', {  account: approval.from });
+    if (account) {
+      newApprovalWeight = api.BigNumber(newApprovalWeight).plus(account.approvalWeight).toFixed(GOVERNANCE_TOKEN_PRECISION);
+    }
+  }
+  const oldApprovalWeight = witnessRec.approvalWeight.$numberDecimal;
+  const deltaApprovalWeight = api.BigNumber(newApprovalWeight)
+      .minus(oldApprovalWeight)
+      .toFixed(GOVERNANCE_TOKEN_PRECISION);
+  await updateWitnessRank(payload.witness, deltaApprovalWeight);
+};
+
 actions.updateParams = async (payload) => {
   if (api.sender !== api.owner) return;
 

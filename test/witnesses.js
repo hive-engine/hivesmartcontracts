@@ -1279,6 +1279,69 @@ describe('witnesses', function () {
       assert.equal(params[0].totalApprovalWeight, "200.25002");
       assert.equal(params[0].totalEnabledApprovalWeight, "100.25001");
 
+      // test recalculate approvals, clear current weights
+      let wit = await fixture.database.findOne({ contract: 'witnesses', table: 'witnesses', query: { 'account': 'dan' }});
+      wit.approvalWeight.$numberDecimal = '0.01';
+      await fixture.database.update({
+        contract: 'witnesses',
+        table: 'witnesses',
+        record : wit
+      });
+      wit = await fixture.database.findOne({ contract: 'witnesses', table: 'witnesses', query: { 'account': 'vitalik' }});
+      wit.approvalWeight.$numberDecimal = '0.02';
+      await fixture.database.update({
+        contract: 'witnesses',
+        table: 'witnesses',
+        record : wit
+      });
+      const param = await fixture.database.findOne({ contract: 'witnesses', table: 'params', query: {}});
+      param.totalApprovalWeight = "0.03";
+      param.totalEnabledApprovalWeight = "0.01";
+      await fixture.database.update({ contract: 'witnesses', table: 'params', record: param});
+
+      transactions = [];
+      transactions.push(new Transaction(37899130, fixture.getNextTxId(), 'hive-engine', 'witnesses', 'recalculateApprovals', '{ "witness": "dan" }'));
+      transactions.push(new Transaction(37899131, fixture.getNextTxId(), 'hive-engine', 'witnesses', 'recalculateApprovals', '{ "witness": "vitalik" }'));
+
+      block = {
+        refHiveBlockNumber: 37899130,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-10-01T00:00:03',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      res = await fixture.database.find({
+        contract: 'witnesses',
+        table: 'witnesses',
+        query: {
+        }
+      });
+
+      witnesses = res;
+
+      assert.equal(witnesses[0].account, "dan");
+      assert.equal(witnesses[0].approvalWeight.$numberDecimal, '100.25001');
+
+      assert.equal(witnesses[1].account, "vitalik");
+      assert.equal(witnesses[1].approvalWeight.$numberDecimal, "100.00001");
+
+      res = await fixture.database.find({
+        contract: 'witnesses',
+        table: 'params',
+        query: {
+        }
+      });
+
+      params = res;
+
+      assert.equal(params[0].numberOfApprovedWitnesses, 2);
+      assert.equal(params[0].totalApprovalWeight, "200.25002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.25001");
+
       resolve();
     })
       .then(() => {
