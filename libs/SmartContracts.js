@@ -1,10 +1,10 @@
 /* eslint-disable max-len */
 
+const ivm = require('isolated-vm');
 const SHA256FN = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
 const dhive = require('@hiveio/dhive');
 const { Base64 } = require('js-base64');
-const { VM, VMScript } = require('vm2');
 const BigNumber = require('bignumber.js');
 const log = require('loglevel');
 const validator = require('validator');
@@ -56,6 +56,26 @@ class SmartContracts {
         // this way we keep control of what can be executed in a smart contract
         let codeTemplate = `
           function wrapper () {
+            const api = {
+              action: sscglobal_action,
+              payload: sscglobal_payload,
+              transactionId: sscglobal_transactionId,
+              blockNumber: sscglobal_blockNumber,
+              refHiveBlockNumber: sscglobal_refHiveBlockNumber,
+              hiveBlockTimestamp: sscglobal_hiveBlockTimestamp,
+              contractVersion: sscglobal_contractVersion,
+              db: sscglobal_db,
+              BigNumber: sscglobal_BigNumber,
+              validator: sscglobal_validator,
+              SHA256: sscglobal_SHA256,
+              checkSignature: sscglobal_checkSignature,
+              random: sscglobal_random,
+              debug: sscglobal_debug,
+              executeSmartContract: sscglobal_executeSmartContract,
+              emit: sscglobal_emit,
+              assert: sscglobal_assert,
+              isValidAccountName: sscglobal_isValidAccountName,
+            };
             RegExp.prototype.constructor = function () { };
             RegExp.prototype.exec = function () {  };
             RegExp.prototype.test = function () {  };
@@ -90,7 +110,6 @@ class SmartContracts {
         codeTemplate = codeTemplate.replace('###ACTIONS###', Base64.decode(code));
 
         // compile the code for faster executions later on
-        const script = new VMScript(codeTemplate).compile();
 
         const tables = {};
 
@@ -211,7 +230,7 @@ class SmartContracts {
           },
         };
 
-        const error = await SmartContracts.runContractCode(vmState, script, jsVMTimeout);
+        const error = await SmartContracts.runContractCode(vmState, codeTemplate, jsVMTimeout);
         if (error) {
           if (error.name && typeof error.name === 'string'
             && error.message && typeof error.message === 'string') {
@@ -524,38 +543,14 @@ class SmartContracts {
   }
 
   static getJSVM(jsVMTimeout) {
-    let vm = null;
-
-    vm = JSVMs.find(v => v.inUse === false);
-
-    if (vm === undefined) {
-      if (JSVMs.length < MAXJSVMs) {
-        vm = {
-          vm: new VM({
-            timeout: jsVMTimeout,
-            sandbox: {
-            },
-          }),
-          inUse: true,
-        };
-        JSVMs.push(vm);
-      }
-    }
-
-    if (vm === undefined) {
-      vm = null;
-    } else {
-      // eslint-disable-next-line no-underscore-dangle
-      Object.keys(vm.vm._context).filter(key => key !== 'VMError' && key !== 'Buffer' && key !== 'api').forEach((key) => {
-        // eslint-disable-next-line no-underscore-dangle
-        delete vm.vm._context[key];
-      });
-      // eslint-disable-next-line no-underscore-dangle
-      vm.vm._context.api = {};
-      vm.inUse = true;
-    }
-
-    return vm;
+    const isolate = new ivm.Isolate({ memoryLimit: 128 });
+    const context = isolate.createContextSync();
+    return {
+      timeout: jsVMTimeout,
+      inUse: true,
+      context,
+      isolate
+    };
   }
 
   // run the contractCode in a VM with the vmState as a state for the VM
@@ -565,18 +560,17 @@ class SmartContracts {
       try {
         // run the code in the VM
         if (vm !== null) {
-          // eslint-disable-next-line no-underscore-dangle
           Object.keys(vmState.api).forEach((key) => {
-            // eslint-disable-next-line no-underscore-dangle
-            vm.vm._context.api[key] = vmState.api[key];
-          });
-          // eslint-disable-next-line no-underscore-dangle
-          vm.vm._context.done = (error) => {
+              vm.context.global.setSync('sscglobal_' + key, vmState.api[key]);
+              });
+          //?
+vm.vm._context.done = (error) => {
             vm.inUse = false;
             resolve(error);
           };
 
-          vm.vm.run(contractCode);
+          const compiled = vm.isolate.compileScriptSync(contractCode);
+          compiled.run(vm.context).then(() => resolve('ok')).catch((err) => resolve(err));
         } else {
           resolve('no JS VM available');
         }
