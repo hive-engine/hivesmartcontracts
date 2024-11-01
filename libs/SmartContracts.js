@@ -1,5 +1,6 @@
 /* eslint-disable max-len */
 
+const { Decimal128 } = require('bson');
 const ivm = require('isolated-vm');
 const SHA256FN = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
@@ -16,6 +17,31 @@ const RESERVED_ACTIONS = ['createSSC'];
 
 const JSVMs = [];
 const MAXJSVMs = 5;
+
+const maybeDeref = (y) => typeof y === 'object' && y !== null && y.deref ? y.deref() : y;
+function deepDeref(x) {
+  let y = x;
+  if (typeof x === "object" && x !== null) {
+    Object.keys(x).forEach(k => {
+        y[k] = deepDeref(y[k]);
+    });
+  } else if (typeof x === "array") {
+    y = x.map(deepDeref); 
+  }
+  return maybeDeref(y);
+}
+
+function deepConvertDecimal128(x) {
+  let y = x;
+  if (typeof x === "object" && x !== null) {
+    Object.keys(x).forEach(k => {
+        y[k] = deepConvertDecimal128(y[k]);
+    });
+  } else if (typeof x === "array") {
+    y = x.map(deepConvertDecimal128); 
+  }
+  return y instanceof Decimal128 ? BigNumber(y) : y;
+}
 
 class SmartContracts {
   // deploy the smart contract to the blockchain and initialize the database if needed
@@ -56,26 +82,6 @@ class SmartContracts {
         // this way we keep control of what can be executed in a smart contract
         let codeTemplate = `
           function wrapper () {
-            const api = {
-              action: sscglobal_action,
-              payload: sscglobal_payload,
-              transactionId: sscglobal_transactionId,
-              blockNumber: sscglobal_blockNumber,
-              refHiveBlockNumber: sscglobal_refHiveBlockNumber,
-              hiveBlockTimestamp: sscglobal_hiveBlockTimestamp,
-              contractVersion: sscglobal_contractVersion,
-              db: sscglobal_db,
-              BigNumber: sscglobal_BigNumber,
-              validator: sscglobal_validator,
-              SHA256: sscglobal_SHA256,
-              checkSignature: sscglobal_checkSignature,
-              random: sscglobal_random,
-              debug: sscglobal_debug,
-              executeSmartContract: sscglobal_executeSmartContract,
-              emit: sscglobal_emit,
-              assert: sscglobal_assert,
-              isValidAccountName: sscglobal_isValidAccountName,
-            };
             RegExp.prototype.constructor = function () { };
             RegExp.prototype.exec = function () {  };
             RegExp.prototype.test = function () {  };
@@ -91,16 +97,17 @@ class SmartContracts {
                     actions.createSSC = null;
                   }
                   await actions[api.action](api.payload);
-                  done(null);
+                  return null;
                 } else {
-                  done('invalid action');
+                  return 'invalid action';
                 }
               } catch (error) {
-                done(error);
-              }
+                api.debug(error);
+                return 'error';
+             }
             }
   
-            execute();
+            return execute();
           }
 
           wrapper();
@@ -116,37 +123,37 @@ class SmartContracts {
         // prepare the db object that will be available in the VM
         const db = {
           // create a new table for the smart contract
-          createTable: (tableName, indexes = [], tableParams = {}) => SmartContracts.createTable(
+          createTable: new ivm.Reference(async (tableName, indexes = [], tableParams = {}) => await SmartContracts.createTable(
             database, tables, name, tableName, indexes, tableParams,
-          ),
+          )),
           // add indexes for an existing table
-          addIndexes: (tableName, indexes) => SmartContracts.addIndexes(
+          addIndexes: new ivm.Reference(async (tableName, indexes) => await SmartContracts.addIndexes(
             database, tables, name, tableName, indexes,
-          ),
+          )),
           // perform a query find on a table of the smart contract
-          find: (table, query, limit = 1000, offset = 0, indexes = []) => SmartContracts.find(
+          find: new ivm.Reference(async (table, query, limit = 1000, offset = 0, indexes = []) => new ivm.ExternalCopy(await SmartContracts.find(
             database, name, table, query, limit, offset, indexes,
-          ),
+          ))),
           // perform a query find on a table of an other smart contract
-          findInTable: (contractName, table, query, limit = 1000, offset = 0, index = '', descending = false) => SmartContracts.find(
+          findInTable: new ivm.Reference(async (contractName, table, query, limit = 1000, offset = 0, index = '', descending = false) => new ivm.ExternalCopy(await SmartContracts.find(
             database, contractName, table, query, limit, offset, index, descending,
-          ),
+          ))),
           // perform a query findOne on a table of the smart contract
-          findOne: (table, query) => SmartContracts.findOne(database, name, table, query),
+          findOne: new ivm.Reference(async (table, query) => new ivm.ExternalCopy(await SmartContracts.findOne(database, name, table, query))),
           // perform a query findOne on a table of an other smart contract
-          findOneInTable: (contractName, table, query) => SmartContracts.findOne(
+          findOneInTable: new ivm.Reference(async (contractName, table, query) => new ivm.ExternalCopy(await SmartContracts.findOne(
             database, contractName, table, query,
-          ),
+          ))),
           // find the information of a contract
-          findContract: contractName => SmartContracts.findContract(database, contractName),
+          findContract: new ivm.Reference(async (contractName) => new ivm.ExternalCopy(await SmartContracts.findContract(database, contractName))),
           // insert a record in the table of the smart contract
-          insert: (table, record) => SmartContracts.dinsert(database, name, table, record),
+          insert: new ivm.Reference(async (table, record) => new ivm.ExternalCopy(await SmartContracts.dinsert(database, name, table, record))),
           // insert a record in the table of the smart contract
-          remove: (table, record) => SmartContracts.remove(database, name, table, record),
+          remove: new ivm.Reference(async (table, record) => new ivm.ExternalCopy(await SmartContracts.remove(database, name, table, record))),
           // insert a record in the table of the smart contract
-          update: (table, record, unsets = undefined) => SmartContracts.update(database, name, table, record, unsets),
+          update: new ivm.Reference(async (table, record, unsets = undefined) => new ivm.ExternalCopy(await SmartContracts.update(database, name, table, record, unsets))),
           // check if a table exists
-          tableExists: table => SmartContracts.tableExists(database, name, table),
+          tableExists: new ivm.Reference(async (table) => await SmartContracts.tableExists(database, name, table)),
         };
 
         // logs used to store events or errors
@@ -178,17 +185,16 @@ class SmartContracts {
             refHiveBlockNumber,
             hiveBlockTimestamp: timestamp,
             contractVersion,
-            db,
-            BigNumber,
-            validator,
-            SHA256: (payloadToHash) => {
+            //db,
+            BigNumber: new ivm.Reference((x) => BigNumber(x)),
+            SHA256: new ivm.Reference((payloadToHash) => {
               if (typeof payloadToHash === 'string') {
-                return SHA256FN(payloadToHash).toString(enchex);
+                return new ivm.ExternalCopy(SHA256FN(payloadToHash).toString(enchex));
               }
 
-              return SHA256FN(JSON.stringify(payloadToHash)).toString(enchex);
-            },
-            checkSignature: (payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
+              return new ivm.ExternalCopy(SHA256FN(JSON.stringify(payloadToHash)).toString(enchex));
+            }),
+            checkSignature: new ivm.Reference((payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
               if ((typeof payloadToCheck !== 'string'
               && typeof payloadToCheck !== 'object')
               || typeof signature !== 'string'
@@ -204,30 +210,31 @@ class SmartContracts {
               } catch (error) {
                 return false;
               }
-            },
-            random: () => rng(),
-            debug: logmsg => log.info(logmsg), // eslint-disable-line no-console
+            }),
+            random: new ivm.Reference(() => rng()),
+            debug: (logmsg) => log.warn(logmsg), // eslint-disable-line no-console
             // execute a smart contract from the current smart contract
-            executeSmartContract: async (
+            executeSmartContract: new ivm.Reference(async (
               contractName, actionName, parameters,
-            ) => SmartContracts.executeSmartContractFromSmartContract(
+            ) => new ivm.ExternalCopy(await SmartContracts.executeSmartContractFromSmartContract(
               database, logs, finalSender, params, contractName, actionName,
-              JSON.stringify(parameters),
+              JSON.stringify(deepDeref(parameters)),
               blockNumber, timestamp,
               refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
               name, 'createSSC', contractVersion,
-            ),
+            ))),
             // emit an event that will be stored in the logs
-            emit: (event, data) => typeof event === 'string' && logs.events.push({ contract: name, event, data }),
+            emit: new ivm.Reference((event, data) => typeof event === 'string' && logs.events.push({ contract: name, event, data })),
             // add an error that will be stored in the logs
-            assert: (condition, error) => {
+            assert: new ivm.Reference((condition, error) => {
               if (!condition && typeof error === 'string') {
                 logs.errors.push(error);
               }
-              return condition;
-            },
-            isValidAccountName: account => SmartContracts.isValidAccountName(account, refHiveBlockNumber),
+              return new ivm.ExternalCopy(condition);
+            }),
+            isValidAccountName: new ivm.Reference((account) => SmartContracts.isValidAccountName(account, refHiveBlockNumber)),
           },
+          db
         };
 
         const error = await SmartContracts.runContractCode(vmState, codeTemplate, jsVMTimeout);
@@ -328,7 +335,7 @@ class SmartContracts {
         refHiveBlockNumber,
       } = transaction;
 
-      log.info('Execute smart contract ', transaction);
+      log.warn('Execute smart contract ', transaction);
       if (RESERVED_ACTIONS.includes(action)) return { logs: { errors: ['you cannot trigger this action'] } };
 
       const payloadObj = payload ? JSON.parse(payload) : {};
@@ -347,35 +354,35 @@ class SmartContracts {
       // prepare the db object that will be available in the VM
       const db = {
         // create a new table for the smart contract
-        createTable: (tableName, indexes = [], params = {}) => SmartContracts.createTable(
+        createTable: new ivm.Reference(async (tableName, indexes = [], params = {}) => await SmartContracts.createTable(
           database, tables, contract, tableName, indexes, params,
-        ),
+        )),
         // perform a query find on a table of the smart contract
-        find: (table, query, limit = 1000, offset = 0, indexes = []) => SmartContracts.find(
+        find: new ivm.Reference(async (table, query, limit = 1000, offset = 0, indexes = []) => new ivm.ExternalCopy(await SmartContracts.find(
           database, contract, table, query, limit, offset, indexes,
-        ),
+        ))),
         // perform a query find on a table of an other smart contract
-        findInTable: (contractName, table, query, limit = 1000, offset = 0, index = '', descending = false) => SmartContracts.find(
+        findInTable: new ivm.Reference(async (contractName, table, query, limit = 1000, offset = 0, index = '', descending = false) => new ivm.ExternalCopy(await SmartContracts.find(
           database, contractName, table, query, limit, offset, index, descending,
-        ),
+        ))),
         // perform a query findOne on a table of the smart contract
-        findOne: (table, query) => SmartContracts.findOne(database, contract, table, query),
+        findOne: new ivm.Reference(async (table, query) => new ivm.ExternalCopy(await SmartContracts.findOne(database, contract, table, query))),
         // perform a query findOne on a table of an other smart contract
-        findOneInTable: (contractName, table, query) => SmartContracts.findOne(
+        findOneInTable: new ivm.Reference(async (contractName, table, query) => new ivm.ExternalCopy(await SmartContracts.findOne(
           database, contractName, table, query,
-        ),
+        ))),
         // find the information of a contract
-        findContract: contractName => SmartContracts.findContract(database, contractName),
+        findContract: new ivm.Reference(async (contractName) => new ivm.ExternalCopy(await SmartContracts.findContract(database, contractName))),
         // insert a record in the table of the smart contract
-        insert: (table, record) => SmartContracts.insert(database, contract, table, record),
+        insert: new ivm.Reference(async (table, record) => new ivm.ExternalCopy(await SmartContracts.insert(database, contract, table, record))),
         // insert a record in the table of the smart contract
-        remove: (table, record) => SmartContracts.remove(database, contract, table, record),
+        remove: new ivm.Reference(async (table, record) => await SmartContracts.remove(database, contract, table, record)),
         // insert a record in the table of the smart contract
-        update: (table, record, unsets = undefined) => SmartContracts.update(database, contract, table, record, unsets),
+        update: new ivm.Reference(async (table, record, unsets = undefined) => await SmartContracts.update(database, contract, table, record, unsets)),
         // check if a table exists
-        tableExists: table => SmartContracts.tableExists(database, contract, table),
+        tableExists: new ivm.Reference(async table => await SmartContracts.tableExists(database, contract, table)),
         // get block information
-        getBlockInfo: blockNum => SmartContracts.getBlockInfo(database, blockNum),
+        getBlockInfo: new ivm.Reference(async blockNum => new ivm.ExternalCopy(await SmartContracts.getBlockInfo(database, blockNum))),
       };
 
       // logs used to store events or errors
@@ -400,6 +407,7 @@ class SmartContracts {
         BigNumber.set({ RANGE: 500 });
       }
 
+
       // initialize the state that will be available in the VM
       const vmState = {
         api: {
@@ -412,18 +420,17 @@ class SmartContracts {
           blockNumber,
           action,
           payload: JSON.parse(JSON.stringify(payloadObj)),
-          db,
-          BigNumber,
-          validator,
-          logs: () => JSON.parse(JSON.stringify(results.logs)),
-          random: () => rng(),
-          SHA256: (payloadToHash) => {
+          //db,
+          BigNumber: new ivm.Reference((x) => BigNumber(x)),
+          logs: new ivm.Reference(() => new ivm.ExternalCopy(JSON.parse(JSON.stringify(results.logs)))),
+          random: new ivm.Reference(() => rng()),
+          SHA256: new ivm.Reference((payloadToHash) => {
             if (typeof payloadToHash === 'string') {
-              return SHA256FN(payloadToHash).toString(enchex);
+              return new ivm.ExternalCopy(SHA256FN(payloadToHash).toString(enchex));
             }
-            return SHA256FN(JSON.stringify(payloadToHash)).toString(enchex);
-          },
-          checkSignature: (payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
+            return new ivm.ExternalCopy(SHA256FN(JSON.stringify(payloadToHash)).toString(enchex));
+          }),
+          checkSignature: new ivm.Reference((payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
             if ((typeof payloadToCheck !== 'string'
             && typeof payloadToCheck !== 'object')
             || typeof signature !== 'string'
@@ -439,33 +446,33 @@ class SmartContracts {
             } catch (error) {
               return false;
             }
-          },
-          debug: logmsg => log.info(logmsg), // eslint-disable-line no-console
+          }),
+          debug: (logmsg) => log.warn(logmsg), // eslint-disable-line no-console
           // execute a smart contract from the current smart contract
-          executeSmartContract: async (
+          executeSmartContract: new ivm.Reference(async (
             contractName, actionName, parameters,
-          ) => SmartContracts.executeSmartContractFromSmartContract(
+          ) => new ivm.ExternalCopy(await SmartContracts.executeSmartContractFromSmartContract(
             database, results, sender, payloadObj, contractName, actionName,
-            JSON.stringify(parameters),
+            JSON.stringify(deepDeref(parameters)),
             blockNumber, timestamp,
             refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
             contract, action, contractVersion,
-          ),
+          ))),
           // execute a smart contract from the current smart contract
           // with the contractOwner authority level
-          executeSmartContractAsOwner: async (
+          executeSmartContractAsOwner: new ivm.Reference(async (
             contractName, actionName, parameters,
-          ) => SmartContracts.executeSmartContractFromSmartContract(
+          ) => new ivm.ExternalCopy(await SmartContracts.executeSmartContractFromSmartContract(
             database, results, contractOwner, payloadObj, contractName, actionName,
-            JSON.stringify(parameters),
+            JSON.stringify(deepDeref(parameters)),
             blockNumber, timestamp,
             refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
             contract, action, contractVersion,
-          ),
+          ))),
           // execute a token transfer from the contract balance
-          transferTokens: async (
+          transferTokens: new ivm.Reference(async (
             to, symbol, quantity, type,
-          ) => SmartContracts.executeSmartContractFromSmartContract(
+          ) => new ivm.ExternalCopy(await SmartContracts.executeSmartContractFromSmartContract(
             database, results, 'null', payloadObj, 'tokens', 'transferFromContract',
             JSON.stringify({
               from: contract,
@@ -477,30 +484,31 @@ class SmartContracts {
             blockNumber, timestamp,
             refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
             contract, action, contractVersion,
-          ),
-          verifyBlock: async (block) => {
+          ))),
+          verifyBlock: new ivm.Reference(async (block) => {
             if (contract !== 'witnesses') return;
-            SmartContracts.verifyBlock(database, block);
-          },
+            await SmartContracts.verifyBlock(database, block);
+          }),
           // emit an event that will be stored in the logs
-          emit: (event, data) => typeof event === 'string' && results.logs.events.push({ contract, event, data }),
+          emit: new ivm.Reference((event, data) => typeof event === 'string' && results.logs.events.push({ contract, event, data })),
           // add an error that will be stored in the logs
-          assert: (condition, error) => {
+          assert: new ivm.Reference((condition, error) => {
             if (!condition && typeof error === 'string') {
               results.logs.errors.push(error);
             }
-            return condition;
-          },
-          isValidAccountName: account => SmartContracts.isValidAccountName(account, refHiveBlockNumber),
+            return new ivm.ExternalCopy(condition);
+          }),
+          isValidAccountName: new ivm.Reference((account) => SmartContracts.isValidAccountName(account, refHiveBlockNumber)),
         },
+        db,
       };
 
       // if action is called from another contract, we can add an additional function
       // to allow token transfers from the calling contract
       if ('callingContractInfo' in payloadObj) {
-        vmState.api.transferTokensFromCallingContract = async (
+        vmState.api.transferTokensFromCallingContract = new ivm.Reference(async (
           to, symbol, quantity, type,
-        ) => SmartContracts.executeSmartContractFromSmartContract(
+        ) => new ivm.ExternalCopy(await SmartContracts.executeSmartContractFromSmartContract(
           database, results, 'null', payloadObj, 'tokens', 'transferFromContract',
           JSON.stringify({
             from: payloadObj.callingContractInfo.name,
@@ -512,7 +520,7 @@ class SmartContracts {
           blockNumber, timestamp,
           refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
           contract, contractVersion,
-        );
+        )));
       }
 
       const error = await SmartContracts.runContractCode(vmState, contractCode, jsVMTimeout);
@@ -560,21 +568,164 @@ class SmartContracts {
       try {
         // run the code in the VM
         if (vm !== null) {
+          //vm.context.global.setSync('global', vm.context.global.derefInto());
+          //vm.context.global.setSync('api', new ivm.ExternalCopy(vmState.api));
+          vm.context.global.setSync('sscglobal_externalCopy', x => new ivm.ExternalCopy(x));
           Object.keys(vmState.api).forEach((key) => {
-              vm.context.global.setSync('sscglobal_' + key, vmState.api[key]);
+              vm.context.global.setSync('sscglobal_' + key, key === 'payload' && typeof(vmState.api[key]) === 'object' ? new ivm.ExternalCopy(vmState.api[key]) : vmState.api[key]);
               });
-          //?
-vm.vm._context.done = (error) => {
-            vm.inUse = false;
-            resolve(error);
-          };
+          Object.keys(vmState.db).forEach((key) => {
+              vm.context.global.setSync('sscglobal_' + key, vmState.db[key]);
+              });
+          vm.context.global.setSync('sscglobalv_isAlpha', new ivm.Callback(validator.isAlpha));
+          vm.context.global.setSync('sscglobalv_isAlphanumeric', new ivm.Callback(validator.isAlphanumeric));
+          vm.context.global.setSync('sscglobalv_blacklist', new ivm.Callback(validator.blacklist));
+          vm.context.global.setSync('sscglobalv_isUppercase', new ivm.Callback(validator.isUppercase));
 
-          const compiled = vm.isolate.compileScriptSync(contractCode);
-          compiled.run(vm.context).then(() => resolve('ok')).catch((err) => resolve(err));
+          vm.context.global.setSync('sscglobal_bn_construct', new ivm.Reference((x, y) => BigNumber(maybeDeref(x))));
+          vm.context.global.setSync('sscglobal_bn_plus', new ivm.Reference((x, y) => x.deref().plus(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_minus', new ivm.Reference((x, y) => x.deref().minus(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_times', new ivm.Reference((x, y) => x.deref().times(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_multipliedBy', new ivm.Reference((x, y, z) => x.deref().multipliedBy(maybeDeref(y), z)));
+          vm.context.global.setSync('sscglobal_bn_dividedBy', new ivm.Reference((x, y, z) => x.deref().dividedBy(maybeDeref(y), z)));
+          vm.context.global.setSync('sscglobal_bn_sqrt', new ivm.Reference((x) => x.deref().sqrt()));
+          vm.context.global.setSync('sscglobal_bn_pow', new ivm.Reference((x, y) => x.deref().pow(y)));
+          vm.context.global.setSync('sscglobal_bn_negated', new ivm.Reference((x) => x.deref().negated()));
+          vm.context.global.setSync('sscglobal_bn_lt', new ivm.Reference((x, y) => x.deref().lt(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_lte', new ivm.Reference((x, y) => x.deref().lte(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_eq', new ivm.Reference((x, y) => x.deref().eq(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_gt', new ivm.Reference((x, y) => x.deref().gt(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_gte', new ivm.Reference((x, y) => x.deref().gte(maybeDeref(y))));
+          vm.context.global.setSync('sscglobal_bn_dp', new ivm.Reference((x, y, z) => x.deref().dp(y, z)));
+          vm.context.global.setSync('sscglobal_bn_isNaN', new ivm.Reference((x) => x.deref().isNaN()));
+          vm.context.global.setSync('sscglobal_bn_isFinite', new ivm.Reference((x) => x.deref().isFinite()));
+          vm.context.global.setSync('sscglobal_bn_isInteger', new ivm.Reference((x) => x.deref().isInteger()));
+          vm.context.global.setSync('sscglobal_bn_toFixed', new ivm.Reference((x, y, z) => x.deref().toFixed(y, z)));
+          vm.context.global.setSync('sscglobal_bn_toNumber', new ivm.Reference((x) => x.deref().toNumber()));
+          vm.context.global.setSync('sscglobal_bn_integerValue', new ivm.Reference((x, y) => x.deref().integerValue(y)));
+
+          const wrappedCode = `
+          function deepUnwrap(x) {
+            let y = x;
+            if (typeof x === "object" && x !== null) {
+              Object.keys(x).forEach(k => {
+                  y[k] = deepUnwrap(y[k]);
+              });
+            } else if (typeof x === "array") {
+              y = x.map(deepUnwrap); 
+            }
+            return maybeUnwrap(y);
+          }
+          function applyWrapper(fn) {
+            return async (...args) => {
+              const extArgs = args.map(x => sscglobal_externalCopy(deepUnwrap(x)).copyInto());
+              const result = await fn.applySyncPromise(undefined, extArgs);
+              return (typeof result === 'object' && result.copy) ? await result.copy() : result;
+            }
+          }
+          function applyWrapperSync(fn) {
+            return (...args) => {
+api.debug(args);
+              const extArgs = args.map(x => sscglobal_externalCopy(deepUnwrap(x)).copyInto());
+              const result = fn.applySync(undefined, extArgs);
+              return (typeof result === 'object' && result.copy) ? result.copy() : result;
+            }
+          }
+          function maybeUnwrap(x) {
+            return typeof x === 'object' && x !== null && x.unwrap ? x.unwrap() : x;
+          }
+          function makeBigNumber(x) {
+            return bigNumberWrapper(sscglobal_bn_construct.applySync(undefined, [maybeUnwrap(x)]));
+          }
+          function bigNumberWrapper(x) {
+            return {
+              plus: (y) => bigNumberWrapper(sscglobal_bn_plus.applySync(undefined,[x, maybeUnwrap(y)])),
+              minus: (y) => bigNumberWrapper(sscglobal_bn_minus.applySync(undefined,[x, maybeUnwrap(y)])),
+              times: (y) => bigNumberWrapper(sscglobal_bn_times.applySync(undefined,[x, maybeUnwrap(y)])),
+              multipliedBy: (y, z) => bigNumberWrapper(sscglobal_bn_multipliedBy.applySync(undefined,[x, maybeUnwrap(y), z])),
+              dividedBy: (y, z) => bigNumberWrapper(sscglobal_bn_dividedBy.applySync(undefined,[x, maybeUnwrap(y), z])),
+              sqrt: () => bigNumberWrapper(sscglobal_bn_sqrt.applySync(undefined,[x])),
+              pow: (y) => bigNumberWrapper(sscglobal_bn_sqrt.applySync(undefined,[x, y])),
+              negated: () => bigNumberWrapper(sscglobal_bn_negated.applySync(undefined,[x])),
+              lt: (y) => sscglobal_bn_lt.applySync(undefined, [x, maybeUnwrap(y)]),
+              lte: (y) => sscglobal_bn_lte.applySync(undefined, [x, maybeUnwrap(y)]),
+              eq: (y) => sscglobal_bn_eq.applySync(undefined, [x, maybeUnwrap(y)]),
+              gt: (y) => sscglobal_bn_gt.applySync(undefined, [x, maybeUnwrap(y)]),
+              gte: (y) => sscglobal_bn_gte.applySync(undefined, [x, maybeUnwrap(y)]),
+              dp: (y, z) => { const ret = sscglobal_bn_dp.applySync(undefined, [x, y, z]);
+                return typeof y === 'number' ? bigNumberWrapper(ret) : ret;
+              },
+              isNaN: () => sscglobal_bn_isNaN.applySync(undefined, [x]),
+              isFinite: () => sscglobal_bn_isFinite.applySync(undefined, [x]),
+              isInteger: () => sscglobal_bn_isInteger.applySync(undefined, [x]),
+              toFixed: (y, z) => sscglobal_bn_toFixed.applySync(undefined, [x, y, z]),
+              toNumber: () => sscglobal_bn_toNumber.applySync(undefined, [x]),
+              integerValue: (y) => sscglobal_bn_integerValue.applySync(undefined, [x, y]),
+              unwrap: () => x,
+            };
+          }
+          const api = {
+            sender: typeof sscglobal_sender !== 'undefined' ? sscglobal_sender : null,
+            owner: typeof sscglobal_owner !== 'undefined' ? sscglobal_owner : null,
+            action: sscglobal_action,
+            payload: typeof sscglobal_payload === 'object' && sscglobal_payload.copy ? sscglobal_payload.copy() : sscglobal_payload,
+            transactionId: sscglobal_transactionId,
+            blockNumber: sscglobal_blockNumber,
+            refHiveBlockNumber: sscglobal_refHiveBlockNumber,
+            hiveBlockTimestamp: sscglobal_hiveBlockTimestamp,
+            contractVersion: sscglobal_contractVersion,
+            db: {
+              createTable: typeof sscglobal_createTable !== 'undefined' ? applyWrapper(sscglobal_createTable) : null,
+              addIndexes: typeof sscglobal_addIndexes !== 'undefined' ? applyWrapper(sscglobal_addIndexes) : null,
+              find: applyWrapper(sscglobal_find),
+              findInTable: applyWrapper(sscglobal_findInTable),
+              findOne: applyWrapper(sscglobal_findOne),
+              findOneInTable: applyWrapper(sscglobal_findOneInTable),
+              findContract: applyWrapper(sscglobal_findContract),
+              insert: applyWrapper(sscglobal_insert),
+              remove: applyWrapper(sscglobal_remove),
+              update: applyWrapper(sscglobal_update),
+              tableExists: applyWrapper(sscglobal_tableExists),
+            },
+            BigNumber: makeBigNumber,
+            validator: {
+              isAlpha: sscglobalv_isAlpha,
+              isAlphanumeric: sscglobalv_isAlphanumeric,
+              blacklist: sscglobalv_blacklist,
+              isUppercase: sscglobalv_isUppercase,
+            },
+            logs: typeof sscglobal_logs !== 'undefined' ? sscglobal_logs : null,
+            SHA256: sscglobal_SHA256,
+            checkSignature: sscglobal_checkSignature,
+            random: sscglobal_random,
+            debug: sscglobal_debug,
+            executeSmartContract: applyWrapper(sscglobal_executeSmartContract),
+            executeSmartContractAsOwner: typeof sscglobal_executeSmartContractAsOwner !== 'undefined' ? applyWrapper(sscglobal_executeSmartContractAsOwner) : null,
+            transferTokens: typeof sscglobal_transferTokens !== 'undefined' ? applyWrapper(sscglobal_transferTokens) : null,
+            transferTokensFromCallingContract: typeof sscglobal_transferTokensFromCallingContract !== 'undefined' ? applyWrapper(sscglobal_transferTokensFromCallingContract) : null, 
+            verifyBlock: typeof sscglobal_verifyBlock !== 'undefined' ? applyWrapper(sscglobal_verifyBlock) : null,
+            emit: applyWrapper(sscglobal_emit),
+            assert: applyWrapperSync(sscglobal_assert),
+            isValidAccountName: applyWrapperSync(sscglobal_isValidAccountName),
+            };
+            api.BigNumber.ROUND_UP = 0;
+            api.BigNumber.ROUND_DOWN = 1;
+            api.BigNumber.ROUND_CEIL = 2;
+            api.BigNumber.ROUND_FLOOR = 3;
+            api.BigNumber.ROUND_HALF_UP = 4;
+            api.BigNumber.ROUND_HALF_DOWN = 5;
+            api.BigNumber.ROUND_HALF_EVEN = 6;
+            api.BigNumber.ROUND_HALF_CEIL = 7;
+            api.BigNumber.ROUND_HALF_FLOOR = 8;
+          ` + contractCode;
+          const compiled = vm.isolate.compileScriptSync(wrappedCode);
+          compiled.run(vm.context).then((x) => resolve()).catch((err) => { log.warn(err); resolve(err)});
         } else {
+log.warn('no js vm available');
           resolve('no JS VM available');
         }
       } catch (err) {
+        log.warn(err);
         vm.inUse = false;
         resolve(err);
       }
@@ -786,7 +937,7 @@ vm.vm._context.done = (error) => {
       indexes,
     });
 
-    return result;
+    return typeof result === 'array' ? result.map(deepConvertDecimal128) : result;
   }
 
   static async findOne(database, contractName, table, query) {
@@ -796,7 +947,7 @@ vm.vm._context.done = (error) => {
       query,
     });
 
-    return result;
+    return deepConvertDecimal128(result);
   }
 
   static async findContract(database, contractName) {
@@ -811,17 +962,16 @@ vm.vm._context.done = (error) => {
     const result = await database.insert({
       contract: contractName,
       table,
-      record,
+      record: deepDeref(record),
     });
-
-    return result;
+    return deepConvertDecimal128(result);
   }
 
   static async dinsert(database, contractName, table, record) {
     const result = await database.dinsert({
       contract: contractName,
       table: `${contractName}_${table}`,
-      record,
+      record: deepDeref(record),
     });
 
     return result;
@@ -831,7 +981,7 @@ vm.vm._context.done = (error) => {
     const result = await database.remove({
       contract: contractName,
       table,
-      record,
+      record: deepDeref(record),
     });
 
     return result;
@@ -841,7 +991,7 @@ vm.vm._context.done = (error) => {
     const result = await database.update({
       contract: contractName,
       table,
-      record,
+      record: deepDeref(record),
       unsets,
     });
 
