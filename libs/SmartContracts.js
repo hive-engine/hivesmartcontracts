@@ -40,7 +40,7 @@ function deepConvertDecimal128(x) {
   } else if (typeof x === "array") {
     y = x.map(deepConvertDecimal128); 
   }
-  return y instanceof Decimal128 ? BigNumber(y) : y;
+  return y instanceof Decimal128 ? BigNumber(y).toString() : y instanceof BigNumber ? y.toString() : y;
 }
 
 class SmartContracts {
@@ -97,17 +97,16 @@ class SmartContracts {
                     actions.createSSC = null;
                   }
                   await actions[api.action](api.payload);
-                  return null;
+                  done(null);
                 } else {
-                  return 'invalid action';
+                  done('invalid action');
                 }
               } catch (error) {
-                api.debug(error);
-                return 'error';
-             }
+                done(error);
+              }
             }
   
-            return execute();
+            execute();
           }
 
           wrapper();
@@ -224,7 +223,7 @@ class SmartContracts {
               name, 'createSSC', contractVersion,
             ))),
             // emit an event that will be stored in the logs
-            emit: new ivm.Reference((event, data) => typeof event === 'string' && logs.events.push({ contract: name, event, data })),
+            emit: new ivm.Reference((event, data) => typeof event === 'string' && logs.events.push({ contract: name, event, data: deepDeref(data) })),
             // add an error that will be stored in the logs
             assert: new ivm.Reference((condition, error) => {
               if (!condition && typeof error === 'string') {
@@ -477,7 +476,7 @@ class SmartContracts {
             JSON.stringify({
               from: contract,
               to,
-              quantity,
+              quantity: maybeDeref(quantity),
               symbol,
               type,
             }),
@@ -490,7 +489,7 @@ class SmartContracts {
             await SmartContracts.verifyBlock(database, block);
           }),
           // emit an event that will be stored in the logs
-          emit: new ivm.Reference((event, data) => typeof event === 'string' && results.logs.events.push({ contract, event, data })),
+          emit: new ivm.Reference((event, data) => typeof event === 'string' && results.logs.events.push({ contract, event, data: deepDeref(data) })),
           // add an error that will be stored in the logs
           assert: new ivm.Reference((condition, error) => {
             if (!condition && typeof error === 'string') {
@@ -513,7 +512,7 @@ class SmartContracts {
           JSON.stringify({
             from: payloadObj.callingContractInfo.name,
             to,
-            quantity,
+            quantity: maybeDeref(quantity),
             symbol,
             type,
           }),
@@ -555,7 +554,6 @@ class SmartContracts {
     const context = isolate.createContextSync();
     return {
       timeout: jsVMTimeout,
-      inUse: true,
       context,
       isolate
     };
@@ -565,169 +563,182 @@ class SmartContracts {
   static runContractCode(vmState, contractCode, jsVMTimeout) {
     return new Promise((resolve) => {
       const vm = SmartContracts.getJSVM(jsVMTimeout);
-      try {
-        // run the code in the VM
-        if (vm !== null) {
-          //vm.context.global.setSync('global', vm.context.global.derefInto());
-          //vm.context.global.setSync('api', new ivm.ExternalCopy(vmState.api));
-          vm.context.global.setSync('sscglobal_externalCopy', x => new ivm.ExternalCopy(x));
-          Object.keys(vmState.api).forEach((key) => {
-              vm.context.global.setSync('sscglobal_' + key, key === 'payload' && typeof(vmState.api[key]) === 'object' ? new ivm.ExternalCopy(vmState.api[key]) : vmState.api[key]);
-              });
-          Object.keys(vmState.db).forEach((key) => {
-              vm.context.global.setSync('sscglobal_' + key, vmState.db[key]);
-              });
-          vm.context.global.setSync('sscglobalv_isAlpha', new ivm.Callback(validator.isAlpha));
-          vm.context.global.setSync('sscglobalv_isAlphanumeric', new ivm.Callback(validator.isAlphanumeric));
-          vm.context.global.setSync('sscglobalv_blacklist', new ivm.Callback(validator.blacklist));
-          vm.context.global.setSync('sscglobalv_isUppercase', new ivm.Callback(validator.isUppercase));
+      // run the code in the VM
+      if (vm !== null) {
+        vm.context.global.setSync('done', (error) => {
+          resolve(error);
+        });
+        vm.context.global.setSync('sscglobal_externalCopy', x => new ivm.ExternalCopy(x));
+        Object.keys(vmState.api).forEach((key) => {
+            vm.context.global.setSync('sscglobal_' + key, key === 'payload' && typeof(vmState.api[key]) === 'object' ? new ivm.ExternalCopy(vmState.api[key]) : vmState.api[key]);
+            });
+        Object.keys(vmState.db).forEach((key) => {
+            vm.context.global.setSync('sscglobal_' + key, vmState.db[key]);
+            });
+        vm.context.global.setSync('sscglobalv_isAlpha', new ivm.Callback(validator.isAlpha));
+        vm.context.global.setSync('sscglobalv_isAlphanumeric', new ivm.Callback(validator.isAlphanumeric));
+        vm.context.global.setSync('sscglobalv_blacklist', new ivm.Callback(validator.blacklist));
+        vm.context.global.setSync('sscglobalv_isUppercase', new ivm.Callback(validator.isUppercase));
+        vm.context.global.setSync('sscglobalv_isIP', new ivm.Callback(validator.isIP));
+        vm.context.global.setSync('sscglobalv_isFQDN', new ivm.Callback(validator.isFQDN));
 
-          vm.context.global.setSync('sscglobal_bn_construct', new ivm.Reference((x, y) => BigNumber(maybeDeref(x))));
-          vm.context.global.setSync('sscglobal_bn_plus', new ivm.Reference((x, y) => x.deref().plus(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_minus', new ivm.Reference((x, y) => x.deref().minus(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_times', new ivm.Reference((x, y) => x.deref().times(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_multipliedBy', new ivm.Reference((x, y, z) => x.deref().multipliedBy(maybeDeref(y), z)));
-          vm.context.global.setSync('sscglobal_bn_dividedBy', new ivm.Reference((x, y, z) => x.deref().dividedBy(maybeDeref(y), z)));
-          vm.context.global.setSync('sscglobal_bn_sqrt', new ivm.Reference((x) => x.deref().sqrt()));
-          vm.context.global.setSync('sscglobal_bn_pow', new ivm.Reference((x, y) => x.deref().pow(y)));
-          vm.context.global.setSync('sscglobal_bn_negated', new ivm.Reference((x) => x.deref().negated()));
-          vm.context.global.setSync('sscglobal_bn_lt', new ivm.Reference((x, y) => x.deref().lt(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_lte', new ivm.Reference((x, y) => x.deref().lte(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_eq', new ivm.Reference((x, y) => x.deref().eq(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_gt', new ivm.Reference((x, y) => x.deref().gt(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_gte', new ivm.Reference((x, y) => x.deref().gte(maybeDeref(y))));
-          vm.context.global.setSync('sscglobal_bn_dp', new ivm.Reference((x, y, z) => x.deref().dp(y, z)));
-          vm.context.global.setSync('sscglobal_bn_isNaN', new ivm.Reference((x) => x.deref().isNaN()));
-          vm.context.global.setSync('sscglobal_bn_isFinite', new ivm.Reference((x) => x.deref().isFinite()));
-          vm.context.global.setSync('sscglobal_bn_isInteger', new ivm.Reference((x) => x.deref().isInteger()));
-          vm.context.global.setSync('sscglobal_bn_toFixed', new ivm.Reference((x, y, z) => x.deref().toFixed(y, z)));
-          vm.context.global.setSync('sscglobal_bn_toNumber', new ivm.Reference((x) => x.deref().toNumber()));
-          vm.context.global.setSync('sscglobal_bn_integerValue', new ivm.Reference((x, y) => x.deref().integerValue(y)));
+        vm.context.global.setSync('sscglobal_bn_construct', new ivm.Reference((x, y) => BigNumber(maybeDeref(x))));
+        vm.context.global.setSync('sscglobal_bn_plus', new ivm.Reference((x, y) => x.deref().plus(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_minus', new ivm.Reference((x, y) => x.deref().minus(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_times', new ivm.Reference((x, y) => x.deref().times(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_multipliedBy', new ivm.Reference((x, y, z) => x.deref().multipliedBy(maybeDeref(y), z)));
+        vm.context.global.setSync('sscglobal_bn_dividedBy', new ivm.Reference((x, y, z) => x.deref().dividedBy(maybeDeref(y), z)));
+        vm.context.global.setSync('sscglobal_bn_sqrt', new ivm.Reference((x) => x.deref().sqrt()));
+        vm.context.global.setSync('sscglobal_bn_pow', new ivm.Reference((x, y) => x.deref().pow(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_negated', new ivm.Reference((x) => x.deref().negated()));
+        vm.context.global.setSync('sscglobal_bn_abs', new ivm.Reference((x) => x.deref().abs()));
+        vm.context.global.setSync('sscglobal_bn_lt', new ivm.Reference((x, y) => x.deref().lt(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_lte', new ivm.Reference((x, y) => x.deref().lte(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_eq', new ivm.Reference((x, y) => x.deref().eq(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_gt', new ivm.Reference((x, y) => x.deref().gt(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_gte', new ivm.Reference((x, y) => x.deref().gte(maybeDeref(y))));
+        vm.context.global.setSync('sscglobal_bn_dp', new ivm.Reference((x, y, z) => x.deref().dp(y, z)));
+        vm.context.global.setSync('sscglobal_bn_decimalPlaces', new ivm.Reference((x, y, z) => x.deref().decimalPlaces(y, z)));
+        vm.context.global.setSync('sscglobal_bn_isNaN', new ivm.Reference((x) => x.deref().isNaN()));
+        vm.context.global.setSync('sscglobal_bn_isFinite', new ivm.Reference((x) => x.deref().isFinite()));
+        vm.context.global.setSync('sscglobal_bn_isInteger', new ivm.Reference((x) => x.deref().isInteger()));
+        vm.context.global.setSync('sscglobal_bn_isPositive', new ivm.Reference((x) => x.deref().isPositive()));
+        vm.context.global.setSync('sscglobal_bn_toFixed', new ivm.Reference((x, y, z) => x.deref().toFixed(y, z)));
+        vm.context.global.setSync('sscglobal_bn_toNumber', new ivm.Reference((x) => x.deref().toNumber()));
+        vm.context.global.setSync('sscglobal_bn_toString', new ivm.Reference((x) => x.deref().toString()));
+        vm.context.global.setSync('sscglobal_bn_integerValue', new ivm.Reference((x, y) => x.deref().integerValue(y)));
+        vm.context.global.setSync('sscglobal_bn_min', new ivm.Reference((...args) => BigNumber.min.apply(undefined, args.map(maybeDeref))));
+        vm.context.global.setSync('sscglobal_bn_max', new ivm.Reference((...args) => BigNumber.max.apply(undefined, args.map(maybeDeref))));
 
-          const wrappedCode = `
-          function deepUnwrap(x) {
-            let y = x;
-            if (typeof x === "object" && x !== null) {
-              Object.keys(x).forEach(k => {
-                  y[k] = deepUnwrap(y[k]);
-              });
-            } else if (typeof x === "array") {
-              y = x.map(deepUnwrap); 
-            }
-            return maybeUnwrap(y);
+        const wrappedCode = `
+        function deepUnwrap(x) {
+          let y = x;
+          if (typeof x === "object" && x !== null) {
+            Object.keys(x).forEach(k => {
+                y[k] = deepUnwrap(y[k]);
+            });
+          } else if (typeof x === "array") {
+            y = x.map(deepUnwrap);
           }
-          function applyWrapper(fn) {
-            return async (...args) => {
-              const extArgs = args.map(x => sscglobal_externalCopy(deepUnwrap(x)).copyInto());
-              const result = await fn.applySyncPromise(undefined, extArgs);
-              return (typeof result === 'object' && result.copy) ? await result.copy() : result;
-            }
-          }
-          function applyWrapperSync(fn) {
-            return (...args) => {
-api.debug(args);
-              const extArgs = args.map(x => sscglobal_externalCopy(deepUnwrap(x)).copyInto());
-              const result = fn.applySync(undefined, extArgs);
-              return (typeof result === 'object' && result.copy) ? result.copy() : result;
-            }
-          }
-          function maybeUnwrap(x) {
-            return typeof x === 'object' && x !== null && x.unwrap ? x.unwrap() : x;
-          }
-          function makeBigNumber(x) {
-            return bigNumberWrapper(sscglobal_bn_construct.applySync(undefined, [maybeUnwrap(x)]));
-          }
-          function bigNumberWrapper(x) {
-            return {
-              plus: (y) => bigNumberWrapper(sscglobal_bn_plus.applySync(undefined,[x, maybeUnwrap(y)])),
-              minus: (y) => bigNumberWrapper(sscglobal_bn_minus.applySync(undefined,[x, maybeUnwrap(y)])),
-              times: (y) => bigNumberWrapper(sscglobal_bn_times.applySync(undefined,[x, maybeUnwrap(y)])),
-              multipliedBy: (y, z) => bigNumberWrapper(sscglobal_bn_multipliedBy.applySync(undefined,[x, maybeUnwrap(y), z])),
-              dividedBy: (y, z) => bigNumberWrapper(sscglobal_bn_dividedBy.applySync(undefined,[x, maybeUnwrap(y), z])),
-              sqrt: () => bigNumberWrapper(sscglobal_bn_sqrt.applySync(undefined,[x])),
-              pow: (y) => bigNumberWrapper(sscglobal_bn_sqrt.applySync(undefined,[x, y])),
-              negated: () => bigNumberWrapper(sscglobal_bn_negated.applySync(undefined,[x])),
-              lt: (y) => sscglobal_bn_lt.applySync(undefined, [x, maybeUnwrap(y)]),
-              lte: (y) => sscglobal_bn_lte.applySync(undefined, [x, maybeUnwrap(y)]),
-              eq: (y) => sscglobal_bn_eq.applySync(undefined, [x, maybeUnwrap(y)]),
-              gt: (y) => sscglobal_bn_gt.applySync(undefined, [x, maybeUnwrap(y)]),
-              gte: (y) => sscglobal_bn_gte.applySync(undefined, [x, maybeUnwrap(y)]),
-              dp: (y, z) => { const ret = sscglobal_bn_dp.applySync(undefined, [x, y, z]);
-                return typeof y === 'number' ? bigNumberWrapper(ret) : ret;
-              },
-              isNaN: () => sscglobal_bn_isNaN.applySync(undefined, [x]),
-              isFinite: () => sscglobal_bn_isFinite.applySync(undefined, [x]),
-              isInteger: () => sscglobal_bn_isInteger.applySync(undefined, [x]),
-              toFixed: (y, z) => sscglobal_bn_toFixed.applySync(undefined, [x, y, z]),
-              toNumber: () => sscglobal_bn_toNumber.applySync(undefined, [x]),
-              integerValue: (y) => sscglobal_bn_integerValue.applySync(undefined, [x, y]),
-              unwrap: () => x,
-            };
-          }
-          const api = {
-            sender: typeof sscglobal_sender !== 'undefined' ? sscglobal_sender : null,
-            owner: typeof sscglobal_owner !== 'undefined' ? sscglobal_owner : null,
-            action: sscglobal_action,
-            payload: typeof sscglobal_payload === 'object' && sscglobal_payload.copy ? sscglobal_payload.copy() : sscglobal_payload,
-            transactionId: sscglobal_transactionId,
-            blockNumber: sscglobal_blockNumber,
-            refHiveBlockNumber: sscglobal_refHiveBlockNumber,
-            hiveBlockTimestamp: sscglobal_hiveBlockTimestamp,
-            contractVersion: sscglobal_contractVersion,
-            db: {
-              createTable: typeof sscglobal_createTable !== 'undefined' ? applyWrapper(sscglobal_createTable) : null,
-              addIndexes: typeof sscglobal_addIndexes !== 'undefined' ? applyWrapper(sscglobal_addIndexes) : null,
-              find: applyWrapper(sscglobal_find),
-              findInTable: applyWrapper(sscglobal_findInTable),
-              findOne: applyWrapper(sscglobal_findOne),
-              findOneInTable: applyWrapper(sscglobal_findOneInTable),
-              findContract: applyWrapper(sscglobal_findContract),
-              insert: applyWrapper(sscglobal_insert),
-              remove: applyWrapper(sscglobal_remove),
-              update: applyWrapper(sscglobal_update),
-              tableExists: applyWrapper(sscglobal_tableExists),
-            },
-            BigNumber: makeBigNumber,
-            validator: {
-              isAlpha: sscglobalv_isAlpha,
-              isAlphanumeric: sscglobalv_isAlphanumeric,
-              blacklist: sscglobalv_blacklist,
-              isUppercase: sscglobalv_isUppercase,
-            },
-            logs: typeof sscglobal_logs !== 'undefined' ? sscglobal_logs : null,
-            SHA256: sscglobal_SHA256,
-            checkSignature: sscglobal_checkSignature,
-            random: sscglobal_random,
-            debug: sscglobal_debug,
-            executeSmartContract: applyWrapper(sscglobal_executeSmartContract),
-            executeSmartContractAsOwner: typeof sscglobal_executeSmartContractAsOwner !== 'undefined' ? applyWrapper(sscglobal_executeSmartContractAsOwner) : null,
-            transferTokens: typeof sscglobal_transferTokens !== 'undefined' ? applyWrapper(sscglobal_transferTokens) : null,
-            transferTokensFromCallingContract: typeof sscglobal_transferTokensFromCallingContract !== 'undefined' ? applyWrapper(sscglobal_transferTokensFromCallingContract) : null, 
-            verifyBlock: typeof sscglobal_verifyBlock !== 'undefined' ? applyWrapper(sscglobal_verifyBlock) : null,
-            emit: applyWrapper(sscglobal_emit),
-            assert: applyWrapperSync(sscglobal_assert),
-            isValidAccountName: applyWrapperSync(sscglobal_isValidAccountName),
-            };
-            api.BigNumber.ROUND_UP = 0;
-            api.BigNumber.ROUND_DOWN = 1;
-            api.BigNumber.ROUND_CEIL = 2;
-            api.BigNumber.ROUND_FLOOR = 3;
-            api.BigNumber.ROUND_HALF_UP = 4;
-            api.BigNumber.ROUND_HALF_DOWN = 5;
-            api.BigNumber.ROUND_HALF_EVEN = 6;
-            api.BigNumber.ROUND_HALF_CEIL = 7;
-            api.BigNumber.ROUND_HALF_FLOOR = 8;
-          ` + contractCode;
-          const compiled = vm.isolate.compileScriptSync(wrappedCode);
-          compiled.run(vm.context).then((x) => resolve()).catch((err) => { log.warn(err); resolve(err)});
-        } else {
-log.warn('no js vm available');
-          resolve('no JS VM available');
+          return maybeUnwrap(y);
         }
-      } catch (err) {
-        log.warn(err);
-        vm.inUse = false;
-        resolve(err);
+        function applyWrapper(fn) {
+          return async (...args) => {
+            const extArgs = args.map(x => sscglobal_externalCopy(deepUnwrap(x)).copyInto());
+            const result = await fn.applySyncPromise(undefined, extArgs);
+            return (typeof result === 'object' && result.copy) ? await result.copy() : result;
+          }
+        }
+        function applyWrapperSync(fn) {
+          return (...args) => {
+            const extArgs = args.map(x => sscglobal_externalCopy(deepUnwrap(x)).copyInto());
+            const result = fn.applySync(undefined, extArgs);
+            return (typeof result === 'object' && result.copy) ? result.copy() : result;
+          }
+        }
+        function maybeUnwrap(x) {
+          return typeof x === 'object' && x !== null && x.unwrap ? x.unwrap() : x;
+        }
+        function makeBigNumber(x) {
+          return bigNumberWrapper(sscglobal_bn_construct.applySync(undefined, [maybeUnwrap(x)]));
+        }
+        function bigNumberWrapper(x) {
+          return {
+            plus: (y) => bigNumberWrapper(sscglobal_bn_plus.applySync(undefined,[x, maybeUnwrap(y)])),
+            minus: (y) => bigNumberWrapper(sscglobal_bn_minus.applySync(undefined,[x, maybeUnwrap(y)])),
+            times: (y) => bigNumberWrapper(sscglobal_bn_times.applySync(undefined,[x, maybeUnwrap(y)])),
+            multipliedBy: (y, z) => bigNumberWrapper(sscglobal_bn_multipliedBy.applySync(undefined,[x, maybeUnwrap(y), z])),
+            dividedBy: (y, z) => bigNumberWrapper(sscglobal_bn_dividedBy.applySync(undefined,[x, maybeUnwrap(y), z])),
+            sqrt: () => bigNumberWrapper(sscglobal_bn_sqrt.applySync(undefined,[x])),
+            pow: (y) => bigNumberWrapper(sscglobal_bn_pow.applySync(undefined,[x, maybeUnwrap(y)])),
+            negated: () => bigNumberWrapper(sscglobal_bn_negated.applySync(undefined,[x])),
+            abs: () => bigNumberWrapper(sscglobal_bn_abs.applySync(undefined,[x])),
+            lt: (y) => sscglobal_bn_lt.applySync(undefined, [x, maybeUnwrap(y)]),
+            lte: (y) => sscglobal_bn_lte.applySync(undefined, [x, maybeUnwrap(y)]),
+            eq: (y) => sscglobal_bn_eq.applySync(undefined, [x, maybeUnwrap(y)]),
+            gt: (y) => sscglobal_bn_gt.applySync(undefined, [x, maybeUnwrap(y)]),
+            gte: (y) => sscglobal_bn_gte.applySync(undefined, [x, maybeUnwrap(y)]),
+            dp: (y, z) => { const ret = sscglobal_bn_dp.applySync(undefined, [x, y, z]);
+              return typeof y === 'number' ? bigNumberWrapper(ret) : ret;
+            },
+            decimalPlaces: (y, z) => { const ret = sscglobal_bn_decimalPlaces.applySync(undefined, [x, y, z]);
+              return typeof y === 'number' ? bigNumberWrapper(ret) : ret;
+            },
+            isNaN: () => sscglobal_bn_isNaN.applySync(undefined, [x]),
+            isFinite: () => sscglobal_bn_isFinite.applySync(undefined, [x]),
+            isInteger: () => sscglobal_bn_isInteger.applySync(undefined, [x]),
+            isPositive: () => sscglobal_bn_isPositive.applySync(undefined, [x]),
+            toFixed: (y, z) => sscglobal_bn_toFixed.applySync(undefined, [x, y, z]),
+            toNumber: () => sscglobal_bn_toNumber.applySync(undefined, [x]),
+            toString: () => sscglobal_bn_toString.applySync(undefined, [x]),
+            integerValue: (y) => bigNumberWrapper(sscglobal_bn_integerValue.applySync(undefined, [x, y])),
+            unwrap: () => x,
+            [Symbol.toPrimitive]: () => sscglobal_bn_toNumber.applySync(undefined, [x]),
+          };
+        }
+        const api = {
+          sender: typeof sscglobal_sender !== 'undefined' ? sscglobal_sender : null,
+          owner: typeof sscglobal_owner !== 'undefined' ? sscglobal_owner : null,
+          action: sscglobal_action,
+          payload: typeof sscglobal_payload === 'object' && sscglobal_payload.copy ? sscglobal_payload.copy() : sscglobal_payload,
+          transactionId: sscglobal_transactionId,
+          blockNumber: sscglobal_blockNumber,
+          refHiveBlockNumber: sscglobal_refHiveBlockNumber,
+          hiveBlockTimestamp: sscglobal_hiveBlockTimestamp,
+          contractVersion: sscglobal_contractVersion,
+          db: {
+            createTable: typeof sscglobal_createTable !== 'undefined' ? applyWrapper(sscglobal_createTable) : null,
+            addIndexes: typeof sscglobal_addIndexes !== 'undefined' ? applyWrapper(sscglobal_addIndexes) : null,
+            find: applyWrapper(sscglobal_find),
+            findInTable: applyWrapper(sscglobal_findInTable),
+            findOne: applyWrapper(sscglobal_findOne),
+            findOneInTable: applyWrapper(sscglobal_findOneInTable),
+            findContract: applyWrapper(sscglobal_findContract),
+            insert: applyWrapper(sscglobal_insert),
+            remove: applyWrapper(sscglobal_remove),
+            update: applyWrapper(sscglobal_update),
+            tableExists: applyWrapper(sscglobal_tableExists),
+            getBlockInfo: typeof sscglobal_getBlockInfo !== 'undefined' ? applyWrapper(sscglobal_getBlockInfo) : null,
+          },
+          BigNumber: makeBigNumber,
+          validator: {
+            isAlpha: sscglobalv_isAlpha,
+            isAlphanumeric: sscglobalv_isAlphanumeric,
+            blacklist: sscglobalv_blacklist,
+            isUppercase: sscglobalv_isUppercase,
+            isIP: sscglobalv_isIP,
+            isFQDN: sscglobalv_isFQDN,
+          },
+          logs: typeof sscglobal_logs !== 'undefined' ? applyWrapperSync(sscglobal_logs) : null,
+          SHA256: applyWrapperSync(sscglobal_SHA256),
+          checkSignature: applyWrapperSync(sscglobal_checkSignature),
+          random: applyWrapperSync(sscglobal_random),
+          debug: sscglobal_debug,
+          executeSmartContract: applyWrapper(sscglobal_executeSmartContract),
+          executeSmartContractAsOwner: typeof sscglobal_executeSmartContractAsOwner !== 'undefined' ? applyWrapper(sscglobal_executeSmartContractAsOwner) : null,
+          transferTokens: typeof sscglobal_transferTokens !== 'undefined' ? applyWrapper(sscglobal_transferTokens) : null,
+          transferTokensFromCallingContract: typeof sscglobal_transferTokensFromCallingContract !== 'undefined' ? applyWrapper(sscglobal_transferTokensFromCallingContract) : null,
+          verifyBlock: typeof sscglobal_verifyBlock !== 'undefined' ? applyWrapper(sscglobal_verifyBlock) : null,
+          emit: applyWrapper(sscglobal_emit),
+          assert: (condition, message) => sscglobal_assert.applySync(undefined, [!!condition, message]).copy(),
+          isValidAccountName: applyWrapperSync(sscglobal_isValidAccountName),
+          };
+          api.BigNumber.ROUND_UP = 0;
+          api.BigNumber.ROUND_DOWN = 1;
+          api.BigNumber.ROUND_CEIL = 2;
+          api.BigNumber.ROUND_FLOOR = 3;
+          api.BigNumber.ROUND_HALF_UP = 4;
+          api.BigNumber.ROUND_HALF_DOWN = 5;
+          api.BigNumber.ROUND_HALF_EVEN = 6;
+          api.BigNumber.ROUND_HALF_CEIL = 7;
+          api.BigNumber.ROUND_HALF_FLOOR = 8;
+          api.BigNumber.min = (...args) => bigNumberWrapper(sscglobal_bn_min.applySync(undefined, args.map(maybeUnwrap)));
+          api.BigNumber.max = (...args) => bigNumberWrapper(sscglobal_bn_max.applySync(undefined, args.map(maybeUnwrap)));
+        ` + contractCode;
+        const compiled = vm.isolate.compileScriptSync(wrappedCode);
+        compiled.run(vm.context);
+      } else {
+        resolve('no JS VM available');
       }
     });
   }
@@ -931,12 +942,11 @@ log.warn('no js vm available');
     const result = await database.find({
       contract: contractName,
       table,
-      query,
+      query: deepDeref(query),
       limit,
       offset,
       indexes,
     });
-
     return typeof result === 'array' ? result.map(deepConvertDecimal128) : result;
   }
 
@@ -944,7 +954,7 @@ log.warn('no js vm available');
     const result = await database.findOne({
       contract: contractName,
       table,
-      query,
+      query: deepDeref(query),
     });
 
     return deepConvertDecimal128(result);
