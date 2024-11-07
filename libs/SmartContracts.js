@@ -15,9 +15,6 @@ const { CONSTANTS } = require('../libs/Constants');
 const RESERVED_CONTRACT_NAMES = ['contract', 'blockProduction', 'null'];
 const RESERVED_ACTIONS = ['createSSC'];
 
-const JSVMs = [];
-const MAXJSVMs = 5;
-
 const maybeDeref = (y) => typeof y === 'object' && y !== null && y.deref ? y.deref() : y;
 function deepDeref(x) {
   let y = x;
@@ -40,7 +37,10 @@ function deepConvertDecimal128(x) {
   } else if (typeof x === "array") {
     y = x.map(deepConvertDecimal128); 
   }
-  return y instanceof Decimal128 ? BigNumber(y).toString() : y instanceof BigNumber ? y.toString() : y;
+  if (y instanceof BigNumber || y instanceof Decimal128) {
+    y = new ivm.Reference(y);
+  }
+  return y;
 }
 
 class SmartContracts {
@@ -211,7 +211,7 @@ class SmartContracts {
               }
             }),
             random: new ivm.Reference(() => rng()),
-            debug: (logmsg) => log.warn(logmsg), // eslint-disable-line no-console
+            debug: (logmsg) => log.info(logmsg), // eslint-disable-line no-console
             // execute a smart contract from the current smart contract
             executeSmartContract: new ivm.Reference(async (
               contractName, actionName, parameters,
@@ -334,7 +334,7 @@ class SmartContracts {
         refHiveBlockNumber,
       } = transaction;
 
-      log.warn('Execute smart contract ', transaction);
+      log.info('Execute smart contract ', transaction);
       if (RESERVED_ACTIONS.includes(action)) return { logs: { errors: ['you cannot trigger this action'] } };
 
       const payloadObj = payload ? JSON.parse(payload) : {};
@@ -446,7 +446,7 @@ class SmartContracts {
               return false;
             }
           }),
-          debug: (logmsg) => log.warn(logmsg), // eslint-disable-line no-console
+          debug: (logmsg) => log.info(logmsg), // eslint-disable-line no-console
           // execute a smart contract from the current smart contract
           executeSmartContract: new ivm.Reference(async (
             contractName, actionName, parameters,
@@ -555,17 +555,19 @@ class SmartContracts {
     return {
       timeout: jsVMTimeout,
       context,
-      isolate
+      isolate,
+      isActive: true,
     };
   }
 
   // run the contractCode in a VM with the vmState as a state for the VM
   static runContractCode(vmState, contractCode, jsVMTimeout) {
     return new Promise((resolve) => {
-      const vm = SmartContracts.getJSVM(jsVMTimeout);
       // run the code in the VM
+      const vm = SmartContracts.getJSVM(jsVMTimeout);
       if (vm !== null) {
         vm.context.global.setSync('done', (error) => {
+          vm.isActive = false;
           resolve(error);
         });
         vm.context.global.setSync('sscglobal_externalCopy', x => new ivm.ExternalCopy(x));
@@ -736,7 +738,7 @@ class SmartContracts {
           api.BigNumber.max = (...args) => bigNumberWrapper(sscglobal_bn_max.applySync(undefined, args.map(maybeUnwrap)));
         ` + contractCode;
         const compiled = vm.isolate.compileScriptSync(wrappedCode);
-        compiled.run(vm.context);
+        compiled.run(vm.context).then(() => vm.isolate.dispose());
       } else {
         resolve('no JS VM available');
       }
@@ -983,8 +985,7 @@ class SmartContracts {
       table: `${contractName}_${table}`,
       record: deepDeref(record),
     });
-
-    return result;
+    return deepConvertDecimal128(result);
   }
 
   static async remove(database, contractName, table, record) {
