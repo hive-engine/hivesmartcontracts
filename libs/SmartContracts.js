@@ -23,7 +23,7 @@ function deepDeref(x) {
         y[k] = deepDeref(y[k]);
     });
   } else if (typeof x === "array") {
-    y = x.map(deepDeref); 
+    y = x.map(deepDeref);
   }
   return maybeDeref(y);
 }
@@ -35,7 +35,7 @@ function deepConvertDecimal128(x) {
         y[k] = deepConvertDecimal128(y[k]);
     });
   } else if (typeof x === "array") {
-    y = x.map(deepConvertDecimal128); 
+    y = x.map(deepConvertDecimal128);
   }
   if (y instanceof BigNumber || y instanceof Decimal128) {
     y = new ivm.Reference(y);
@@ -85,11 +85,11 @@ class SmartContracts {
             RegExp.prototype.constructor = function () { };
             RegExp.prototype.exec = function () {  };
             RegExp.prototype.test = function () {  };
-  
+
             let actions = {};
-  
+
             ###ACTIONS###
-  
+
             const execute = async function () {
               try {
                 if (api.action && typeof api.action === 'string' && typeof actions[api.action] === 'function') {
@@ -105,7 +105,7 @@ class SmartContracts {
                 done(error);
               }
             }
-  
+
             execute();
           }
 
@@ -184,7 +184,6 @@ class SmartContracts {
             refHiveBlockNumber,
             hiveBlockTimestamp: timestamp,
             contractVersion,
-            //db,
             BigNumber: new ivm.Reference((x) => BigNumber(x)),
             SHA256: new ivm.Reference((payloadToHash) => {
               if (typeof payloadToHash === 'string') {
@@ -539,7 +538,6 @@ class SmartContracts {
         Object.assign(contractInDb.tables, tables);
         await database.updateContract(contractInDb);
       }
-
       return results;
     } catch (e) {
       log.error('ERROR DURING CONTRACT EXECUTION: ', e);
@@ -550,7 +548,7 @@ class SmartContracts {
   }
 
   static getJSVM(jsVMTimeout) {
-    const isolate = new ivm.Isolate({ memoryLimit: 128 });
+    const isolate = new ivm.Isolate({ memoryLimit: 256 });
     const context = isolate.createContextSync();
     return {
       timeout: jsVMTimeout,
@@ -834,6 +832,7 @@ class SmartContracts {
         }
       }
     } catch (error) {
+      log.warn(error);
       results.errors = [];
       results.errors.push(error);
     }
