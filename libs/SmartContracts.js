@@ -85,11 +85,11 @@ class SmartContracts {
             RegExp.prototype.constructor = function () { };
             RegExp.prototype.exec = function () {  };
             RegExp.prototype.test = function () {  };
-
+  
             let actions = {};
-
+  
             ###ACTIONS###
-
+  
             const execute = async function () {
               try {
                 if (api.action && typeof api.action === 'string' && typeof actions[api.action] === 'function') {
@@ -105,7 +105,7 @@ class SmartContracts {
                 done(error);
               }
             }
-
+  
             execute();
           }
 
@@ -114,8 +114,6 @@ class SmartContracts {
 
         // the code of the smart contarct comes as a Base64 encoded string
         codeTemplate = codeTemplate.replace('###ACTIONS###', Base64.decode(code));
-
-        // compile the code for faster executions later on
 
         const tables = {};
 
@@ -418,7 +416,6 @@ class SmartContracts {
           blockNumber,
           action,
           payload: JSON.parse(JSON.stringify(payloadObj)),
-          //db,
           BigNumber: new ivm.Reference((x) => BigNumber(x)),
           logs: new ivm.Reference(() => new ivm.ExternalCopy(JSON.parse(JSON.stringify(results.logs)))),
           random: new ivm.Reference(() => rng()),
@@ -548,7 +545,7 @@ class SmartContracts {
   }
 
   static getJSVM(jsVMTimeout) {
-    const isolate = new ivm.Isolate({ memoryLimit: 256 });
+    const isolate = new ivm.Isolate({ memoryLimit: 128 });
     const context = isolate.createContextSync();
     return {
       timeout: jsVMTimeout,
