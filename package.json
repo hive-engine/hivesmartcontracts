@@ -32,8 +32,8 @@
     "test21": "./node_modules/mocha/bin/mocha ./test/beedollar.js --exit"
   },
   "engines": {
-    "node": ">=v16.15.0",
-    "npm": ">=6.13.6"
+    "node": ">=v18.17.0",
+    "npm": ">=9.6.7"
   },
   "keywords": [],
   "author": "Harpagon210 <harpagon210@gmail.com>",
