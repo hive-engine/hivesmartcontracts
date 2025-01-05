@@ -340,6 +340,7 @@ actions.createSSC = async () => {
     await removeBadOrders();
     await removeBlacklistedOrders('buy', 'waitingforlove');
     await removeBlacklistedOrders('sell', 'waitingforlove');
+    await api.db.addIndexes('tradesHistory', [{ name: 'timestamp', index: { timestamp: 1 } }]);
   }
 };
 
