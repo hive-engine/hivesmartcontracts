@@ -153,7 +153,7 @@ const updateTradesHistory = async (type, buyer, seller, symbol, quantity, price,
       volumeToDelete = volumeToDelete.plus(trade.volume);
       await api.db.remove('tradesHistory', trade);
     }
-    await updateVolumeMetric(trade.symbol, volumeToDelete, false);
+    await updateVolumeMetric(symbol, volumeToDelete, false);
     tradesToDelete = await api.db.find(
       'tradesHistory',
       {
