@@ -1,6 +1,6 @@
 {
   "name": "hivesmartcontracts",
-  "version": "2.0.2",
+  "version": "ivm-1.0.0",
   "description": "",
   "main": "app.js",
   "scripts": {
@@ -50,6 +50,7 @@
     "dotenv": "^6.2.0",
     "express": "^4.18.2",
     "fs-extra": "^6.0.1",
+    "isolated-vm": "^4.7.2",
     "jayson": "^4.1.2",
     "js-base64": "^2.6.4",
     "line-by-line": "^0.1.6",
@@ -59,7 +60,6 @@
     "read-last-lines": "^1.8.0",
     "seedrandom": "^3.0.5",
     "validator": "^10.11.0",
-    "vm2": "^3.9.2",
     "winston": "^3.3.3"
   },
   "devDependencies": {

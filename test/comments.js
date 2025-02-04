@@ -353,6 +353,7 @@ describe('comments', function () {
   afterEach((done) => {
       // runs after each test in this block
       new Promise(async (resolve) => {
+        fixture.tearDown();
         await db.dropDatabase()
         resolve();
       })
@@ -360,7 +361,7 @@ describe('comments', function () {
           done()
         })
   });
-  
+
   it('should create reward pool', (done) => {
     new Promise(async (resolve) => {
       await fixture.setUp();
@@ -1728,7 +1729,6 @@ describe('comments', function () {
         done();
       });
   });
-
 
   it('vote past payout is ignored', (done) => {
     new Promise(async (resolve) => {
