@@ -149,6 +149,7 @@ describe('Smart Contracts', function ()  {
   afterEach((done) => {
       // runs after each test in this block
       new Promise(async (resolve) => {
+        fixture.tearDown();
         await db.dropDatabase()
         resolve();
       })
@@ -1381,6 +1382,7 @@ describe('Smart Contracts', function ()  {
       };
 
       await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
 
       const latestBlock = await fixture.database.getLatestBlockInfo();
 
@@ -1399,6 +1401,7 @@ describe('Smart Contracts', function ()  {
         done();
       });
   });
+
 
   it('should trim executionCodeHash after cutoff', (done) => {
     new Promise(async (resolve) => {
@@ -1476,7 +1479,6 @@ describe('Smart Contracts', function ()  {
         done();
       });
   });
-
 
   it('should log a node error during the deployment of a smart contract if an error is thrown up to block 83680408', (done) => {
     new Promise(async (resolve) => {
