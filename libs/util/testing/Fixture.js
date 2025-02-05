@@ -13,7 +13,6 @@ const conf = {
   databaseURL: 'mongodb://localhost:27017',
   databaseName: 'testssc',
   streamNodes: ['https://api.hive.blog'],
-  defaultLogLevel: "warn",
 };
 
 class Fixture {
@@ -90,10 +89,8 @@ class Fixture {
   }
 
   unloadPlugin(plugin) {
-    if (this.plugins[plugin.PLUGIN_NAME]) {
-      this.plugins[plugin.PLUGIN_NAME].cp.kill('SIGINT');
-      this.plugins[plugin.PLUGIN_NAME] = null;
-    }
+    this.plugins[plugin.PLUGIN_NAME].cp.kill('SIGINT');
+    this.plugins[plugin.PLUGIN_NAME] = null;
   }
 
   getNextTxId() {

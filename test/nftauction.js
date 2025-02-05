@@ -122,7 +122,6 @@ describe('NFT Auction Smart Contract', function () {
   afterEach((done) => {
     // runs after each test in this block
     new Promise(async (resolve) => {
-      fixture.tearDown();
       await db.dropDatabase();
       resolve();
     })
@@ -1084,7 +1083,6 @@ describe('NFT Auction Smart Contract', function () {
       };
 
       await fixture.sendBlock(block);
-      await tableAsserts.assertNoErrorInLastBlock();
 
       const res = await fixture.database.getLatestBlockInfo();
       const txs = res.transactions;
@@ -1093,6 +1091,8 @@ describe('NFT Auction Smart Contract', function () {
       await assertBalances(['cryptomancer', 'dave', 'bidmaker', 'ali-h', "mart"], ['100', '100', '0', '99', "1"], 'BEE');
 
       await assertAuction('AUCTION-TX', true);
+
+      await tableAsserts.assertNoErrorInLastBlock();
 
       resolve();
     })

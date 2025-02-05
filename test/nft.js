@@ -102,7 +102,6 @@ describe('nft', function() {
   afterEach((done) => {
       // runs after each test in this block
       new Promise(async (resolve) => {
-        fixture.tearDown();
         await db.dropDatabase()
         resolve();
       })

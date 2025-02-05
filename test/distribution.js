@@ -165,7 +165,6 @@ describe('distribution', function () {
   afterEach((done) => {
       // runs after each test in this block
       new Promise(async (resolve) => {
-        fixture.tearDown();
         await db.dropDatabase()
         resolve();
       })
@@ -635,7 +634,7 @@ describe('distribution', function () {
         fixture.tearDown();
         done();
       });
-  });
+  });    
 
   it('should flush fixed distribution', (done) => {
     new Promise(async (resolve) => {
@@ -1530,5 +1529,6 @@ describe('distribution', function () {
       });
 
   });
+
   /// END TESTS
 });
