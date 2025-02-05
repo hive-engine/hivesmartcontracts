@@ -18,7 +18,6 @@ class Block {
     this.previousHash = previousHash;
     this.previousDatabaseHash = previousDatabaseHash;
     this.timestamp = timestamp;
-    this.transactions = transactions;
     this.virtualTransactions = [];
     this.hash = this.calculateHash();
     this.databaseHash = '';
@@ -28,6 +27,31 @@ class Block {
     this.witness = '';
     this.signingKey = '';
     this.roundSignature = '';
+
+    if (this.refHiveBlockNumber >= 93049800) {
+      const filteredTransactions = [];
+      const transactionsCountBySender = {};
+
+      for (let idx = 0; idx < transactions.length; idx += 1) {
+        const tx = transactions[idx];
+
+        if (!transactionsCountBySender[tx.sender]) {
+          transactionsCountBySender[tx.sender] = 0;
+        }
+
+        if (transactionsCountBySender[tx.sender] < 20 || tx.sender === 'null') {
+          filteredTransactions.push(tx);
+
+          transactionsCountBySender[tx.sender] += 1;
+        } else {
+          log.info('Transaction ignored', tx);
+        }
+      }
+
+      this.transactions = filteredTransactions;
+    } else {
+      this.transactions = transactions;
+    }
   }
 
   // calculate the hash of the block
