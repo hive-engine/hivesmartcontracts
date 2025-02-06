@@ -432,6 +432,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
   } = order;
 
   const buyOrder = order;
+  const ordersToFetch = 25;
   let offset = 0;
   let volumeTraded = 0;
 
@@ -443,7 +444,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
     priceDec: {
       $lte: priceDec,
     },
-  }, 1000, offset,
+  }, ordersToFetch, offset,
   [
     { index: 'priceDec', descending: false },
     { index: '_id', descending: false },
@@ -601,7 +602,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
       inc += 1;
     }
 
-    offset += 1000;
+    offset += ordersToFetch;
 
     if (api.BigNumber(buyOrder.quantity).gt(0)) {
       // get the orders that match the symbol and the price
@@ -610,7 +611,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
         priceDec: {
           $lte: priceDec,
         },
-      }, 1000, offset,
+      }, ordersToFetch, offset,
       [
         { index: 'priceDec', descending: false },
         { index: '_id', descending: false },
@@ -637,6 +638,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
   } = order;
 
   const sellOrder = order;
+  const ordersToFetch = 25;
   let offset = 0;
   let volumeTraded = 0;
 
@@ -648,7 +650,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
     priceDec: {
       $gte: priceDec,
     },
-  }, 1000, offset,
+  }, ordersToFetch, offset,
   [
     { index: 'priceDec', descending: true },
     { index: '_id', descending: false },
@@ -805,7 +807,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
       inc += 1;
     }
 
-    offset += 1000;
+    offset += ordersToFetch;
 
     if (api.BigNumber(sellOrder.quantity).gt(0)) {
       // get the orders that match the symbol and the price
@@ -814,7 +816,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
         priceDec: {
           $gte: priceDec,
         },
-      }, 1000, offset,
+      }, ordersToFetch, offset,
       [
         { index: 'priceDec', descending: true },
         { index: '_id', descending: false },
@@ -987,7 +989,7 @@ actions.marketBuy = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-
+  const ordersToFetch = 25;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
     return;
@@ -1017,7 +1019,7 @@ actions.marketBuy = async (payload) => {
         // get the orders that match the symbol and the price
         let sellOrderBook = await api.db.find('sellBook', {
           symbol,
-        }, 1000, offset,
+        }, ordersToFetch, offset,
         [
           { index: 'priceDec', descending: false },
           { index: '_id', descending: false },
@@ -1140,13 +1142,13 @@ actions.marketBuy = async (payload) => {
             inc += 1;
           }
 
-          offset += 1000;
+          offset += ordersToFetch;
 
           if (api.BigNumber(hiveRemaining).gt(0)) {
             // get the orders that match the symbol and the price
             sellOrderBook = await api.db.find('sellBook', {
               symbol,
-            }, 1000, offset,
+            }, ordersToFetch, offset,
             [
               { index: 'priceDec', descending: false },
               { index: '_id', descending: false },
@@ -1177,7 +1179,7 @@ actions.marketSell = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-
+  const ordersToFetch = 25;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
     return;
@@ -1207,7 +1209,7 @@ actions.marketSell = async (payload) => {
         // get the orders that match the symbol
         let buyOrderBook = await api.db.find('buyBook', {
           symbol,
-        }, 1000, offset,
+        }, ordersToFetch, offset,
         [
           { index: 'priceDec', descending: true },
           { index: '_id', descending: false },
@@ -1345,13 +1347,13 @@ actions.marketSell = async (payload) => {
             inc += 1;
           }
 
-          offset += 1000;
+          offset += ordersToFetch;
 
           if (api.BigNumber(tokensRemaining).gt(0)) {
             // get the orders that match the symbol and the price
             buyOrderBook = await api.db.find('buyBook', {
               symbol,
-            }, 1000, offset,
+            }, ordersToFetch, offset,
             [
               { index: 'priceDec', descending: true },
               { index: '_id', descending: false },
