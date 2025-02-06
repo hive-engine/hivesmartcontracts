@@ -147,11 +147,13 @@ const updateTradesHistory = async (type, buyer, seller, symbol, quantity, price,
   let nbTradesToDelete = tradesToDelete.length;
 
   while (nbTradesToDelete > 0) {
+    let volumeToDelete = api.BigNumber(0);
     for (let index = 0; index < nbTradesToDelete; index += 1) {
       const trade = tradesToDelete[index];
-      await updateVolumeMetric(trade.symbol, trade.volume, false);
+      volumeToDelete = volumeToDelete.plus(trade.volume);
       await api.db.remove('tradesHistory', trade);
     }
+    await updateVolumeMetric(symbol, volumeToDelete, false);
     tradesToDelete = await api.db.find(
       'tradesHistory',
       {
@@ -340,6 +342,7 @@ actions.createSSC = async () => {
     await removeBadOrders();
     await removeBlacklistedOrders('buy', 'waitingforlove');
     await removeBlacklistedOrders('sell', 'waitingforlove');
+    await api.db.addIndexes('tradesHistory', [{ name: 'timestamp', index: { timestamp: 1 } }]);
   }
 };
 
