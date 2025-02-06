@@ -10,7 +10,7 @@ const { setupContractPayload } = require('../libs/util/contractUtil');
 const revertCommentsContractPayload = setupContractPayload('comments', './contracts/revert/comments_minify_20211027.js');
 
 class Block {
-  constructor(timestamp, refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, transactions, previousBlockNumber, previousHash = '', previousDatabaseHash = '', enablePerUserTxLimit = true) {
+  constructor(timestamp, refHiveBlockNumber, refHiveBlockId, prevRefHiveBlockId, transactions, previousBlockNumber, previousHash = '', previousDatabaseHash = '') {
     this.blockNumber = previousBlockNumber + 1;
     this.refHiveBlockNumber = refHiveBlockNumber;
     this.refHiveBlockId = refHiveBlockId;
@@ -28,7 +28,6 @@ class Block {
     this.witness = '';
     this.signingKey = '';
     this.roundSignature = '';
-    this.enablePerUserTxLimit = enablePerUserTxLimit;
   }
 
   // calculate the hash of the block
@@ -105,35 +104,8 @@ class Block {
     }
   }
 
-  applyPerUserTxLimit() {
-    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601) {
-      const perUserTxLimit = 20;
-      const filteredTransactions = [];
-      const transactionsCountBySender = {};
-
-      for (let idx = 0; idx < this.transactions.length; idx += 1) {
-        const tx = this.transactions[idx];
-
-        if (!transactionsCountBySender[tx.sender]) {
-          transactionsCountBySender[tx.sender] = 0;
-        }
-
-        if (transactionsCountBySender[tx.sender] < perUserTxLimit || tx.sender === 'null') {
-          filteredTransactions.push(tx);
-
-          transactionsCountBySender[tx.sender] += 1;
-        } else {
-          log.info('Transaction ignored', tx);
-        }
-      }
-      this.transactions = filteredTransactions;
-    }
-  }
-
   // produce the block (deploy a smart contract or execute a smart contract)
   async produceBlock(database, jsVMTimeout, mainBlock) {
-    this.applyPerUserTxLimit();
-
     await this.blockAdjustments(database);
 
     const nbTransactions = this.transactions.length;

@@ -17,7 +17,6 @@ let javascriptVMTimeout = 0;
 let producing = false;
 let stopRequested = false;
 let hashVerificationNode = false;
-let enablePerUserTxLimit = true;
 
 const createGenesisBlock = async (payload) => {
   // check if genesis block hasn't been generated already
@@ -102,7 +101,6 @@ async function producePendingTransactions(
       previousBlock.blockNumber,
       previousBlock.hash,
       previousBlock.databaseHash,
-      enablePerUserTxLimit
     );
     log.info(`Start session for block ${newBlock.blockNumber}`);
     const session = database.startSession();
@@ -200,7 +198,6 @@ const init = async (conf, callback) => {
   } = conf;
   javascriptVMTimeout = conf.javascriptVMTimeout; // eslint-disable-line prefer-destructuring
   hashVerificationNode = conf.hashVerificationNode; // eslint-disable-line prefer-destructuring
-  enablePerUserTxLimit = conf.enablePerUserTxLimit; // eslint-disable-line prefer-destructuring
   log.setDefaultLevel(conf.defaultLogLevel ? conf.defaultLogLevel : 'warn');
 
   database = new Database();
