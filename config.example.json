@@ -38,6 +38,7 @@
         "port" : 5002
     },
     "hashVerificationNode": false,
+    "enablePerUserTxLimit": true,
     "streamerConfig": {
         "antiForkBufferMaxSize": 2,
         "maxQps": 1,
