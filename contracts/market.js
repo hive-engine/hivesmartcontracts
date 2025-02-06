@@ -6,6 +6,7 @@
 const HIVE_PEGGED_SYMBOL = 'SWAP.HIVE';
 const HIVE_PEGGED_SYMBOL_PRESICION = 8;
 const CONTRACT_NAME = 'market';
+const MAX_ALLOWED_OPEN_ORDERS = 200;
 
 // trading by these accounts is blocked
 const ACCOUNT_BLACKLIST = {
@@ -17,6 +18,22 @@ const ACCOUNT_BLACKLIST = {
   'shaggroed': 1,
   'shaggythesecond': 1,
 };
+
+const OrderCountUpdates = {};
+
+const addOrUpdateOrderCounter = (account, change) => {
+  OrderCountUpdates[account] ||= { account, orderCount: 0 };
+  OrderCountUpdates[account].orderCount += change;
+};
+
+const executeUpdateOrderCounter = async () => {
+  for (const entry of Object.values(OrderCountUpdates)) {
+    if (entry.orderCount == 0)
+      continue;
+
+    await api.db.update('openOrders', { _id: entry.account }, {}, { orderCount: entry.orderCount });
+  }
+}
 
 const getMetric = async (symbol) => {
   let metric = await api.db.findOne('metrics', { symbol });
@@ -204,6 +221,7 @@ const removeBadOrders = async () => {
       nbOrdersDeleted += 1;
       const order = ordersToDelete[index];
 
+      AddOrUpdateOrderCounter(order.account, -1);
       await api.db.remove('buyBook', order);
       await updateBidMetric(order.symbol);
     }
@@ -222,6 +240,8 @@ const removeBadOrders = async () => {
 
     nbOrdersToDelete = ordersToDelete.length;
   }
+
+  await executeUpdateOrderCounter();
 };
 
 const removeBlacklistedOrders = async (type, targetAccount) => {
@@ -244,8 +264,9 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
       nbOrdersDeleted += 1;
       const order = ordersToDelete[index];
 
+      addOrUpdateOrderCounter(order.account, -1);
       await api.db.remove(table, order);
-
+      
       if (type === 'sell') {
         await updateAskMetric(order.symbol);
       } else {
@@ -265,6 +286,8 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
 
     nbOrdersToDelete = ordersToDelete.length;
   }
+
+  await executeUpdateOrderCounter();
 };
 
 const removeBlacklistedOrdersBatch = async (type, targetAccount, qty) => {
@@ -334,7 +357,7 @@ const removeExpiredOrders = async (table) => {
 
       // unlock tokens
       await api.transferTokens(order.account, symbol, quantity, 'user');
-
+      addOrUpdateOrderCounter(order.account, -1);
       await api.db.remove(table, order);
 
       if (table === 'buyBook') {
@@ -369,7 +392,13 @@ actions.createSSC = async () => {
     await api.db.createTable('sellBook', ['symbol', 'account', 'priceDec', 'expiration', 'txId']);
     await api.db.createTable('tradesHistory', ['symbol']);
     await api.db.createTable('metrics', ['symbol']);
+    await api.db.createTable('openOrders', ['orderCount'], { primaryKey: ['account'] });
   } else {
+    const openOrdersExists = await api.db.tableExists('openOrders');
+    if (openOrdersExists === false) {
+      await api.db.createTable('openOrders', ['orderCount'], { primaryKey: ['account'] });
+    }
+
     // remove stuck 0 quantity orders and any that have been blacklisted
     await removeBadOrders();
     // await removeBlacklistedOrders('buy', 'waitingforlove');
@@ -412,8 +441,10 @@ actions.cancel = async (payload) => {
 
       // unlock tokens
       await api.transferTokens(finalAccount, symbol, quantity, 'user');
-
+      
+      addOrUpdateOrderCounter(finalAccount, -1);
       await api.db.remove(table, order);
+      await executeUpdateOrderCounter();
 
       if (type === 'sell') {
         await updateAskMetric(order.symbol);
@@ -507,6 +538,8 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
             if (api.BigNumber(qtyLeftSellOrder).gt(0)) {
               await api.transferTokens(sellOrder.account, symbol, qtyLeftSellOrder, 'user');
             }
+
+            addOrUpdateOrderCounter(sellOrder.account, -1);
             api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
             await api.db.remove('sellBook', sellOrder);
           }
@@ -527,6 +560,8 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
           volumeTraded = api.BigNumber(volumeTraded).plus(qtyTokensToSend);
 
           buyOrder.quantity = '0';
+          
+          addOrUpdateOrderCounter(buyOrder.account, -1);
           await api.db.remove('buyBook', buyOrder);
           api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
         }
@@ -563,6 +598,8 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
             api.debug(qtyTokensToSend);
           }
 
+          addOrUpdateOrderCounter(sellOrder.account, -1);
+
           // remove the sell order
           await api.db.remove('sellBook', sellOrder);
           api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
@@ -586,6 +623,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
               await api.transferTokens(account, HIVE_PEGGED_SYMBOL, buyOrder.tokensLocked, 'user');
             }
 
+            addOrUpdateOrderCounter(buyOrder.account, -1);
             buyOrder.quantity = '0';
             await api.db.remove('buyBook', buyOrder);
             api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
@@ -717,6 +755,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
             if (api.BigNumber(buyOrdertokensLocked).gt(0)) {
               await api.transferTokens(buyOrder.account, HIVE_PEGGED_SYMBOL, buyOrdertokensLocked, 'user');
             }
+            addOrUpdateOrderCounter(buyOrder.account, -1);
             api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
             await api.db.remove('buyBook', buyOrder);
           }
@@ -728,6 +767,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
           volumeTraded = api.BigNumber(volumeTraded).plus(qtyTokensToSend);
 
           sellOrder.quantity = 0;
+          addOrUpdateOrderCounter(sellOrder.account, -1);
           await api.db.remove('sellBook', sellOrder);
           api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
         }
@@ -773,6 +813,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
           }
 
           // remove the buy order
+          addOrUpdateOrderCounter(buyOrder.account, -1);
           await api.db.remove('buyBook', buyOrder);
           api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
 
@@ -792,6 +833,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
             }
 
             sellOrder.quantity = '0';
+            addOrUpdateOrderCounter(sellOrder.account, -1);
             await api.db.remove('sellBook', sellOrder);
             api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
           }
@@ -902,8 +944,11 @@ actions.buy = async (payload) => {
             : timestampSec + expiration;
 
           const orderInDb = await api.db.insert('buyBook', order);
+            addOrUpdateOrderCounter(finalAccount, 1);
 
           await findMatchingSellOrders(orderInDb, token.precision);
+            addOrUpdateOrderCounter(finalAccount, 1);
+            await executeUpdateOrderCounter();
         }
       }
     }
@@ -972,8 +1017,10 @@ actions.sell = async (payload) => {
             : timestampSec + expiration;
 
           const orderInDb = await api.db.insert('sellBook', order);
+          addOrUpdateOrderCounter(finalAccount, 1);
 
           await findMatchingBuyOrders(orderInDb, token.precision);
+          await executeUpdateOrderCounter();
         }
       }
     }
@@ -1028,6 +1075,7 @@ actions.marketBuy = async (payload) => {
         do {
           const nbOrders = sellOrderBook.length;
           let inc = 0;
+                    addOrUpdateOrderCounter(sellOrder.account, -1);
 
           while (inc < nbOrders && api.BigNumber(hiveRemaining).gt(0)) {
             const sellOrder = sellOrderBook[inc];
@@ -1094,6 +1142,7 @@ actions.marketBuy = async (payload) => {
               let qtyHiveToSend = api.BigNumber(sellOrder.price)
                 .multipliedBy(sellOrder.quantity)
                 .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
+                  addOrUpdateOrderCounter(sellOrder.account, -1);
 
               if (api.BigNumber(qtyHiveToSend).gt(hiveRemaining)) {
                 qtyHiveToSend = hiveRemaining;
@@ -1168,6 +1217,7 @@ actions.marketBuy = async (payload) => {
       }
     }
   }
+  await executeUpdateOrderCounter();
 };
 
 actions.marketSell = async (payload) => {
@@ -1276,6 +1326,7 @@ actions.marketSell = async (payload) => {
                   if (api.BigNumber(buyOrdertokensLocked).gt(0)) {
                     await api.transferTokens(buyOrder.account, HIVE_PEGGED_SYMBOL, buyOrdertokensLocked, 'user');
                   }
+                  addOrUpdateOrderCounter(buyOrder.account, -1);
                   await api.db.remove('buyBook', buyOrder);
                 }
 
@@ -1329,6 +1380,7 @@ actions.marketSell = async (payload) => {
                 }
 
                 // remove the buy order
+                addOrUpdateOrderCounter(buyOrder.account, -1);
                 await api.db.remove('buyBook', buyOrder);
 
                 // update the quantity to get
@@ -1374,4 +1426,5 @@ actions.marketSell = async (payload) => {
       }
     }
   }
+  await executeUpdateOrderCounter();
 };
