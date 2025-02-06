@@ -221,7 +221,7 @@ const removeBadOrders = async () => {
       nbOrdersDeleted += 1;
       const order = ordersToDelete[index];
 
-      AddOrUpdateOrderCounter(order.account, -1);
+      addOrUpdateOrderCounter(order.account, -1);
       await api.db.remove('buyBook', order);
       await updateBidMetric(order.symbol);
     }
