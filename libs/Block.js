@@ -106,7 +106,7 @@ class Block {
   }
 
   applyPerUserTxLimit() {
-    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93049800) {
+    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601) {
       const perUserTxLimit = 20;
       const filteredTransactions = [];
       const transactionsCountBySender = {};
@@ -123,7 +123,7 @@ class Block {
 
           transactionsCountBySender[tx.sender] += 1;
         } else {
-          log.warn('Transaction ignored', tx);
+          log.info('Transaction ignored', tx);
         }
       }
       this.transactions = filteredTransactions;
