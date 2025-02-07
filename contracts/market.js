@@ -289,9 +289,9 @@ const removeBlacklistedOrdersBatch = async (type, symbol, targetAccount, qty) =>
       await api.db.remove(table, order);
     }
     if (type === 'sell') {
-      await updateAskMetric(order.symbol);
+      await updateAskMetric(symbol);
     } else {
-      await updateBidMetric(order.symbol);
+      await updateBidMetric(symbol);
     }
   }
 };
