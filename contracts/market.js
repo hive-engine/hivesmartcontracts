@@ -14,6 +14,8 @@ const ACCOUNT_BLACKLIST = {
   'thenights': 1,
   'thedays': 1,
   'temp': 1,
+  'shaggroed': 1,
+  'shaggythesecond': 1,
 };
 
 const getMetric = async (symbol) => {
@@ -265,10 +267,42 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
   }
 };
 
+const removeBlacklistedOrdersBatch = async (type, targetAccount, qty) => {
+  const table = type === 'buy' ? 'buyBook' : 'sellBook';
+  let nbOrdersToDelete = 0;
+  const ordersToDelete = await api.db.find(
+    table,
+    {
+      account: targetAccount,
+    },
+    qty,
+    0,
+    [{ index: '_id', descending: false }],
+  );
+
+  nbOrdersToDelete = ordersToDelete.length;
+  if (nbOrdersToDelete > 0) {
+    for (let index = 0; index < nbOrdersToDelete; index += 1) {
+      const order = ordersToDelete[index];
+
+      await api.db.remove(table, order);
+
+      if (type === 'sell') {
+        await updateAskMetric(order.symbol);
+      } else {
+        await updateBidMetric(order.symbol);
+      }
+    }
+  }
+};
+
 const removeExpiredOrders = async (table) => {
   const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
     .dividedBy(1000)
     .toNumber();
+
+  // get rid of some blacklisted orders while we're here
+  await removeBlacklistedOrdersBatch('sell', 'shaggroed', 5);
 
   // clean orders
   let nbOrdersToDelete = 0;
@@ -338,8 +372,8 @@ actions.createSSC = async () => {
   } else {
     // remove stuck 0 quantity orders and any that have been blacklisted
     await removeBadOrders();
-    await removeBlacklistedOrders('buy', 'waitingforlove');
-    await removeBlacklistedOrders('sell', 'waitingforlove');
+    // await removeBlacklistedOrders('buy', 'waitingforlove');
+    // await removeBlacklistedOrders('sell', 'waitingforlove');
   }
 };
 
