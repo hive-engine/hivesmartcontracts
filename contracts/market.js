@@ -1374,6 +1374,6 @@ actions.marketSell = async (payload) => {
 actions.tick = async () => {
   if (api.assert(api.sender === 'null', `not authorized: ${api.sender}`)) {
     // get rid of some blacklisted orders while we're here
-    await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 100);
+    await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 10);
   }
 }
