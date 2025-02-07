@@ -37,14 +37,18 @@ const executeUpdateOrderCounter = async () => {
 
 const findOrCountOpenOrders = async (account) => {
   const openOrders = await api.db.findOne('openOrders', {_id: account});
-  if (openOrders == null)
-  {
+  let counter = 0;
+  if (openOrders == null) {
     // count orders from market
     let sellOrderCount = await api.db.count('sellBook', { account });
     let buyOrderCount = await api.db.count('buyBook', { account });
-    return sellOrderCount + buyOrderCount;
+    counter = sellOrderCount + buyOrderCount;
+    addOrUpdateOrderCounter(account, counter);
   }
-  return openOrders.orderCount;
+  else {
+    counter = openOrders.orderCount;
+  }
+  return counter;
 }
 
 const getMetric = async (symbol) => {
