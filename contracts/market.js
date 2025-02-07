@@ -267,13 +267,14 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
   }
 };
 
-const removeBlacklistedOrdersBatch = async (type, targetAccount, qty) => {
+const removeBlacklistedOrdersBatch = async (type, symbol, targetAccount, qty) => {
   const table = type === 'buy' ? 'buyBook' : 'sellBook';
   let nbOrdersToDelete = 0;
   const ordersToDelete = await api.db.find(
     table,
     {
       account: targetAccount,
+      symbol,
     },
     qty,
     0,
@@ -286,12 +287,11 @@ const removeBlacklistedOrdersBatch = async (type, targetAccount, qty) => {
       const order = ordersToDelete[index];
 
       await api.db.remove(table, order);
-
-      if (type === 'sell') {
-        await updateAskMetric(order.symbol);
-      } else {
-        await updateBidMetric(order.symbol);
-      }
+    }
+    if (type === 'sell') {
+      await updateAskMetric(order.symbol);
+    } else {
+      await updateBidMetric(order.symbol);
     }
   }
 };
@@ -302,7 +302,7 @@ const removeExpiredOrders = async (table) => {
     .toNumber();
 
   // get rid of some blacklisted orders while we're here
-  await removeBlacklistedOrdersBatch('sell', 'shaggroed', 5);
+  await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 5);
 
   // clean orders
   let nbOrdersToDelete = 0;
