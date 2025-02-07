@@ -255,7 +255,7 @@ const proposeRound = async (witness, round, retry = 0) => {
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
-            }, 5000 * (retry + 1));
+            }, 8000 * (retry + 1)); // allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
           }
         }
       }
