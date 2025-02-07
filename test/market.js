@@ -277,6 +277,11 @@ describe('Market', function() {
         },
         indexes: [{index: '_id', descending: false}],
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       console.log(buyOrders);
       assert.equal(buyOrders.length, 3);
@@ -295,6 +300,9 @@ describe('Market', function() {
       assert.equal(buyOrders[2].account, 'aggroed');
       assert.equal(buyOrders[2].symbol, 'TKN');
       assert.equal(buyOrders[2].quantity, 60);
+
+      assert.strictEqual(entries[0].orderCount, 2);
+      assert.strictEqual(entries[1].orderCount, 1);
 
       // check market contract has correct token amounts
       balances = await fixture.database.find({
@@ -369,8 +377,15 @@ describe('Market', function() {
         },
         indexes: [{index: '_id', descending: false}],
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 0);
 
       // check volume metric looks OK
       const metric = await fixture.database.findOne({
@@ -473,6 +488,11 @@ describe('Market', function() {
         },
         indexes: [{index: '_id', descending: false}],
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       console.log(sellOrders);
       assert.equal(sellOrders.length, 3);
@@ -491,6 +511,9 @@ describe('Market', function() {
       assert.equal(sellOrders[2].account, 'aggroed');
       assert.equal(sellOrders[2].symbol, 'TKN');
       assert.equal(sellOrders[2].quantity, 60);
+
+      assert.strictEqual(entries[0].orderCount, 2);
+      assert.strictEqual(entries[1].orderCount, 1);
 
       // check market contract has correct token amounts
       balances = await fixture.database.find({
@@ -565,6 +588,11 @@ describe('Market', function() {
         },
         indexes: [{index: '_id', descending: false}],
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders.length, 0);
 
@@ -580,6 +608,8 @@ describe('Market', function() {
 
       assert.equal(metric.symbol, 'TKN');
       assert.equal(metric.volume, 119.140316);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 0);
 
       resolve();
     })
@@ -628,8 +658,14 @@ describe('Market', function() {
           symbol: 'TKN'
         }
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders.length, 1);
+      assert.strictEqual(entries[0].orderCount, 1);
 
       console.log(sellOrders);
 
@@ -687,7 +723,14 @@ describe('Market', function() {
         }
       });
 
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+
       assert.equal(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       // test 2 - try to market buy an empty order book
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -759,12 +802,20 @@ describe('Market', function() {
         }
       });
 
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+
       console.log(sellOrders);
       assert.equal(sellOrders.length, 1);
 
       assert.equal(sellOrders[0].account, 'vitalik');
       assert.equal(sellOrders[0].symbol, 'TKN');
       assert.equal(sellOrders[0].quantity, 5.906);
+
+      assert.strictEqual(entries[0].orderCount, 1);
 
       // check volume metric looks OK
       const metric = await fixture.database.findOne({
@@ -828,8 +879,14 @@ describe('Market', function() {
           symbol: 'TKN'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       // test 2 - try to market sell to an empty order book
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -900,6 +957,11 @@ describe('Market', function() {
           symbol: 'TKN'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       console.log(buyOrders);
       assert.equal(buyOrders.length, 1);
@@ -907,6 +969,7 @@ describe('Market', function() {
       assert.equal(buyOrders[0].account, 'satoshi');
       assert.equal(buyOrders[0].symbol, 'TKN');
       assert.equal(buyOrders[0].quantity, 30);
+      assert.strictEqual(entries[0].orderCount, 1)
 
       // check volume metric looks OK
       const metric = await fixture.database.findOne({
@@ -990,7 +1053,7 @@ describe('Market', function() {
         }
       });
       
-      assert.equal(entry.orderCount, 1);
+      assert.strictEqual(entry.orderCount, 1);
 
       resolve();
     })
@@ -1085,8 +1148,8 @@ describe('Market', function() {
       });
       
       // sunsetjesus should not appear because he is on the blacklist
-      assert.equal(entries.length, 1);
-      assert.equal(entries[0].orderCount, 3);
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(entries[0].orderCount, 3);
 
       resolve();
     })
@@ -1121,9 +1184,16 @@ describe('Market', function() {
 
       await fixture.sendBlock(block);
 
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+
       const block1 = await fixture.database.getBlockInfo(1);
       const transactionsBlock1 = block1.transactions;
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'order cannot be placed as it cannot be filled');
+      assert.strictEqual(entries.length, 0);
 
       resolve();
     })
@@ -1138,7 +1208,6 @@ describe('Market', function() {
       
       await fixture.setUp();
 
-      
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
@@ -1168,6 +1237,11 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      const entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders[0].txId, 'TXID1235');
       assert.equal(sellOrders[0].account, 'satoshi');
@@ -1192,6 +1266,8 @@ describe('Market', function() {
       assert.equal(sellOrders[2].quantity, 3);
       assert.equal(sellOrders[2].timestamp, 1527811200);
       assert.equal(sellOrders[2].expiration, 1527811200 + 2592000);
+
+      assert.strictEqual(entries[0].orderCount, 3);
 
       resolve();
     })
@@ -1252,12 +1328,25 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      const allSellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      const entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders[0].txId, 'TXID1235');
       assert.equal(sellOrders[0].account, 'satoshi');
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, '0.00000001');
       assert.equal(sellOrders[0].quantity, 100.276);
+
+      assert.strictEqual(allSellOrders.length, 4);
+      assert.strictEqual(entries[0].orderCount, 4);
 
       resolve();
     })
@@ -1294,8 +1383,14 @@ describe('Market', function() {
 
       const block1 = await fixture.database.getBlockInfo(1);
       const transactionsBlock1 = block1.transactions;
+      const entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'order cannot be placed as it cannot be filled');
+      assert.strictEqual(entries.length, 0);
 
       resolve();
     })
@@ -1310,7 +1405,6 @@ describe('Market', function() {
       
       await fixture.setUp();
 
-      
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
@@ -1351,12 +1445,19 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders[0].txId, 'TXID1235');
       assert.equal(buyOrders[0].account, 'satoshi');
       assert.equal(buyOrders[0].symbol, 'TKN.TEST');
       assert.equal(buyOrders[0].price, 0.001);
       assert.equal(buyOrders[0].quantity, 1000);
+
+      assert.strictEqual(entries[0].orderCount, 1);
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -1389,8 +1490,14 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(res, null);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       resolve();
     })
@@ -1447,12 +1554,18 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders[0].txId, 'TXID1235');
       assert.equal(sellOrders[0].account, 'satoshi');
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, 0.234);
       assert.equal(sellOrders[0].quantity, 100);
+      assert.strictEqual(entries[0].orderCount, 1);
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -1478,8 +1591,14 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(res, null);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       resolve();
     })
@@ -1541,12 +1660,18 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders[0].txId, 'TXID1237');
       assert.equal(sellOrders[0].account, 'vitalik');
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, 0.234);
       assert.equal(sellOrders[0].quantity, 90);
+      assert.strictEqual(entries[0].orderCount, 1);
 
       resolve();
     })
@@ -1595,6 +1720,29 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TKN.TEST', balance: '97.000'});
       await tableAsserts.assertUserBalances({ account: 'dan', symbol: 'TKN.TEST', balance: '295.000'});
       await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: 'TKN.TEST', balance: '10.000'});
+
+      let buyOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'buyBook',
+        query: {}
+      });
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+
+      assert.strictEqual(entries.length, 3);
+      assert.strictEqual(buyOrders.length, 0);
+      assert.strictEqual(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 0);
+      assert.strictEqual(entries[2].orderCount, 0);
 
       resolve();
     })
@@ -1664,6 +1812,16 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders[0].txId, 'TXID1243');
       assert.equal(buyOrders[0].account, 'harpagon');
@@ -1671,6 +1829,14 @@ describe('Market', function() {
       assert.equal(buyOrders[0].price, 3);
       assert.equal(buyOrders[0].quantity, 5);
       assert.equal(buyOrders[0].tokensLocked, 22);
+
+      assert.strictEqual(sellOrders.length, 0);
+
+      assert.strictEqual(entries.length, 4);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 1);
+      assert.strictEqual(entries[2].orderCount, 0);
+      assert.strictEqual(entries[3].orderCount, 0);
 
       resolve();
     })
@@ -1735,12 +1901,26 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders[0].txId, 'TXID1238');
       assert.equal(buyOrders[0].account, 'satoshi');
       assert.equal(buyOrders[0].symbol, 'TKN.TEST');
       assert.equal(buyOrders[0].price, 0.234);
       assert.equal(buyOrders[0].quantity, 90);
+
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(entries[0].orderCount, 1);
+      assert.strictEqual(sellOrders.length, 0);
 
       resolve();
     })
@@ -1794,6 +1974,29 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'dan', symbol: 'TKN.TEST', balance: '5.000'});
       await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: 'TKN.TEST', balance: '490.000'});
 
+      let buyOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'buyBook',
+        query: {}
+      });
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+
+      assert.strictEqual(entries.length, 3);
+      assert.strictEqual(buyOrders.length, 0);
+      assert.strictEqual(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 0);
+      assert.strictEqual(entries[2].orderCount, 0);
+
       resolve();
     })
       .then(() => {
@@ -1845,6 +2048,27 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TKN.TEST', balance: '198.000'});
       await tableAsserts.assertUserBalances({ account: 'dan', symbol: 'TKN.TEST', balance: '295.000'});
       await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: 'TKN.TEST', balance: '10.000'});
+
+      let buyOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'buyBook',
+        query: {}
+      });
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(buyOrders.length, 0);
+      assert.strictEqual(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       resolve();
     })
@@ -2250,12 +2474,21 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
+      assert.strictEqual(sellOrders.length, 1);
       assert.equal(sellOrders[0].txId, 'TXID1237');
       assert.equal(sellOrders[0].account, 'vitalik');
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, 0.234);
       assert.equal(sellOrders[0].quantity, 10);
+
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(entries[0].orderCount, 1);
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -2279,9 +2512,6 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
-
-      assert.equal(sellOrders.length, 0);
-
       let buyOrders = await fixture.database.find({
         contract: 'market',
         table: 'buyBook',
@@ -2290,6 +2520,11 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders[0].txId, 'TXID1238');
       assert.equal(buyOrders[0].account, 'satoshi');
@@ -2297,6 +2532,11 @@ describe('Market', function() {
       assert.equal(buyOrders[0].price, 0.234);
       assert.equal(buyOrders[0].quantity, 100);
       
+      assert.strictEqual(entries.length, 2);
+      assert.strictEqual(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 1);
+      assert.strictEqual(entries[1].orderCount, 0);
+
       resolve();
     })
       .then(() => {
@@ -2339,12 +2579,25 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {}
+      });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders[0].txId, 'TXID1238');
       assert.equal(buyOrders[0].account, 'satoshi');
       assert.equal(buyOrders[0].symbol, 'TKN.TEST');
       assert.equal(buyOrders[0].price, 0.234);
       assert.equal(buyOrders[0].quantity, 100);
+
+      assert.strictEqual(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 1);
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -2368,6 +2621,11 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders.length, 0);
 
@@ -2380,11 +2638,17 @@ describe('Market', function() {
         }
       });
 
+      assert.strictEqual(buyOrders.length, 0);
+      assert.strictEqual(sellOrders.length, 1);
+
       assert.equal(sellOrders[0].txId, 'TXID1237');
       assert.equal(sellOrders[0].account, 'vitalik');
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, 0.234);
       assert.equal(sellOrders[0].quantity, 10);
+
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 1);
 
       resolve();
     })
@@ -2445,8 +2709,14 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      let entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders.length, 0);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -2488,8 +2758,16 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(sellOrders.length, 0);
+      assert.strictEqual(entries.length, 2);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 0);
 
       resolve();
     })
@@ -2546,8 +2824,7 @@ describe('Market', function() {
       assert.equal(balances[0].symbol, 'SWAP.HIVE');
       assert.equal(balances[0].account, 'market');
 
-      
-      const entries = await fixture.database.find({
+      let entries = await fixture.database.find({
         contract: 'market',
         table: 'openOrders',
         query: { }
@@ -2556,8 +2833,8 @@ describe('Market', function() {
       // The order from satoshi is created but not executed and is therefore lying on the market orderCount +1
       // Vitalik's order is created +1, executed and closed -1 = 0.
       // This means that no entry is created for vitalik.
-      assert.equal(entries.length, 1);
-      assert.equal(entries[0].orderCount, 0);
+      assert.strictEqual(entries.length, 1);
+      assert.strictEqual(entries[0].orderCount, 0);
 
       let buyOrders = await fixture.database.find({
         contract: 'market',
@@ -2610,8 +2887,16 @@ describe('Market', function() {
           symbol: 'TKN.TEST'
         }
       });
+      entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
 
       assert.equal(buyOrders.length, 0);
+      assert.strictEqual(entries.length, 2);
+      assert.strictEqual(entries[0].orderCount, 0);
+      assert.strictEqual(entries[1].orderCount, 0);
 
       resolve();
     })
@@ -2701,10 +2986,10 @@ describe('Market', function() {
       });
       
       // vitalik orders are created with old contract, they should appear
-      assert.strictEqual(entries[1].orderCount, 31)
-      assert.strictEqual(entries[0].orderCount, 1)
+      assert.strictEqual(entries[1].orderCount, 1)
+      assert.strictEqual(entries[0].orderCount, 31)
       assert.strictEqual(buyOrders.length, 17)
-      assert.strictEqual(sellOrders.orderCount, 16)
+      assert.strictEqual(sellOrders.length, 15)
 
       resolve();
     })
@@ -2714,7 +2999,7 @@ describe('Market', function() {
       });
   });
 
-  it('prevent creating more than allowed orders', (done) => {
+  it('prevent creation of more than allowed orders', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
