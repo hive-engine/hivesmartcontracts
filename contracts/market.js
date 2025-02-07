@@ -918,8 +918,8 @@ actions.buy = async (payload) => {
       && (expiration === undefined || (expiration && Number.isInteger(expiration) && expiration > 0)), 'invalid params')
   ) {
     // check if sender has already more orders open than allowed
-    const openOrders = await api.db.findOne('openOrders', {_id: finalAccount});
-    if (api.assert(openOrders == null || openOrders.orderCount < MAX_ALLOWED_OPEN_ORDERS, "too many open orders")) {
+    const openOrders = await findOrCountOpenOrders(finalAccount);
+    if (api.assert(openOrders < MAX_ALLOWED_OPEN_ORDERS, "too many open orders")) {
 
       // get the token params
       const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
@@ -997,46 +997,50 @@ actions.sell = async (payload) => {
       && quantity && typeof quantity === 'string' && !api.BigNumber(quantity).isNaN()
       && finalTxId && typeof finalTxId === 'string' && finalTxId.length > 0
       && (expiration === undefined || (expiration && Number.isInteger(expiration) && expiration > 0)), 'invalid params')) {
-    // get the token params
-    const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
+    // check if sender has already more orders open than allowed
+    const openOrders = await findOrCountOpenOrders(finalAccount);
+    if (api.assert(openOrders < MAX_ALLOWED_OPEN_ORDERS, "too many open orders")) {
+      // get the token params
+      const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
 
-    // perform a few verifications
-    if (api.assert(token
-      && api.BigNumber(price).gt(0)
-      && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
-      && countDecimals(quantity) <= token.precision, 'invalid params')) {
-      const nbTokensToFillOrderRaw = api.BigNumber(price).multipliedBy(quantity);
+      // perform a few verifications
+      if (api.assert(token
+        && api.BigNumber(price).gt(0)
+        && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
+        && countDecimals(quantity) <= token.precision, 'invalid params')) {
+        const nbTokensToFillOrderRaw = api.BigNumber(price).multipliedBy(quantity);
 
-      if (api.assert(nbTokensToFillOrderRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
-        // initiate a transfer from sender to contract balance
-        // lock symbol tokens
-        const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
+        if (api.assert(nbTokensToFillOrderRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
+          // initiate a transfer from sender to contract balance
+          // lock symbol tokens
+          const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
 
-        if (res.errors === undefined
-          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
-          const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
-            .dividedBy(1000)
-            .toNumber();
+          if (res.errors === undefined
+            && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+            const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
+              .dividedBy(1000)
+              .toNumber();
 
-          // order
-          const order = {};
+            // order
+            const order = {};
 
-          order.txId = finalTxId;
-          order.timestamp = timestampSec;
-          order.account = finalAccount;
-          order.symbol = symbol;
-          order.quantity = api.BigNumber(quantity).toFixed(token.precision);
-          order.price = api.BigNumber(price).toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
-          order.priceDec = { $numberDecimal: order.price };
-          order.expiration = expiration === undefined || expiration > 2592000
-            ? timestampSec + 2592000
-            : timestampSec + expiration;
+            order.txId = finalTxId;
+            order.timestamp = timestampSec;
+            order.account = finalAccount;
+            order.symbol = symbol;
+            order.quantity = api.BigNumber(quantity).toFixed(token.precision);
+            order.price = api.BigNumber(price).toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
+            order.priceDec = { $numberDecimal: order.price };
+            order.expiration = expiration === undefined || expiration > 2592000
+              ? timestampSec + 2592000
+              : timestampSec + expiration;
 
-          const orderInDb = await api.db.insert('sellBook', order);
-          addOrUpdateOrderCounter(finalAccount, 1);
+            const orderInDb = await api.db.insert('sellBook', order);
+            addOrUpdateOrderCounter(finalAccount, 1);
 
-          await findMatchingBuyOrders(orderInDb, token.precision);
-          await executeUpdateOrderCounter();
+            await findMatchingBuyOrders(orderInDb, token.precision);
+            await executeUpdateOrderCounter();
+          }
         }
       }
     }
