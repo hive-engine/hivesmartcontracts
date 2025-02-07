@@ -1049,179 +1049,175 @@ actions.marketBuy = async (payload) => {
   if (api.assert(isSignedWithActiveKey === true || api.sender === 'null', 'you must use a custom_json signed with your active key')
     && symbol && typeof symbol === 'string' && symbol !== HIVE_PEGGED_SYMBOL
     && quantity && typeof quantity === 'string' && !api.BigNumber(quantity).isNaN() && api.BigNumber(quantity).gt(0)) {
-    // check if sender has already more orders open than allowed
-    const openOrders = await api.db.findOne('openOrders', {_id: finalAccount});
-    if (api.assert(openOrders == null || openOrders.orderCount < MAX_ALLOWED_OPEN_ORDERS, "too many open orders")) {
-      // get the token params
-      const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
+    // get the token params
+    const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
 
-      // perform a few verifications
-      if (api.assert(token
-        && countDecimals(quantity) <= HIVE_PEGGED_SYMBOL_PRESICION, 'invalid params')) {
-        // initiate a transfer from sender to contract balance
-        // lock HIVE_PEGGED_SYMBOL tokens
-        const result = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity, to: CONTRACT_NAME });
+    // perform a few verifications
+    if (api.assert(token
+      && countDecimals(quantity) <= HIVE_PEGGED_SYMBOL_PRESICION, 'invalid params')) {
+      // initiate a transfer from sender to contract balance
+      // lock HIVE_PEGGED_SYMBOL tokens
+      const result = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity, to: CONTRACT_NAME });
 
-        if (result.errors === undefined
-          && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
-          let hiveRemaining = quantity;
-          let offset = 0;
-          let volumeTraded = 0;
+      if (result.errors === undefined
+        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+        let hiveRemaining = quantity;
+        let offset = 0;
+        let volumeTraded = 0;
 
-          await removeExpiredOrders('sellBook');
+        await removeExpiredOrders('sellBook');
 
-          // get the orders that match the symbol and the price
-          let sellOrderBook = await api.db.find('sellBook', {
-            symbol,
-          }, ordersToFetch, offset,
-          [
-            { index: 'priceDec', descending: false },
-            { index: '_id', descending: false },
-          ]);
+        // get the orders that match the symbol and the price
+        let sellOrderBook = await api.db.find('sellBook', {
+          symbol,
+        }, ordersToFetch, offset,
+        [
+          { index: 'priceDec', descending: false },
+          { index: '_id', descending: false },
+        ]);
 
-          do {
-            const nbOrders = sellOrderBook.length;
-            let inc = 0;
+        do {
+          const nbOrders = sellOrderBook.length;
+          let inc = 0;
 
-            while (inc < nbOrders && api.BigNumber(hiveRemaining).gt(0)) {
-              const sellOrder = sellOrderBook[inc];
-              const qtyTokensToSend = api.BigNumber(hiveRemaining)
-                .dividedBy(sellOrder.price)
-                .toFixed(token.precision, api.BigNumber.ROUND_DOWN);
+          while (inc < nbOrders && api.BigNumber(hiveRemaining).gt(0)) {
+            const sellOrder = sellOrderBook[inc];
+            const qtyTokensToSend = api.BigNumber(hiveRemaining)
+              .dividedBy(sellOrder.price)
+              .toFixed(token.precision, api.BigNumber.ROUND_DOWN);
 
-              if (api.BigNumber(qtyTokensToSend).lte(sellOrder.quantity)
-                && api.BigNumber(qtyTokensToSend).gt(0)) {
-                if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
-                  && api.BigNumber(hiveRemaining).gt(0), 'the order cannot be filled')) {
-                  // transfer the tokens to the buyer
-                  let res = await api.transferTokens(finalAccount, symbol, qtyTokensToSend, 'user');
+            if (api.BigNumber(qtyTokensToSend).lte(sellOrder.quantity)
+              && api.BigNumber(qtyTokensToSend).gt(0)) {
+              if (api.assert(api.BigNumber(qtyTokensToSend).gt(0)
+                && api.BigNumber(hiveRemaining).gt(0), 'the order cannot be filled')) {
+                // transfer the tokens to the buyer
+                let res = await api.transferTokens(finalAccount, symbol, qtyTokensToSend, 'user');
 
-                  if (res.errors) {
-                    api.debug(res.errors);
-                    api.debug(`TXID: ${api.transactionId}`);
-                    api.debug(finalAccount);
-                    api.debug(symbol);
-                    api.debug(qtyTokensToSend);
-                  }
-
-                  // transfer the tokens to the seller
-                  res = await api.transferTokens(sellOrder.account, HIVE_PEGGED_SYMBOL, hiveRemaining, 'user');
-
-                  if (res.errors) {
-                    api.debug(res.errors);
-                    api.debug(`TXID: ${api.transactionId}`);
-                    api.debug(sellOrder.account);
-                    api.debug(HIVE_PEGGED_SYMBOL);
-                    api.debug(hiveRemaining);
-                  }
-
-                  // update the sell order
-                  const qtyLeftSellOrder = api.BigNumber(sellOrder.quantity)
-                    .minus(qtyTokensToSend)
-                    .toFixed(token.precision);
-                  // round down here so we don't leave dust orders on the book
-                  const nbTokensToFillOrder = api.BigNumber(sellOrder.price)
-                    .multipliedBy(qtyLeftSellOrder)
-                    .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
-
-                  if (api.BigNumber(qtyLeftSellOrder).gt(0)
-                    && (api.BigNumber(nbTokensToFillOrder).gte('0.00000001'))) {
-                    sellOrder.quantity = qtyLeftSellOrder;
-
-                    await api.db.update('sellBook', sellOrder);
-                  } else {
-                    if (api.BigNumber(qtyLeftSellOrder).gt(0)) {
-                      await api.transferTokens(sellOrder.account, symbol, qtyLeftSellOrder, 'user');
-                    }
-                    addOrUpdateOrderCounter(sellOrder.account, -1);
-                    await api.db.remove('sellBook', sellOrder);
-                  }
-
-                  // add the trade to the history
-                  await updateTradesHistory('buy', finalAccount, sellOrder.account, symbol, qtyTokensToSend, sellOrder.price, hiveRemaining, api.transactionId, sellOrder.txId);
-
-                  // update the volume
-                  volumeTraded = api.BigNumber(volumeTraded).plus(hiveRemaining);
-
-                  hiveRemaining = '0';
-                }
-              } else if (api.BigNumber(qtyTokensToSend).gt(0)) {
-                let qtyHiveToSend = api.BigNumber(sellOrder.price)
-                  .multipliedBy(sellOrder.quantity)
-                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
-
-                if (api.BigNumber(qtyHiveToSend).gt(hiveRemaining)) {
-                  qtyHiveToSend = hiveRemaining;
+                if (res.errors) {
+                  api.debug(res.errors);
+                  api.debug(`TXID: ${api.transactionId}`);
+                  api.debug(finalAccount);
+                  api.debug(symbol);
+                  api.debug(qtyTokensToSend);
                 }
 
-                if (api.assert(api.BigNumber(qtyHiveToSend).gt(0)
-                  && api.BigNumber(hiveRemaining).gt(0), 'the order cannot be filled')) {
-                  // transfer the tokens to the buyer
-                  let res = await api.transferTokens(finalAccount, symbol, sellOrder.quantity, 'user');
+                // transfer the tokens to the seller
+                res = await api.transferTokens(sellOrder.account, HIVE_PEGGED_SYMBOL, hiveRemaining, 'user');
 
-                  if (res.errors) {
-                    api.debug(res.errors);
-                    api.debug(`TXID: ${api.transactionId}`);
-                    api.debug(finalAccount);
-                    api.debug(symbol);
-                    api.debug(sellOrder.quantity);
+                if (res.errors) {
+                  api.debug(res.errors);
+                  api.debug(`TXID: ${api.transactionId}`);
+                  api.debug(sellOrder.account);
+                  api.debug(HIVE_PEGGED_SYMBOL);
+                  api.debug(hiveRemaining);
+                }
+
+                // update the sell order
+                const qtyLeftSellOrder = api.BigNumber(sellOrder.quantity)
+                  .minus(qtyTokensToSend)
+                  .toFixed(token.precision);
+                // round down here so we don't leave dust orders on the book
+                const nbTokensToFillOrder = api.BigNumber(sellOrder.price)
+                  .multipliedBy(qtyLeftSellOrder)
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_DOWN);
+
+                if (api.BigNumber(qtyLeftSellOrder).gt(0)
+                  && (api.BigNumber(nbTokensToFillOrder).gte('0.00000001'))) {
+                  sellOrder.quantity = qtyLeftSellOrder;
+
+                  await api.db.update('sellBook', sellOrder);
+                } else {
+                  if (api.BigNumber(qtyLeftSellOrder).gt(0)) {
+                    await api.transferTokens(sellOrder.account, symbol, qtyLeftSellOrder, 'user');
                   }
-
-                  // transfer the tokens to the seller
-                  res = await api.transferTokens(sellOrder.account, HIVE_PEGGED_SYMBOL, qtyHiveToSend, 'user');
-
-                  if (res.errors) {
-                    api.debug(res.errors);
-                    api.debug(`TXID: ${api.transactionId}`);
-                    api.debug(sellOrder.account);
-                    api.debug(HIVE_PEGGED_SYMBOL);
-                    api.debug(qtyHiveToSend);
-                  }
-
-                  // remove the sell order
                   addOrUpdateOrderCounter(sellOrder.account, -1);
                   await api.db.remove('sellBook', sellOrder);
-
-                  // update tokensLocked and the quantity to get
-                  hiveRemaining = api.BigNumber(hiveRemaining)
-                    .minus(qtyHiveToSend)
-                    .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
-
-                  // add the trade to the history
-                  await updateTradesHistory('buy', finalAccount, sellOrder.account, symbol, sellOrder.quantity, sellOrder.price, qtyHiveToSend, api.transactionId, sellOrder.txId);
-
-                  // update the volume
-                  volumeTraded = api.BigNumber(volumeTraded).plus(qtyHiveToSend);
                 }
+
+                // add the trade to the history
+                await updateTradesHistory('buy', finalAccount, sellOrder.account, symbol, qtyTokensToSend, sellOrder.price, hiveRemaining, api.transactionId, sellOrder.txId);
+
+                // update the volume
+                volumeTraded = api.BigNumber(volumeTraded).plus(hiveRemaining);
+
+                hiveRemaining = '0';
+              }
+            } else if (api.BigNumber(qtyTokensToSend).gt(0)) {
+              let qtyHiveToSend = api.BigNumber(sellOrder.price)
+                .multipliedBy(sellOrder.quantity)
+                .toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
+
+              if (api.BigNumber(qtyHiveToSend).gt(hiveRemaining)) {
+                qtyHiveToSend = hiveRemaining;
               }
 
-              inc += 1;
+              if (api.assert(api.BigNumber(qtyHiveToSend).gt(0)
+                && api.BigNumber(hiveRemaining).gt(0), 'the order cannot be filled')) {
+                // transfer the tokens to the buyer
+                let res = await api.transferTokens(finalAccount, symbol, sellOrder.quantity, 'user');
+
+                if (res.errors) {
+                  api.debug(res.errors);
+                  api.debug(`TXID: ${api.transactionId}`);
+                  api.debug(finalAccount);
+                  api.debug(symbol);
+                  api.debug(sellOrder.quantity);
+                }
+
+                // transfer the tokens to the seller
+                res = await api.transferTokens(sellOrder.account, HIVE_PEGGED_SYMBOL, qtyHiveToSend, 'user');
+
+                if (res.errors) {
+                  api.debug(res.errors);
+                  api.debug(`TXID: ${api.transactionId}`);
+                  api.debug(sellOrder.account);
+                  api.debug(HIVE_PEGGED_SYMBOL);
+                  api.debug(qtyHiveToSend);
+                }
+
+                // remove the sell order
+                addOrUpdateOrderCounter(sellOrder.account, -1);
+                await api.db.remove('sellBook', sellOrder);
+
+                // update tokensLocked and the quantity to get
+                hiveRemaining = api.BigNumber(hiveRemaining)
+                  .minus(qtyHiveToSend)
+                  .toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
+
+                // add the trade to the history
+                await updateTradesHistory('buy', finalAccount, sellOrder.account, symbol, sellOrder.quantity, sellOrder.price, qtyHiveToSend, api.transactionId, sellOrder.txId);
+
+                // update the volume
+                volumeTraded = api.BigNumber(volumeTraded).plus(qtyHiveToSend);
+              }
             }
 
-            offset += ordersToFetch;
+            inc += 1;
+          }
 
-            if (api.BigNumber(hiveRemaining).gt(0)) {
-              // get the orders that match the symbol and the price
-              sellOrderBook = await api.db.find('sellBook', {
-                symbol,
-              }, ordersToFetch, offset,
-              [
-                { index: 'priceDec', descending: false },
-                { index: '_id', descending: false },
-              ]);
-            }
-          } while (sellOrderBook.length > 0 && api.BigNumber(hiveRemaining).gt(0));
+          offset += ordersToFetch;
 
-          // update the buy order if partially filled
           if (api.BigNumber(hiveRemaining).gt(0)) {
-            await api.transferTokens(finalAccount, HIVE_PEGGED_SYMBOL, hiveRemaining, 'user');
+            // get the orders that match the symbol and the price
+            sellOrderBook = await api.db.find('sellBook', {
+              symbol,
+            }, ordersToFetch, offset,
+            [
+              { index: 'priceDec', descending: false },
+              { index: '_id', descending: false },
+            ]);
           }
-          if (api.BigNumber(volumeTraded).gt(0)) {
-            await updateVolumeMetric(symbol, volumeTraded);
-          }
-          await updateAskMetric(symbol);
-          await updateBidMetric(symbol);
+        } while (sellOrderBook.length > 0 && api.BigNumber(hiveRemaining).gt(0));
+
+        // update the buy order if partially filled
+        if (api.BigNumber(hiveRemaining).gt(0)) {
+          await api.transferTokens(finalAccount, HIVE_PEGGED_SYMBOL, hiveRemaining, 'user');
         }
+        if (api.BigNumber(volumeTraded).gt(0)) {
+          await updateVolumeMetric(symbol, volumeTraded);
+        }
+        await updateAskMetric(symbol);
+        await updateBidMetric(symbol);
       }
     }
   }
