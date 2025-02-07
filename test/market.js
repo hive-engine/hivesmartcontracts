@@ -973,6 +973,16 @@ describe('Market', function() {
       assert.equal(sellOrders[0].price, '0.00000001');
       assert.equal(sellOrders[0].quantity, 876.988);
 
+      const entry = await fixture.database.findOne({
+        contract: 'market',
+        table: 'openOrders',
+        query: {
+          _id: 'satoshi',
+        }
+      });
+      
+      assert.equal(entry.orderCount, 1);
+
       resolve();
     })
       .then(() => {
@@ -1058,6 +1068,16 @@ describe('Market', function() {
 
       assert.equal(accountBalances.length, 1);
       assert.equal(accountBalances[0].balance, '123.456');
+
+      const entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: {}
+      });
+      
+      // sunsetjesus should not appear because he is on the blacklist
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].orderCount, 3);
 
       resolve();
     })
@@ -2516,6 +2536,19 @@ describe('Market', function() {
       assert.equal(balances[0].balance, 0);
       assert.equal(balances[0].symbol, 'SWAP.HIVE');
       assert.equal(balances[0].account, 'market');
+
+      
+      const entries = await fixture.database.find({
+        contract: 'market',
+        table: 'openOrders',
+        query: { }
+      });
+      
+      // The order from satoshi is not executed and is therefore on the market orderCount +1
+      // Vitalik's order is created +1, executed and closed -1 = 0.
+      // This means that no entry is created for vitalik.
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].orderCount, 0);
 
       let buyOrders = await fixture.database.find({
         contract: 'market',
