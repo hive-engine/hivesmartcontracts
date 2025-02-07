@@ -301,9 +301,6 @@ const removeExpiredOrders = async (table) => {
     .dividedBy(1000)
     .toNumber();
 
-  // get rid of some blacklisted orders while we're here
-  await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 5);
-
   // clean orders
   let nbOrdersToDelete = 0;
   let ordersToDelete = await api.db.find(
@@ -1373,3 +1370,10 @@ actions.marketSell = async (payload) => {
     }
   }
 };
+
+actions.tick = async () => {
+  if (api.assert(api.sender === 'null', `not authorized: ${api.sender}`)) {
+    // get rid of some blacklisted orders while we're here
+    await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 100);
+  }
+}
