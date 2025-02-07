@@ -75,7 +75,7 @@ async function getBlock(node, blockNumber, tries = 1) {
     }
   }
   console.log(`Attempt #${tries} failed, retrying...`);
-  await new Promise(r => setTimeout(() => r(), 500));
+  await new Promise(r => setTimeout(() => r(), 3000));
   return await getBlock(node, blockNumber, tries + 1);
 }
   

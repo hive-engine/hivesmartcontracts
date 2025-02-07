@@ -123,7 +123,7 @@ class Block {
 
           transactionsCountBySender[tx.sender] += 1;
         } else {
-          log.info('Transaction ignored', tx);
+          log.warn('Transaction ignored', tx);
         }
       }
       this.transactions = filteredTransactions;
