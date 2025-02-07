@@ -255,7 +255,7 @@ const proposeRound = async (witness, round, retry = 0) => {
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
-            }, 1500);
+            }, 8000 * (retry + 1)); // allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
           }
         }
       }
@@ -371,79 +371,67 @@ const proposeRoundHandler = async (args, callback) => {
     // get the current round info
     const params = await findOne('witnesses', 'params', {});
 
-    if (params.round === round && params.currentWitness === account) {
-      // get witness signing key
-      const witness = await findOne('witnesses', 'witnesses', { account });
+    // get witness signing key
+    const witness = await findOne('witnesses', 'witnesses', { account });
 
-      if (witness !== null) {
-        const { signingKey } = witness;
+    if (witness !== null) {
+      const { signingKey } = witness;
 
-        // check if the signature is valid
-        if (checkSignature(roundHash, signature, signingKey, true)) {
-          if (currentRound < params.round) {
-            // eslint-disable-next-line prefer-destructuring
-            currentRound = params.round;
-          }
-
+      // check if the signature is valid
+      if (checkSignature(roundHash, signature, signingKey, true)) {
+        if (currentRound < params.round) {
           // eslint-disable-next-line prefer-destructuring
-          lastBlockRound = params.lastBlockRound;
+          currentRound = params.round;
+        }
 
-          const startblockNum = params.lastVerifiedBlockNumber + 1;
-          let calculatedRoundHash = null;
-          let attempt = 1;
-          while (!calculatedRoundHash && attempt <= 3) {
-            if (attempt > 1) {
-              console.log('null round hash, waiting for block');
-              await new Promise(r => setTimeout(r, 3000));
-            }
-            calculatedRoundHash = await calculateRoundHash(startblockNum, lastBlockRound);
-            attempt += 1;
+        // eslint-disable-next-line prefer-destructuring
+        lastBlockRound = params.lastBlockRound;
+
+        const startblockNum = params.lastVerifiedBlockNumber + 1;
+        let calculatedRoundHash = null;
+        let attempt = 1;
+        while (!calculatedRoundHash && attempt <= 3) {
+          if (attempt > 1) {
+            console.log('null round hash, waiting for block');
+            await new Promise(r => setTimeout(r, 3000));
           }
-          if (!calculatedRoundHash) console.error('null while verifying round hash proposal');
+          calculatedRoundHash = await calculateRoundHash(startblockNum, lastBlockRound);
+          attempt += 1;
+        }
+        if (!calculatedRoundHash) console.error('null while verifying round hash proposal');
 
-          if (calculatedRoundHash === roundHash) {
-            if (round > lastVerifiedRoundNumber) {
-              lastVerifiedRoundNumber = round;
-            }
-
-            const sig = signPayload(calculatedRoundHash, true);
-            const roundPayload = {
-              round,
-              roundHash,
-              signature: sig,
-            };
-
-            callback(null, roundPayload);
-            console.log('verified round', round);
-          } else {
-            // TODO: handle dispute
-            callback({
-              code: 404,
-              message: 'round hash different',
-            }, null);
+        if (calculatedRoundHash === roundHash) {
+          if (round > lastVerifiedRoundNumber) {
+            lastVerifiedRoundNumber = round;
           }
+
+          const sig = signPayload(calculatedRoundHash, true);
+          const roundPayload = {
+            round,
+            roundHash,
+            signature: sig,
+          };
+
+          callback(null, roundPayload);
+          console.log('verified round', round);
         } else {
+          // TODO: handle dispute
           callback({
-            code: 401,
-            message: 'invalid signature',
+            code: 404,
+            message: 'round hash different',
           }, null);
-          console.error(`invalid signature, round ${round}, witness ${witness.account}`);
         }
       } else {
         callback({
           code: 401,
-          message: 'your witness is not registered',
+          message: 'invalid signature',
         }, null);
+        console.error(`invalid signature, round ${round}, witness ${witness.account}`);
       }
-    } else if (params.round < round) {
+    } else {
       callback({
-        code: 404,
-        message: 'current round is lower',
-      }, null);
-    } else if (params.currentWitness !== account) {
-      callback({
-        code: 404,
-        message: 'current witness is different',
+        code: 401,
+        message: 'your witness is not registered',
       }, null);
     }
   } else {
