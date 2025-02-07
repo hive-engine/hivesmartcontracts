@@ -128,6 +128,8 @@ class SmartContracts {
           update: (table, record, unsets = undefined, increment = undefined) => SmartContracts.update(database, name, table, record, unsets, increment),
           // check if a table exists
           tableExists: table => SmartContracts.tableExists(database, name, table),
+          // just count the documents with a specific filter
+          count: (table, query) => SmartContracts.count(database, name, table, query),
         };
 
         // logs used to store events or errors
@@ -357,6 +359,8 @@ class SmartContracts {
         tableExists: table => SmartContracts.tableExists(database, contract, table),
         // get block information
         getBlockInfo: blockNum => SmartContracts.getBlockInfo(database, blockNum),
+        // just count the documents with a specific filter
+        count: (table, query) => SmartContracts.count(database, contract, table, query),
       };
 
       // logs used to store events or errors
@@ -866,6 +870,16 @@ class SmartContracts {
 
   static async getBlockInfo(database, blockNumber) {
     const result = await database.getBlockInfo(blockNumber);
+
+    return result;
+  }
+
+  static async count(database, contractName, table, query) {
+    const result = await database.count({
+      contract: contractName,
+      table,
+      query,
+    });
 
     return result;
   }

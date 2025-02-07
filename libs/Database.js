@@ -887,6 +887,47 @@ class Database {
     }
   }
 
+  /**
+   * retrieve count of found documents from query
+   * @param {String} contract contract name
+   * @param {String} table table name
+   * @param {JSON} query to perform on the table
+   * @returns {Integer} returns a number if records found a 0 otherwise
+   */
+  async count(payload) {
+    try {
+      const {
+        contract,
+        table,
+        query
+      } = payload;
+
+      log.info('count payload ', JSON.stringify(payload));
+      await this.flushCache();
+
+      let result = null;
+
+      if (contract && typeof contract === 'string'
+        && table && typeof table === 'string'
+        && query && typeof query === 'object') {
+        
+        const finalTableName = `${contract}_${table}`;
+        const contractInDb = await this.findContract({ name: contract });
+        let tableData = null;
+        if (contractInDb && contractInDb.tables[finalTableName] !== undefined) {
+          tableData = this.database.collection(finalTableName);
+          result = await tableData.countDocuments(EJSON.deserialize(query), { session: this.session })
+        }
+      }
+
+      return result;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      log.error(error);
+      return null;
+    }
+  }
+
   async flushCache() {
     if (!this.session) {
       return;
