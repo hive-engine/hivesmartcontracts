@@ -19,6 +19,8 @@ const oldMktContractPayload = setupContractPayload('market', './contracts/testin
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
+const TICK_TEST_ENABLED = false;
+
 // Market
 describe('Market', function() {
   this.timeout(10000);
@@ -2583,6 +2585,11 @@ describe('Market', function() {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
+
+      if (TICK_TEST_ENABLED !== true) {
+        console.log("Tick test disabled; skipping");
+        resolve();
+      }
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];

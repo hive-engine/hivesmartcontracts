@@ -224,6 +224,7 @@ const removeBadOrders = async () => {
   }
 };
 
+// eslint-disable-next-line no-unused-vars
 const removeBlacklistedOrders = async (type, targetAccount) => {
   const table = type === 'buy' ? 'buyBook' : 'sellBook';
   let nbOrdersToDelete = 0;
@@ -267,6 +268,7 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
   }
 };
 
+// eslint-disable-next-line no-unused-vars
 const removeBlacklistedOrdersBatch = async (type, symbol, targetAccount, qty) => {
   const table = type === 'buy' ? 'buyBook' : 'sellBook';
   let nbOrdersToDelete = 0;
@@ -1371,9 +1373,9 @@ actions.marketSell = async (payload) => {
   }
 };
 
+// currently nothing to do here as all the blacklisted orders have been removed
 actions.tick = async () => {
-  if (api.assert(api.sender === 'null', `not authorized: ${api.sender}`)) {
-    // get rid of some blacklisted orders while we're here
+  /* if (api.assert(api.sender === 'null', `not authorized: ${api.sender}`)) {
     await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 10);
-  }
-}
+  } */
+};
