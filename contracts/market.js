@@ -14,6 +14,8 @@ const ACCOUNT_BLACKLIST = {
   'thenights': 1,
   'thedays': 1,
   'temp': 1,
+  'shaggroed': 1,
+  'shaggythesecond': 1,
 };
 
 const getMetric = async (symbol) => {
@@ -222,6 +224,7 @@ const removeBadOrders = async () => {
   }
 };
 
+// eslint-disable-next-line no-unused-vars
 const removeBlacklistedOrders = async (type, targetAccount) => {
   const table = type === 'buy' ? 'buyBook' : 'sellBook';
   let nbOrdersToDelete = 0;
@@ -262,6 +265,36 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
     );
 
     nbOrdersToDelete = ordersToDelete.length;
+  }
+};
+
+// eslint-disable-next-line no-unused-vars
+const removeBlacklistedOrdersBatch = async (type, symbol, targetAccount, qty) => {
+  const table = type === 'buy' ? 'buyBook' : 'sellBook';
+  let nbOrdersToDelete = 0;
+  const ordersToDelete = await api.db.find(
+    table,
+    {
+      account: targetAccount,
+      symbol,
+    },
+    qty,
+    0,
+    [{ index: '_id', descending: false }],
+  );
+
+  nbOrdersToDelete = ordersToDelete.length;
+  if (nbOrdersToDelete > 0) {
+    for (let index = 0; index < nbOrdersToDelete; index += 1) {
+      const order = ordersToDelete[index];
+
+      await api.db.remove(table, order);
+    }
+    if (type === 'sell') {
+      await updateAskMetric(symbol);
+    } else {
+      await updateBidMetric(symbol);
+    }
   }
 };
 
@@ -338,8 +371,8 @@ actions.createSSC = async () => {
   } else {
     // remove stuck 0 quantity orders and any that have been blacklisted
     await removeBadOrders();
-    await removeBlacklistedOrders('buy', 'waitingforlove');
-    await removeBlacklistedOrders('sell', 'waitingforlove');
+    // await removeBlacklistedOrders('buy', 'waitingforlove');
+    // await removeBlacklistedOrders('sell', 'waitingforlove');
   }
 };
 
@@ -1338,4 +1371,11 @@ actions.marketSell = async (payload) => {
       }
     }
   }
+};
+
+// currently nothing to do here as all the blacklisted orders have been removed
+actions.tick = async () => {
+  /* if (api.assert(api.sender === 'null', `not authorized: ${api.sender}`)) {
+    await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 10);
+  } */
 };

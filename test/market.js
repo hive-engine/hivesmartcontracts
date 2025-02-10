@@ -19,6 +19,8 @@ const oldMktContractPayload = setupContractPayload('market', './contracts/testin
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
+const TICK_TEST_ENABLED = false;
+
 // Market
 describe('Market', function() {
   this.timeout(10000);
@@ -2572,6 +2574,76 @@ describe('Market', function() {
 
       assert.equal(buyOrders.length, 0);
 
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('ticks and removes blacklisted orders', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      if (TICK_TEST_ENABLED !== true) {
+        console.log("Tick test disabled; skipping");
+        resolve();
+      }
+
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'contract', 'update', JSON.stringify(pegContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mktContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'registerTick', '{ "contractName": "market", "tickAction": "tick" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'accounts', 'register', ''));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'accounts', 'register', ''));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'accounts', 'register', ''));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      // now add a blacklisted order, and add new block
+      await fixture.database.insert({
+        contract: 'market',
+        table: 'sellBook',
+        record: {
+          account: 'shaggroed',
+          symbol: 'TVST'
+        },
+      });
+
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'whatever', 'whatever', '')); // No-op to force block creation.
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD2',
+        prevRefHiveBlockId: 'ABCD1',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      }
+      await fixture.sendBlock(block);
+
+      let sellOrders = await fixture.database.find({
+        contract: 'market',
+        table: 'sellBook',
+        query: {
+          account: 'shaggroed',
+          symbol: 'TVST'
+        }
+      });
+
+      assert.equal(sellOrders.length, 0);
       resolve();
     })
       .then(() => {
