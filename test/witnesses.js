@@ -2098,7 +2098,7 @@ describe('witnesses', function () {
 
       params = res;
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness5","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness5"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
@@ -2106,7 +2106,7 @@ describe('witnesses', function () {
         query: {}
       });
 
-      assert.equal(JSON.stringify(schedule), '[{"_id":1,"witness":"witness8","blockNumber":2,"round":1},{"_id":2,"witness":"witness7","blockNumber":3,"round":1},{"_id":3,"witness":"witness9","blockNumber":4,"round":1},{"_id":4,"witness":"witness5","blockNumber":5,"round":1},{"_id":5,"witness":"witness10","blockNumber":6,"round":1}]');
+      assert.equal(JSON.stringify(schedule), '[{"_id":6,"witness":"witness10","blockNumber":2,"round":1},{"_id":7,"witness":"witness8","blockNumber":3,"round":1},{"_id":8,"witness":"witness7","blockNumber":4,"round":1},{"_id":9,"witness":"witness9","blockNumber":5,"round":1},{"_id":10,"witness":"witness5","blockNumber":6,"round":1}]');
 
       resolve();
     })
@@ -2224,7 +2224,7 @@ describe('witnesses', function () {
 
       params = res;
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"2900.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness10","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness10"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"2900.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness5","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness5"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
@@ -2232,7 +2232,7 @@ describe('witnesses', function () {
         query: {}
       });
 
-      assert.equal(JSON.stringify(schedule), '[{"_id":1,"witness":"witness8","blockNumber":2,"round":1},{"_id":2,"witness":"witness7","blockNumber":3,"round":1},{"_id":3,"witness":"witness9","blockNumber":4,"round":1},{"_id":4,"witness":"witness5","blockNumber":5,"round":1},{"_id":5,"witness":"witness10","blockNumber":6,"round":1}]');
+      assert.equal(JSON.stringify(schedule), '[{"_id":6,"witness":"witness10","blockNumber":2,"round":1},{"_id":7,"witness":"witness8","blockNumber":3,"round":1},{"_id":8,"witness":"witness7","blockNumber":4,"round":1},{"_id":9,"witness":"witness9","blockNumber":5,"round":1},{"_id":10,"witness":"witness5","blockNumber":6,"round":1}]');
 
       resolve();
     })
@@ -2647,5 +2647,4 @@ describe('witnesses', function () {
         done();
       });
   });
-
 });
