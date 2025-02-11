@@ -46,6 +46,63 @@ function deepConvertDecimal128(x) {
   return y;
 }
 
+const ivmBigNumber = new ivm.Reference((x) => BigNumber(x));
+const ivmSHA256 = new ivm.Reference((payloadToHash) => {
+  if (typeof payloadToHash === 'string') {
+    return new ivm.ExternalCopy(SHA256FN(payloadToHash).toString(enchex));
+  }
+  return new ivm.ExternalCopy(SHA256FN(JSON.stringify(payloadToHash)).toString(enchex));
+});
+const ivmCheckSignature = new ivm.Reference((payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
+  if ((typeof payloadToCheck !== 'string'
+        && typeof payloadToCheck !== 'object')
+      || typeof signature !== 'string'
+      || typeof publicKey !== 'string') return false;
+  try {
+    const sig = dhive.Signature.fromString(signature);
+    const finalPayload = typeof payloadToCheck === 'string' ? payloadToCheck : JSON.stringify(payloadToCheck);
+    const payloadHash = isPayloadSHA256 === true ? finalPayload : SHA256FN(finalPayload).toString(enchex);
+    const buffer = Buffer.from(payloadHash, 'hex');
+    return dhive.PublicKey.fromString(publicKey).verify(buffer, sig);
+  } catch (error) {
+    return false;
+  }
+});
+const sscglobal_externalCopy = x => new ivm.ExternalCopy(x);
+const sscglobalv_isAlpha = new ivm.Callback(validator.isAlpha);
+const sscglobalv_isAlphanumeric = new ivm.Callback(validator.isAlphanumeric);
+const sscglobalv_blacklist = new ivm.Callback(validator.blacklist);
+const sscglobalv_isUppercase = new ivm.Callback(validator.isUppercase);
+const sscglobalv_isIP = new ivm.Callback(validator.isIP);
+const sscglobalv_isFQDN = new ivm.Callback(validator.isFQDN);
+const sscglobal_bn_construct = new ivm.Reference((x, y) => BigNumber(maybeDeref(x)));
+const sscglobal_bn_plus = new ivm.Reference((x, y) => x.deref().plus(maybeDeref(y)));
+const sscglobal_bn_minus = new ivm.Reference((x, y) => x.deref().minus(maybeDeref(y)));
+const sscglobal_bn_times = new ivm.Reference((x, y) => x.deref().times(maybeDeref(y)));
+const sscglobal_bn_multipliedBy = new ivm.Reference((x, y, z) => x.deref().multipliedBy(maybeDeref(y), z));
+const sscglobal_bn_dividedBy = new ivm.Reference((x, y, z) => x.deref().dividedBy(maybeDeref(y), z));
+const sscglobal_bn_sqrt = new ivm.Reference((x) => x.deref().sqrt());
+const sscglobal_bn_pow = new ivm.Reference((x, y) => x.deref().pow(maybeDeref(y)));
+const sscglobal_bn_negated = new ivm.Reference((x) => x.deref().negated());
+const sscglobal_bn_abs = new ivm.Reference((x) => x.deref().abs());
+const sscglobal_bn_lt = new ivm.Reference((x, y) => x.deref().lt(maybeDeref(y)));
+const sscglobal_bn_lte = new ivm.Reference((x, y) => x.deref().lte(maybeDeref(y)));
+const sscglobal_bn_eq = new ivm.Reference((x, y) => x.deref().eq(maybeDeref(y)));
+const sscglobal_bn_gt = new ivm.Reference((x, y) => x.deref().gt(maybeDeref(y)));
+const sscglobal_bn_gte = new ivm.Reference((x, y) => x.deref().gte(maybeDeref(y)));
+const sscglobal_bn_dp = new ivm.Reference((x, y, z) => x.deref().dp(y, z));
+const sscglobal_bn_decimalPlaces = new ivm.Reference((x, y, z) => x.deref().decimalPlaces(y, z));
+const sscglobal_bn_isNaN = new ivm.Reference((x) => x.deref().isNaN());
+const sscglobal_bn_isFinite = new ivm.Reference((x) => x.deref().isFinite());
+const sscglobal_bn_isInteger = new ivm.Reference((x) => x.deref().isInteger());
+const sscglobal_bn_isPositive = new ivm.Reference((x) => x.deref().isPositive());
+const sscglobal_bn_toFixed = new ivm.Reference((x, y, z) => x.deref().toFixed(y, z));
+const sscglobal_bn_toNumber = new ivm.Reference((x) => x.deref().toNumber());
+const sscglobal_bn_toString = new ivm.Reference((x) => x.deref().toString());
+const sscglobal_bn_integerValue = new ivm.Reference((x, y) => x.deref().integerValue(y));
+const sscglobal_bn_min = new ivm.Reference((...args) => BigNumber.min.apply(undefined, args.map(maybeDeref)));
+const sscglobal_bn_max = new ivm.Reference((...args) => BigNumber.max.apply(undefined, args.map(maybeDeref)));
+
 class SmartContracts {
   // deploy the smart contract to the blockchain and initialize the database if needed
   static async deploySmartContract(
@@ -185,31 +242,9 @@ class SmartContracts {
             refHiveBlockNumber,
             hiveBlockTimestamp: timestamp,
             contractVersion,
-            BigNumber: new ivm.Reference((x) => BigNumber(x)),
-            SHA256: new ivm.Reference((payloadToHash) => {
-              if (typeof payloadToHash === 'string') {
-                return new ivm.ExternalCopy(SHA256FN(payloadToHash).toString(enchex));
-              }
-
-              return new ivm.ExternalCopy(SHA256FN(JSON.stringify(payloadToHash)).toString(enchex));
-            }),
-            checkSignature: new ivm.Reference((payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
-              if ((typeof payloadToCheck !== 'string'
-              && typeof payloadToCheck !== 'object')
-              || typeof signature !== 'string'
-              || typeof publicKey !== 'string') return false;
-              try {
-                const sig = dhive.Signature.fromString(signature);
-                const finalPayload = typeof payloadToCheck === 'string' ? payloadToCheck : JSON.stringify(payloadToCheck);
-                const payloadHash = isPayloadSHA256 === true
-                  ? finalPayload
-                  : SHA256FN(finalPayload).toString(enchex);
-                const buffer = Buffer.from(payloadHash, 'hex');
-                return dhive.PublicKey.fromString(publicKey).verify(buffer, sig);
-              } catch (error) {
-                return false;
-              }
-            }),
+            BigNumber: ivmBigNumber,
+            SHA256: ivmSHA256,
+            checkSignature: ivmCheckSignature,
             random: new ivm.Reference(() => rng()),
             debug: (logmsg) => log.info(logmsg), // eslint-disable-line no-console
             // execute a smart contract from the current smart contract
@@ -419,32 +454,11 @@ class SmartContracts {
           blockNumber,
           action,
           payload: JSON.parse(JSON.stringify(payloadObj)),
-          BigNumber: new ivm.Reference((x) => BigNumber(x)),
+          BigNumber: ivmBigNumber,
           logs: new ivm.Reference(() => new ivm.ExternalCopy(JSON.parse(JSON.stringify(results.logs)))),
           random: new ivm.Reference(() => rng()),
-          SHA256: new ivm.Reference((payloadToHash) => {
-            if (typeof payloadToHash === 'string') {
-              return new ivm.ExternalCopy(SHA256FN(payloadToHash).toString(enchex));
-            }
-            return new ivm.ExternalCopy(SHA256FN(JSON.stringify(payloadToHash)).toString(enchex));
-          }),
-          checkSignature: new ivm.Reference((payloadToCheck, signature, publicKey, isPayloadSHA256 = false) => {
-            if ((typeof payloadToCheck !== 'string'
-            && typeof payloadToCheck !== 'object')
-            || typeof signature !== 'string'
-            || typeof publicKey !== 'string') return false;
-            try {
-              const sig = dhive.Signature.fromString(signature);
-              const finalPayload = typeof payloadToCheck === 'string' ? payloadToCheck : JSON.stringify(payloadToCheck);
-              const payloadHash = isPayloadSHA256 === true
-                ? finalPayload
-                : SHA256FN(finalPayload).toString(enchex);
-              const buffer = Buffer.from(payloadHash, 'hex');
-              return dhive.PublicKey.fromString(publicKey).verify(buffer, sig);
-            } catch (error) {
-              return false;
-            }
-          }),
+          SHA256: ivmSHA256,
+          checkSignature: ivmCheckSignature,
           debug: (logmsg) => log.info(logmsg), // eslint-disable-line no-console
           // execute a smart contract from the current smart contract
           executeSmartContract: new ivm.Reference(async (
@@ -581,44 +595,43 @@ class SmartContracts {
       vm.context.global.setSync('done', (error) => {
         contractError = error;
       });
-      vm.context.global.setSync('sscglobal_externalCopy', x => new ivm.ExternalCopy(x));
       vm.context.global.setSync('sscglobal_api', new ivm.Reference(vmState.api));
       vm.context.global.setSync('sscglobal_debug', vmState.api.debug);
       vm.context.global.setSync('sscglobal_db', new ivm.Reference(vmState.db));
-      vm.context.global.setSync('sscglobalv_isAlpha', new ivm.Callback(validator.isAlpha));
-      vm.context.global.setSync('sscglobalv_isAlphanumeric', new ivm.Callback(validator.isAlphanumeric));
-      vm.context.global.setSync('sscglobalv_blacklist', new ivm.Callback(validator.blacklist));
-      vm.context.global.setSync('sscglobalv_isUppercase', new ivm.Callback(validator.isUppercase));
-      vm.context.global.setSync('sscglobalv_isIP', new ivm.Callback(validator.isIP));
-      vm.context.global.setSync('sscglobalv_isFQDN', new ivm.Callback(validator.isFQDN));
-
-      vm.context.global.setSync('sscglobal_bn_construct', new ivm.Reference((x, y) => BigNumber(maybeDeref(x))));
-      vm.context.global.setSync('sscglobal_bn_plus', new ivm.Reference((x, y) => x.deref().plus(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_minus', new ivm.Reference((x, y) => x.deref().minus(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_times', new ivm.Reference((x, y) => x.deref().times(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_multipliedBy', new ivm.Reference((x, y, z) => x.deref().multipliedBy(maybeDeref(y), z)));
-      vm.context.global.setSync('sscglobal_bn_dividedBy', new ivm.Reference((x, y, z) => x.deref().dividedBy(maybeDeref(y), z)));
-      vm.context.global.setSync('sscglobal_bn_sqrt', new ivm.Reference((x) => x.deref().sqrt()));
-      vm.context.global.setSync('sscglobal_bn_pow', new ivm.Reference((x, y) => x.deref().pow(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_negated', new ivm.Reference((x) => x.deref().negated()));
-      vm.context.global.setSync('sscglobal_bn_abs', new ivm.Reference((x) => x.deref().abs()));
-      vm.context.global.setSync('sscglobal_bn_lt', new ivm.Reference((x, y) => x.deref().lt(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_lte', new ivm.Reference((x, y) => x.deref().lte(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_eq', new ivm.Reference((x, y) => x.deref().eq(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_gt', new ivm.Reference((x, y) => x.deref().gt(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_gte', new ivm.Reference((x, y) => x.deref().gte(maybeDeref(y))));
-      vm.context.global.setSync('sscglobal_bn_dp', new ivm.Reference((x, y, z) => x.deref().dp(y, z)));
-      vm.context.global.setSync('sscglobal_bn_decimalPlaces', new ivm.Reference((x, y, z) => x.deref().decimalPlaces(y, z)));
-      vm.context.global.setSync('sscglobal_bn_isNaN', new ivm.Reference((x) => x.deref().isNaN()));
-      vm.context.global.setSync('sscglobal_bn_isFinite', new ivm.Reference((x) => x.deref().isFinite()));
-      vm.context.global.setSync('sscglobal_bn_isInteger', new ivm.Reference((x) => x.deref().isInteger()));
-      vm.context.global.setSync('sscglobal_bn_isPositive', new ivm.Reference((x) => x.deref().isPositive()));
-      vm.context.global.setSync('sscglobal_bn_toFixed', new ivm.Reference((x, y, z) => x.deref().toFixed(y, z)));
-      vm.context.global.setSync('sscglobal_bn_toNumber', new ivm.Reference((x) => x.deref().toNumber()));
-      vm.context.global.setSync('sscglobal_bn_toString', new ivm.Reference((x) => x.deref().toString()));
-      vm.context.global.setSync('sscglobal_bn_integerValue', new ivm.Reference((x, y) => x.deref().integerValue(y)));
-      vm.context.global.setSync('sscglobal_bn_min', new ivm.Reference((...args) => BigNumber.min.apply(undefined, args.map(maybeDeref))));
-      vm.context.global.setSync('sscglobal_bn_max', new ivm.Reference((...args) => BigNumber.max.apply(undefined, args.map(maybeDeref))));
+      vm.context.global.setSync('sscglobal_externalCopy', sscglobal_externalCopy);
+      vm.context.global.setSync('sscglobalv_isAlpha', sscglobalv_isAlpha);
+      vm.context.global.setSync('sscglobalv_isAlphanumeric', sscglobalv_isAlphanumeric);
+      vm.context.global.setSync('sscglobalv_blacklist', sscglobalv_blacklist);
+      vm.context.global.setSync('sscglobalv_isUppercase', sscglobalv_isUppercase);
+      vm.context.global.setSync('sscglobalv_isIP', sscglobalv_isIP);
+      vm.context.global.setSync('sscglobalv_isFQDN', sscglobalv_isFQDN);
+      vm.context.global.setSync('sscglobal_bn_construct', sscglobal_bn_construct);
+      vm.context.global.setSync('sscglobal_bn_plus', sscglobal_bn_plus);
+      vm.context.global.setSync('sscglobal_bn_minus', sscglobal_bn_minus);
+      vm.context.global.setSync('sscglobal_bn_times', sscglobal_bn_times);
+      vm.context.global.setSync('sscglobal_bn_multipliedBy', sscglobal_bn_multipliedBy);
+      vm.context.global.setSync('sscglobal_bn_dividedBy', sscglobal_bn_dividedBy);
+      vm.context.global.setSync('sscglobal_bn_sqrt', sscglobal_bn_sqrt);
+      vm.context.global.setSync('sscglobal_bn_pow', sscglobal_bn_pow);
+      vm.context.global.setSync('sscglobal_bn_negated', sscglobal_bn_negated);
+      vm.context.global.setSync('sscglobal_bn_abs', sscglobal_bn_abs);
+      vm.context.global.setSync('sscglobal_bn_lt', sscglobal_bn_lt);
+      vm.context.global.setSync('sscglobal_bn_lte', sscglobal_bn_lte);
+      vm.context.global.setSync('sscglobal_bn_eq', sscglobal_bn_eq);
+      vm.context.global.setSync('sscglobal_bn_gt', sscglobal_bn_gt);
+      vm.context.global.setSync('sscglobal_bn_gte', sscglobal_bn_gte);
+      vm.context.global.setSync('sscglobal_bn_dp', sscglobal_bn_dp);
+      vm.context.global.setSync('sscglobal_bn_decimalPlaces', sscglobal_bn_decimalPlaces);
+      vm.context.global.setSync('sscglobal_bn_isNaN', sscglobal_bn_isNaN);
+      vm.context.global.setSync('sscglobal_bn_isFinite', sscglobal_bn_isFinite);
+      vm.context.global.setSync('sscglobal_bn_isInteger', sscglobal_bn_isInteger);
+      vm.context.global.setSync('sscglobal_bn_isPositive', sscglobal_bn_isPositive);
+      vm.context.global.setSync('sscglobal_bn_toFixed', sscglobal_bn_toFixed);
+      vm.context.global.setSync('sscglobal_bn_toNumber', sscglobal_bn_toNumber);
+      vm.context.global.setSync('sscglobal_bn_toString', sscglobal_bn_toString);
+      vm.context.global.setSync('sscglobal_bn_integerValue', sscglobal_bn_integerValue);
+      vm.context.global.setSync('sscglobal_bn_min', sscglobal_bn_min);
+      vm.context.global.setSync('sscglobal_bn_max', sscglobal_bn_max);
 
       const wrappedCode = 'new ' + function() {
         let _sscglobal_api = sscglobal_api;
@@ -1037,12 +1050,29 @@ class SmartContracts {
   }
 
   static async findOne(database, contractName, table, query) {
+    const isMiningPower = contractName === 'mining' && table === 'miningPower';
+    const derefQuery = isMiningPower ? query : deepDeref(query);
     const result = await database.findOne({
       contract: contractName,
       table,
-      query: deepDeref(query),
+      query: derefQuery,
     });
-
+    if (isMiningPower) {
+      if (result !== null) {
+        //if (result.balances) {
+        //  Object.keys(result.balances).forEach(k => { result.balances[k] = deepConvertDecimal128(result.balances[k]); });
+        //}
+        //if (result.nftBalances) {
+        //  Object.keys(result.nftBalances).forEach(k => { result.nftBalances[k] = deepConvertDecimal128(result.nftBalances[k]); });
+        //}
+        //if (result.power) {
+        //  result.power['$numberDecimal'] = deepConvertDecimal128(result.power['$numberDecimal']);
+        //}
+        if (result.equippedNfts) {
+          delete result.equippedNfts;
+        }
+      }
+    }
     return deepConvertDecimal128(result);
   }
 
@@ -1083,6 +1113,23 @@ class SmartContracts {
   }
 
   static async update(database, contractName, table, record, unsets) {
+    const isMiningPower = contractName === 'mining' && table === 'miningPower';
+    if (isMiningPower) {
+      if (record !== null) {
+        //if (record.balances) {
+        //  Object.keys(record.balances).forEach(k => { record.balances[k] = deepDeref(record.balances[k]); });
+        //}
+        //if (record.nftBalances) {
+        //  Object.keys(record.nftBalances).forEach(k => { record.nftBalances[k] = deepDeref(record.nftBalances[k]); });
+        //}
+        //if (record.power) {
+        //  record.power['$numberDecimal'] = deepDeref(record.power['$numberDecimal']);
+        //}
+        if (record.equippedNfts) {
+          delete record.equippedNfts;
+        }
+      }
+    }
     const result = await database.update({
       contract: contractName,
       table,
