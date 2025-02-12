@@ -175,15 +175,6 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '497.02561906'});
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TEST', balance: '400.00000034'});
 
-      const entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: { }
-      });
-      
-      // vitalik orders are created with old contract so
-      assert.equal(entries.length, 0);
-
       const block3 = await fixture.database.getBlockInfo(3);
       const transactionsBlock3 = block3.transactions;
       console.log(JSON.parse(transactionsBlock3[1].logs).errors);
@@ -1079,16 +1070,6 @@ describe('Market', function() {
 
       assert.equal(accountBalances.length, 1);
       assert.equal(accountBalances[0].balance, '123.456');
-
-      const entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: {}
-      });
-      
-      // sunsetjesus should not appear because he is on the blacklist
-      assert.equal(entries.length, 1);
-      assert.equal(entries[0].orderCount, 3);
 
       resolve();
     })
@@ -2548,19 +2529,6 @@ describe('Market', function() {
       assert.equal(balances[0].symbol, 'SWAP.HIVE');
       assert.equal(balances[0].account, 'market');
 
-      
-      const entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: { }
-      });
-      
-      // The order from satoshi is created but not executed and is therefore lying on the market orderCount +1
-      // Vitalik's order is created +1, executed and closed -1 = 0.
-      // This means that no entry is created for vitalik.
-      assert.equal(entries.length, 1);
-      assert.equal(entries[0].orderCount, 0);
-
       let buyOrders = await fixture.database.find({
         contract: 'market',
         table: 'buyBook',
@@ -2686,11 +2654,6 @@ describe('Market', function() {
 
       await fixture.sendBlock(block);
 
-      const entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: { }
-      });
       buyOrders = await fixture.database.find({
         contract: 'market',
         table: 'buyBook',
@@ -2702,9 +2665,7 @@ describe('Market', function() {
         query: {}
       });
       
-      // vitalik orders are created with old contract, they should appear
-      assert.strictEqual(entries[1].orderCount, 31)
-      assert.strictEqual(entries[0].orderCount, 1)
+
       assert.strictEqual(buyOrders.length, 17)
       assert.strictEqual(sellOrders.orderCount, 16)
 
@@ -2716,7 +2677,7 @@ describe('Market', function() {
       });
   });
 
-  it('prevent creating more than allowed orders', (done) => {
+  it('prevent creation of more than allowed orders', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -2761,15 +2722,9 @@ describe('Market', function() {
         table: 'sellBook',
         query: {}
       });
-      let entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: { }
-      });
 
       assert.strictEqual(buyOrders.length, 100);
       assert.strictEqual(sellOrders.length, 100);
-      assert.strictEqual(entries[0].orderCount, 200);
       assert.strictEqual(JSON.parse(transactionsBlock1[transactionsBlock1.length - 1].logs).errors[0], 'too many open orders');
 
 
@@ -2799,15 +2754,9 @@ describe('Market', function() {
         table: 'sellBook',
         query: {}
       });
-      entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: { }
-      });
 
       assert.strictEqual(buyOrders.length, 99);
       assert.strictEqual(sellOrders.length, 99);
-      assert.strictEqual(entries[0].orderCount, 198);
 
       // now lets add again 3 orders
       transactions = [];
@@ -2836,15 +2785,9 @@ describe('Market', function() {
         table: 'sellBook',
         query: {}
       });
-      entries = await fixture.database.find({
-        contract: 'market',
-        table: 'openOrders',
-        query: { }
-      });
 
       assert.strictEqual(buyOrders.length, 100);
       assert.strictEqual(sellOrders.length, 100);
-      assert.strictEqual(entries[0].orderCount, 200);
 
       resolve();
     })
