@@ -230,6 +230,7 @@ const removeBadOrders = async () => {
   }
 };
 
+// eslint-disable-next-line no-unused-vars
 const removeBlacklistedOrders = async (type, targetAccount) => {
   const table = type === 'buy' ? 'buyBook' : 'sellBook';
   let nbOrdersToDelete = 0;
@@ -272,13 +273,15 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
   }
 };
 
-const removeBlacklistedOrdersBatch = async (type, targetAccount, qty) => {
+// eslint-disable-next-line no-unused-vars
+const removeBlacklistedOrdersBatch = async (type, symbol, targetAccount, qty) => {
   const table = type === 'buy' ? 'buyBook' : 'sellBook';
   let nbOrdersToDelete = 0;
   const ordersToDelete = await api.db.find(
     table,
     {
       account: targetAccount,
+      symbol,
     },
     qty,
     0,
@@ -291,12 +294,11 @@ const removeBlacklistedOrdersBatch = async (type, targetAccount, qty) => {
       const order = ordersToDelete[index];
 
       await api.db.remove(table, order);
-
-      if (type === 'sell') {
-        await updateAskMetric(order.symbol);
-      } else {
-        await updateBidMetric(order.symbol);
-      }
+    }
+    if (type === 'sell') {
+      await updateAskMetric(symbol);
+    } else {
+      await updateBidMetric(symbol);
     }
   }
 };
@@ -305,9 +307,6 @@ const removeExpiredOrders = async (table) => {
   const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
     .dividedBy(1000)
     .toNumber();
-
-  // get rid of some blacklisted orders while we're here
-  await removeBlacklistedOrdersBatch('sell', 'shaggroed', 5);
 
   // clean orders
   let nbOrdersToDelete = 0;
@@ -1388,4 +1387,11 @@ actions.marketSell = async (payload) => {
       }
     }
   }
+};
+
+// currently nothing to do here as all the blacklisted orders have been removed
+actions.tick = async () => {
+  /* if (api.assert(api.sender === 'null', `not authorized: ${api.sender}`)) {
+    await removeBlacklistedOrdersBatch('sell', 'TVST', 'shaggroed', 10);
+  } */
 };
