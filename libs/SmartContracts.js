@@ -125,7 +125,7 @@ class SmartContracts {
           // insert a record in the table of the smart contract
           remove: (table, record) => SmartContracts.remove(database, name, table, record),
           // insert a record in the table of the smart contract
-          update: (table, record, unsets = undefined, increment = undefined) => SmartContracts.update(database, name, table, record, unsets, increment),
+          update: (table, record, unsets = undefined) => SmartContracts.update(database, name, table, record, unsets),
           // check if a table exists
           tableExists: table => SmartContracts.tableExists(database, name, table),
           // just count the documents with a specific filter
@@ -354,7 +354,7 @@ class SmartContracts {
         // insert a record in the table of the smart contract
         remove: (table, record) => SmartContracts.remove(database, contract, table, record),
         // insert a record in the table of the smart contract
-        update: (table, record, unsets = undefined, increment = undefined) => SmartContracts.update(database, contract, table, record, unsets, increment),
+        update: (table, record, unsets = undefined) => SmartContracts.update(database, contract, table, record, unsets),
         // check if a table exists
         tableExists: table => SmartContracts.tableExists(database, contract, table),
         // get block information
@@ -847,13 +847,12 @@ class SmartContracts {
     return result;
   }
 
-  static async update(database, contractName, table, record, unsets, increment) {
+  static async update(database, contractName, table, record, unsets) {
     const result = await database.update({
       contract: contractName,
       table,
       record,
       unsets,
-      increment
     });
 
     return result;

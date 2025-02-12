@@ -837,7 +837,7 @@ class Database {
    */
   async update(payload, cache = true) {
     const {
-      contract, table, record, unsets, increment,
+      contract, table, record, unsets,
     } = payload;
 
     const finalTableName = `${contract}_${table}`;
@@ -862,27 +862,11 @@ class Database {
           await this.updateTableHash(contract, finalTableName);
         }
 
-        const updateQuery = { $set: EJSON.deserialize(record) };
-        
-        if (increment) {
-          updateQuery["$inc"] = increment;
-        }
-
         if (unsets) {
-          updateQuery["$unset"] = EJSON.deserialize(unsets);
-        }
-
-        await tableInDb.updateOne(
-          { _id: record._id },
-          updateQuery,
-          { upsert: true, session: this.session }
-        );
-
-        /*if (unsets) {
           await tableInDb.updateOne({ _id: record._id }, { $set: EJSON.deserialize(record), $unset: EJSON.deserialize(unsets) }, { upsert: true, session: this.session }); // eslint-disable-line
         } else {
           await tableInDb.updateOne({ _id: record._id }, { $set: EJSON.deserialize(record) }, { upsert: true, session: this.session }); // eslint-disable-line
-        }*/
+        }
       }
     }
   }
