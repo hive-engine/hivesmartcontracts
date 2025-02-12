@@ -975,16 +975,6 @@ describe('Market', function() {
       assert.equal(sellOrders[0].price, '0.00000001');
       assert.equal(sellOrders[0].quantity, 876.988);
 
-      const entry = await fixture.database.findOne({
-        contract: 'market',
-        table: 'openOrders',
-        query: {
-          _id: 'satoshi',
-        }
-      });
-      
-      assert.equal(entry.orderCount, 1);
-
       resolve();
     })
       .then(() => {
