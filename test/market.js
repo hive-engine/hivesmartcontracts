@@ -2988,15 +2988,8 @@ describe('Market', function() {
       });
       
       // vitalik orders are created with old contract, they should appear
-      if (openOrders[0].account != 'vitalik'){
-        assert.strictEqual(openOrders[0].orderCount, 1);
-        assert.strictEqual(openOrders[1].orderCount, 31);
-      }
-      else {
-        assert.strictEqual(openOrders[0].orderCount, 31);
-        assert.strictEqual(openOrders[1].orderCount, 1);
-      }
-      
+      assert.strictEqual(openOrders[1].orderCount, 1)
+      assert.strictEqual(openOrders[0].orderCount, 31)
       assert.strictEqual(buyOrders.length, 17)
       assert.strictEqual(sellOrders.length, 15)
 
