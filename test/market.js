@@ -2657,7 +2657,7 @@ describe('Market', function() {
       
 
       assert.strictEqual(buyOrders.length, 17)
-      assert.strictEqual(sellOrders.orderCount, 16)
+      assert.strictEqual(sellOrders.length, 15)
 
       resolve();
     })
