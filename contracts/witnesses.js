@@ -527,6 +527,7 @@ const changeCurrentWitness = async () => {
     round,
     maxRoundsMissedInARow,
     maxRoundPropositionWaitingPeriod,
+    lastVerifiedBlockNumber,
   } = params;
 
   let witnessFound = false;
@@ -557,12 +558,9 @@ const changeCurrentWitness = async () => {
   );
   // get the witnesses on schedule
   const schedules = await api.db.find('schedules', { round });
+  const currentWitnessSchedule = schedules.find(s => s.witness === currentWitness);
 
   const previousRoundWitness = lastWitnesses.length > 1 ? lastWitnesses[lastWitnesses.length - 2] : '';
-
-  // get the current schedule
-  const schedule = await api.db
-    .findOne('schedules', { round, witness: currentWitness, blockNumber: lastBlockRound });
 
   do {
     for (let index = 0; index < witnesses.length; index += 1) {
@@ -579,11 +577,31 @@ const changeCurrentWitness = async () => {
         && witness.account !== previousRoundWitness
         && schedules.find(s => s.witness === witness.account) === undefined
         && api.BigNumber(randomWeight).lte(accWeight)) {
-        api.debug(`changed current witness from ${schedule.witness} to ${witness.account}`);
-        schedule.witness = witness.account;
-        await api.db.update('schedules', schedule);
-        params.currentWitness = witness.account;
-        params.lastWitnesses.push(witness.account);
+        api.debug(`changed witness from ${currentWitnessSchedule.witness} to ${witness.account}`);
+
+        // remove the schedules
+        const newWitnessOrder = [witness.account];
+        for (let index = 0; index < schedules.length; index += 1) {
+          const schedule = schedules[index];
+          if (schedule.witness !== currentWitness) {
+            newWitnessOrder.push(schedule.witness);
+          }
+          await api.db.remove('schedules', schedule);
+        }
+        let blockNumber = lastVerifiedBlockNumber === 0
+          ? api.blockNumber
+          : lastVerifiedBlockNumber + 1;
+        for (let i = 0; i < newWitnessOrder.length; i += 1) {
+          const newSchedule = {
+            witness: newWitnessOrder[i],
+            blockNumber,
+            round,
+          };
+          await api.db.insert('schedules', newSchedule);
+          blockNumber += 1;
+        }
+        params.currentWitness = newWitnessOrder[newWitnessOrder.length - 1];
+        params.lastWitnesses.push(newWitnessOrder[newWitnessOrder.length - 1]);
         params.blockNumberWitnessChange = api.blockNumber
           + maxRoundPropositionWaitingPeriod;
 
