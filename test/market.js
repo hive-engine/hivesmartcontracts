@@ -2643,4 +2643,107 @@ describe('Market', function() {
         done();
       });
   });
+
+  it('small order with zero quantity cannot be filled', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'contract', 'update', JSON.stringify(pegContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mktContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "TEST", "precision": 8, "maxSupply": "1000" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "TEST", "to": "vitalik", "quantity": "10", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'tokens', 'transfer', '{ "symbol": "SWAP.HIVE", "to": "satoshi", "quantity": "500", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'tokens', 'transfer', '{ "symbol": "SWAP.HIVE", "to": "vitalik", "quantity": "500", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "TEST", "to": "satoshi", "quantity": "10", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'market', 'buy', '{ "symbol": "TEST", "quantity": "100", "price": "0.0009", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'market', 'buy', '{ "symbol": "TEST", "quantity": "100", "price": "0.0010", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'market', 'buy', '{ "symbol": "TEST", "quantity": "100", "price": "0.0011", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'market', 'sell', '{ "symbol": "TEST", "quantity": "100", "price": "0.0012", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'market', 'sell', '{ "symbol": "TEST", "quantity": "100", "price": "0.0013", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'vitalik', 'market', 'sell', '{ "symbol": "TEST", "quantity": "100", "price": "0.0014", "isSignedWithActiveKey": true }'));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD2',
+        prevRefHiveBlockId: 'ABCD1',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      // verify market is setup for the test
+      await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'SWAP.HIVE', balance: '500'});
+      await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TEST', balance: '10'});
+      await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '499.70000000'});
+      await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TEST', balance: '9.61000000'});
+
+      let balances = await fixture.database.find({
+        contract: 'tokens',
+        table: 'contractsBalances',
+        query: {
+          symbol: 'TEST'
+        }
+      });
+
+      console.log(balances);
+      assert.equal(balances[0].balance, '0.39');
+      assert.equal(balances[0].symbol, 'TEST');
+      assert.equal(balances[0].account, 'market');
+
+      balances = await fixture.database.find({
+        contract: 'tokens',
+        table: 'contractsBalances',
+        query: {
+          symbol: 'SWAP.HIVE'
+        }
+      });
+
+      console.log(balances);
+      assert.equal(balances[0].balance, '0.300000000');
+      assert.equal(balances[0].symbol, 'SWAP.HIVE');
+      assert.equal(balances[0].account, 'market');
+
+      // perform small buys & sells that demonstrates the exploit
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'market', 'sell', '{ "symbol": "TEST", "quantity": "0.00000148", "price": "0.0011", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'market', 'buy', '{ "symbol": "TEST", "quantity": "0.00000148", "price": "0.0012", "isSignedWithActiveKey": true }'));
+
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD3',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:03',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'SWAP.HIVE', balance: '500'});
+      await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TEST', balance: '10'});
+      await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '499.70000000'});
+      await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TEST', balance: '9.61000000'});
+
+      const block2 = await fixture.database.getBlockInfo(2);
+      const transactionsBlock2 = block2.transactions;
+      const parsedTransaction1 = JSON.parse(transactionsBlock2[1].logs);
+      const parsedTransaction2 = JSON.parse(transactionsBlock2[2].logs);
+      console.log(parsedTransaction1.errors);
+      console.log(parsedTransaction2.errors);
+      assert.equal(parsedTransaction1.errors.length, 1);
+      assert.equal(parsedTransaction2.errors.length, 1);
+      assert.equal(parsedTransaction1.errors[0], 'the order cannot be filled');
+      assert.equal(parsedTransaction2.errors[0], 'the order cannot be filled');
+
+      resolve();
+    })
+    .then(() => {
+      fixture.tearDown();
+      done();
+    });
+  });
 });
