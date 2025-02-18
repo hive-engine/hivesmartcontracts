@@ -211,6 +211,8 @@ class SmartContracts {
           update: new ivm.Reference(async (table, record, unsets = undefined) => new ivm.ExternalCopy(await SmartContracts.update(database, name, table, record, unsets))),
           // check if a table exists
           tableExists: new ivm.Reference(async (table) => await SmartContracts.tableExists(database, name, table)),
+          // just count the documents with a specific filter
+          count: new ivm.Reference(async (table, query) => new ivmExternalCopy(await SmartContracts.count(database, name, table, query))),
         };
 
         // logs used to store events or errors
@@ -417,6 +419,8 @@ class SmartContracts {
         tableExists: new ivm.Reference(async table => await SmartContracts.tableExists(database, contract, table)),
         // get block information
         getBlockInfo: new ivm.Reference(async blockNum => new ivm.ExternalCopy(await SmartContracts.getBlockInfo(database, blockNum))),
+        // just count the documents with a specific filter
+        count: new ivm.Reference(async (table, query) => new ivm.ExternalCopy(await SmartContracts.count(database, contract, table, query))),
       };
 
       // logs used to store events or errors
@@ -762,6 +766,7 @@ class SmartContracts {
             update: applyWrapper(getDbProp('update')),
             tableExists: applyWrapper(getDbProp('tableExists')),
             getBlockInfo: applyWrapper(getDbProp('getBlockInfo')),
+            count: applyWrapper(getDbProp('count')),
           },
           BigNumber: makeBigNumber,
           validator: {
@@ -1151,6 +1156,16 @@ class SmartContracts {
 
   static async getBlockInfo(database, blockNumber) {
     const result = await database.getBlockInfo(blockNumber);
+
+    return result;
+  }
+
+  static async count(database, contractName, table, query) {
+    const result = await database.count({
+      contract: contractName,
+      table,
+      query,
+    });
 
     return result;
   }
