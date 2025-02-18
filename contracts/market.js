@@ -6,6 +6,7 @@
 const HIVE_PEGGED_SYMBOL = 'SWAP.HIVE';
 const HIVE_PEGGED_SYMBOL_PRESICION = 8;
 const CONTRACT_NAME = 'market';
+const MAX_ALLOWED_OPEN_ORDERS = 200;
 
 // trading by these accounts is blocked
 const ACCOUNT_BLACKLIST = {
@@ -17,6 +18,12 @@ const ACCOUNT_BLACKLIST = {
   'shaggroed': 1,
   'shaggythesecond': 1,
 };
+
+const countOpenOrders = async (account) => {
+  let sellOrderCount = await api.db.count('sellBook', { account });
+  let buyOrderCount = await api.db.count('buyBook', { account });
+  return sellOrderCount + buyOrderCount;
+}
 
 const getMetric = async (symbol) => {
   let metric = await api.db.findOne('metrics', { symbol });
@@ -203,7 +210,6 @@ const removeBadOrders = async () => {
     for (let index = 0; index < nbOrdersToDelete; index += 1) {
       nbOrdersDeleted += 1;
       const order = ordersToDelete[index];
-
       await api.db.remove('buyBook', order);
       await updateBidMetric(order.symbol);
     }
@@ -244,9 +250,8 @@ const removeBlacklistedOrders = async (type, targetAccount) => {
     for (let index = 0; index < nbOrdersToDelete; index += 1) {
       nbOrdersDeleted += 1;
       const order = ordersToDelete[index];
-
       await api.db.remove(table, order);
-
+      
       if (type === 'sell') {
         await updateAskMetric(order.symbol);
       } else {
@@ -333,7 +338,6 @@ const removeExpiredOrders = async (table) => {
 
       // unlock tokens
       await api.transferTokens(order.account, symbol, quantity, 'user');
-
       await api.db.remove(table, order);
 
       if (table === 'buyBook') {
@@ -411,7 +415,6 @@ actions.cancel = async (payload) => {
 
       // unlock tokens
       await api.transferTokens(finalAccount, symbol, quantity, 'user');
-
       await api.db.remove(table, order);
 
       if (type === 'sell') {
@@ -431,6 +434,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
   } = order;
 
   const buyOrder = order;
+  const ordersToFetch = 25;
   let offset = 0;
   let volumeTraded = 0;
 
@@ -442,7 +446,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
     priceDec: {
       $lte: priceDec,
     },
-  }, 1000, offset,
+  }, ordersToFetch, offset,
   [
     { index: 'priceDec', descending: false },
     { index: '_id', descending: false },
@@ -505,6 +509,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
             if (api.BigNumber(qtyLeftSellOrder).gt(0)) {
               await api.transferTokens(sellOrder.account, symbol, qtyLeftSellOrder, 'user');
             }
+
             api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
             await api.db.remove('sellBook', sellOrder);
           }
@@ -525,6 +530,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
           volumeTraded = api.BigNumber(volumeTraded).plus(qtyTokensToSend);
 
           buyOrder.quantity = '0';
+          
           await api.db.remove('buyBook', buyOrder);
           api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
         }
@@ -600,7 +606,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
       inc += 1;
     }
 
-    offset += 1000;
+    offset += ordersToFetch;
 
     if (api.BigNumber(buyOrder.quantity).gt(0)) {
       // get the orders that match the symbol and the price
@@ -609,7 +615,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
         priceDec: {
           $lte: priceDec,
         },
-      }, 1000, offset,
+      }, ordersToFetch, offset,
       [
         { index: 'priceDec', descending: false },
         { index: '_id', descending: false },
@@ -636,6 +642,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
   } = order;
 
   const sellOrder = order;
+  const ordersToFetch = 25;
   let offset = 0;
   let volumeTraded = 0;
 
@@ -647,7 +654,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
     priceDec: {
       $gte: priceDec,
     },
-  }, 1000, offset,
+  }, ordersToFetch, offset,
   [
     { index: 'priceDec', descending: true },
     { index: '_id', descending: false },
@@ -804,7 +811,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
       inc += 1;
     }
 
-    offset += 1000;
+    offset += ordersToFetch;
 
     if (api.BigNumber(sellOrder.quantity).gt(0)) {
       // get the orders that match the symbol and the price
@@ -813,7 +820,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
         priceDec: {
           $gte: priceDec,
         },
-      }, 1000, offset,
+      }, ordersToFetch, offset,
       [
         { index: 'priceDec', descending: true },
         { index: '_id', descending: false },
@@ -860,47 +867,52 @@ actions.buy = async (payload) => {
       && finalTxId && typeof finalTxId === 'string' && finalTxId.length > 0
       && (expiration === undefined || (expiration && Number.isInteger(expiration) && expiration > 0)), 'invalid params')
   ) {
-    // get the token params
-    const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
+    // check if sender has already more orders open than allowed
+    const openOrders = await countOpenOrders(finalAccount);
+    if (api.assert(openOrders < MAX_ALLOWED_OPEN_ORDERS, "too many open orders")) {
 
-    // perform a few verifications
-    if (api.assert(token
-      && api.BigNumber(price).gt(0)
-      && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
-      && countDecimals(quantity) <= token.precision, 'invalid params')) {
-      // initiate a transfer from sender to contract balance
+      // get the token params
+      const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
 
-      const nbTokensToLockRaw = api.BigNumber(price).multipliedBy(quantity);
+      // perform a few verifications
+      if (api.assert(token
+        && api.BigNumber(price).gt(0)
+        && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
+        && countDecimals(quantity) <= token.precision, 'invalid params')) {
+        // initiate a transfer from sender to contract balance
 
-      if (api.assert(nbTokensToLockRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
-        // lock HIVE_PEGGED_SYMBOL tokens
-        const nbTokensToLock = nbTokensToLockRaw.toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
-        const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity: nbTokensToLock, to: CONTRACT_NAME });
+        const nbTokensToLockRaw = api.BigNumber(price).multipliedBy(quantity);
 
-        if (res.errors === undefined
-          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === nbTokensToLock && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
-          const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
-            .dividedBy(1000)
-            .toNumber();
+        if (api.assert(nbTokensToLockRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
+          // lock HIVE_PEGGED_SYMBOL tokens
+          const nbTokensToLock = nbTokensToLockRaw.toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
+          const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity: nbTokensToLock, to: CONTRACT_NAME });
 
-          // order
-          const order = {};
+          if (res.errors === undefined
+            && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === nbTokensToLock && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+            const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
+              .dividedBy(1000)
+              .toNumber();
 
-          order.txId = finalTxId;
-          order.timestamp = timestampSec;
-          order.account = finalAccount;
-          order.symbol = symbol;
-          order.quantity = api.BigNumber(quantity).toFixed(token.precision);
-          order.price = api.BigNumber(price).toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
-          order.priceDec = { $numberDecimal: order.price };
-          order.tokensLocked = nbTokensToLock;
-          order.expiration = expiration === undefined || expiration > 2592000
-            ? timestampSec + 2592000
-            : timestampSec + expiration;
+            // order
+            const order = {};
 
-          const orderInDb = await api.db.insert('buyBook', order);
+            order.txId = finalTxId;
+            order.timestamp = timestampSec;
+            order.account = finalAccount;
+            order.symbol = symbol;
+            order.quantity = api.BigNumber(quantity).toFixed(token.precision);
+            order.price = api.BigNumber(price).toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
+            order.priceDec = { $numberDecimal: order.price };
+            order.tokensLocked = nbTokensToLock;
+            order.expiration = expiration === undefined || expiration > 2592000
+              ? timestampSec + 2592000
+              : timestampSec + expiration;
 
-          await findMatchingSellOrders(orderInDb, token.precision);
+            const orderInDb = await api.db.insert('buyBook', order);
+
+            await findMatchingSellOrders(orderInDb, token.precision);
+          }
         }
       }
     }
@@ -933,44 +945,48 @@ actions.sell = async (payload) => {
       && quantity && typeof quantity === 'string' && !api.BigNumber(quantity).isNaN()
       && finalTxId && typeof finalTxId === 'string' && finalTxId.length > 0
       && (expiration === undefined || (expiration && Number.isInteger(expiration) && expiration > 0)), 'invalid params')) {
-    // get the token params
-    const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
+    // check if sender has already more orders open than allowed
+    const openOrders = await countOpenOrders(finalAccount);
+    if (api.assert(openOrders < MAX_ALLOWED_OPEN_ORDERS, "too many open orders")) {
+      // get the token params
+      const token = await api.db.findOneInTable('tokens', 'tokens', { symbol });
 
-    // perform a few verifications
-    if (api.assert(token
-      && api.BigNumber(price).gt(0)
-      && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
-      && countDecimals(quantity) <= token.precision, 'invalid params')) {
-      const nbTokensToFillOrderRaw = api.BigNumber(price).multipliedBy(quantity);
+      // perform a few verifications
+      if (api.assert(token
+        && api.BigNumber(price).gt(0)
+        && countDecimals(price) <= HIVE_PEGGED_SYMBOL_PRESICION
+        && countDecimals(quantity) <= token.precision, 'invalid params')) {
+        const nbTokensToFillOrderRaw = api.BigNumber(price).multipliedBy(quantity);
 
-      if (api.assert(nbTokensToFillOrderRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
-        // initiate a transfer from sender to contract balance
-        // lock symbol tokens
-        const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
+        if (api.assert(nbTokensToFillOrderRaw.gte('0.00000001'), 'order cannot be placed as it cannot be filled')) {
+          // initiate a transfer from sender to contract balance
+          // lock symbol tokens
+          const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
 
-        if (res.errors === undefined
-          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
-          const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
-            .dividedBy(1000)
-            .toNumber();
+          if (res.errors === undefined
+            && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+            const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
+              .dividedBy(1000)
+              .toNumber();
 
-          // order
-          const order = {};
+            // order
+            const order = {};
 
-          order.txId = finalTxId;
-          order.timestamp = timestampSec;
-          order.account = finalAccount;
-          order.symbol = symbol;
-          order.quantity = api.BigNumber(quantity).toFixed(token.precision);
-          order.price = api.BigNumber(price).toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
-          order.priceDec = { $numberDecimal: order.price };
-          order.expiration = expiration === undefined || expiration > 2592000
-            ? timestampSec + 2592000
-            : timestampSec + expiration;
+            order.txId = finalTxId;
+            order.timestamp = timestampSec;
+            order.account = finalAccount;
+            order.symbol = symbol;
+            order.quantity = api.BigNumber(quantity).toFixed(token.precision);
+            order.price = api.BigNumber(price).toFixed(HIVE_PEGGED_SYMBOL_PRESICION);
+            order.priceDec = { $numberDecimal: order.price };
+            order.expiration = expiration === undefined || expiration > 2592000
+              ? timestampSec + 2592000
+              : timestampSec + expiration;
 
-          const orderInDb = await api.db.insert('sellBook', order);
+            const orderInDb = await api.db.insert('sellBook', order);
 
-          await findMatchingBuyOrders(orderInDb, token.precision);
+            await findMatchingBuyOrders(orderInDb, token.precision);
+          }
         }
       }
     }
@@ -986,7 +1002,7 @@ actions.marketBuy = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-
+  const ordersToFetch = 25;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
     return;
@@ -1016,7 +1032,7 @@ actions.marketBuy = async (payload) => {
         // get the orders that match the symbol and the price
         let sellOrderBook = await api.db.find('sellBook', {
           symbol,
-        }, 1000, offset,
+        }, ordersToFetch, offset,
         [
           { index: 'priceDec', descending: false },
           { index: '_id', descending: false },
@@ -1139,13 +1155,13 @@ actions.marketBuy = async (payload) => {
             inc += 1;
           }
 
-          offset += 1000;
+          offset += ordersToFetch;
 
           if (api.BigNumber(hiveRemaining).gt(0)) {
             // get the orders that match the symbol and the price
             sellOrderBook = await api.db.find('sellBook', {
               symbol,
-            }, 1000, offset,
+            }, ordersToFetch, offset,
             [
               { index: 'priceDec', descending: false },
               { index: '_id', descending: false },
@@ -1176,7 +1192,7 @@ actions.marketSell = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-
+  const ordersToFetch = 25;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
     return;
@@ -1206,7 +1222,7 @@ actions.marketSell = async (payload) => {
         // get the orders that match the symbol
         let buyOrderBook = await api.db.find('buyBook', {
           symbol,
-        }, 1000, offset,
+        }, ordersToFetch, offset,
         [
           { index: 'priceDec', descending: true },
           { index: '_id', descending: false },
@@ -1344,13 +1360,13 @@ actions.marketSell = async (payload) => {
             inc += 1;
           }
 
-          offset += 1000;
+          offset += ordersToFetch;
 
           if (api.BigNumber(tokensRemaining).gt(0)) {
             // get the orders that match the symbol and the price
             buyOrderBook = await api.db.find('buyBook', {
               symbol,
-            }, 1000, offset,
+            }, ordersToFetch, offset,
             [
               { index: 'priceDec', descending: true },
               { index: '_id', descending: false },
