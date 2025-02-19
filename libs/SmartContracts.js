@@ -1064,15 +1064,6 @@ class SmartContracts {
     });
     if (isMiningPower) {
       if (result !== null) {
-        //if (result.balances) {
-        //  Object.keys(result.balances).forEach(k => { result.balances[k] = deepConvertDecimal128(result.balances[k]); });
-        //}
-        //if (result.nftBalances) {
-        //  Object.keys(result.nftBalances).forEach(k => { result.nftBalances[k] = deepConvertDecimal128(result.nftBalances[k]); });
-        //}
-        //if (result.power) {
-        //  result.power['$numberDecimal'] = deepConvertDecimal128(result.power['$numberDecimal']);
-        //}
         if (result.equippedNfts) {
           delete result.equippedNfts;
         }
@@ -1121,15 +1112,6 @@ class SmartContracts {
     const isMiningPower = contractName === 'mining' && table === 'miningPower';
     if (isMiningPower) {
       if (record !== null) {
-        //if (record.balances) {
-        //  Object.keys(record.balances).forEach(k => { record.balances[k] = deepDeref(record.balances[k]); });
-        //}
-        //if (record.nftBalances) {
-        //  Object.keys(record.nftBalances).forEach(k => { record.nftBalances[k] = deepDeref(record.nftBalances[k]); });
-        //}
-        //if (record.power) {
-        //  record.power['$numberDecimal'] = deepDeref(record.power['$numberDecimal']);
-        //}
         if (record.equippedNfts) {
           delete record.equippedNfts;
         }
