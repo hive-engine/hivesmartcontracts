@@ -42,9 +42,11 @@ looping (though with transactions there is less risk of data corruption). Anothe
  that you may need to clear node processes after a stop if the process does not terminate on its own. 
 Otherwise it will interfere with logging.
 
+Also, with isolated-vm on node 20 and later, you will need to pass in --no-node-snapshot to node:
+
 E.g.
 ```
-pm2 start app.js --no-treekill --kill-timeout 10000 --no-autorestart
+pm2 start app.js --no-treekill --kill-timeout 10000 --no-autorestart --node-args="--no-node-snapshot"
 ```
 
 ### DB Backup and Restore
