@@ -550,12 +550,7 @@ class SmartContracts {
       vm = null;
     } else {
       // eslint-disable-next-line no-underscore-dangle
-      Object.keys(vm.vm._context).filter(key => key !== 'VMError' && key !== 'Buffer' && key !== 'api').forEach((key) => {
-        // eslint-disable-next-line no-underscore-dangle
-        delete vm.vm._context[key];
-      });
-      // eslint-disable-next-line no-underscore-dangle
-      vm.vm._context.api = {};
+      vm.vm.sandbox.global.api = {};
       vm.inUse = true;
     }
 
@@ -572,10 +567,10 @@ class SmartContracts {
           // eslint-disable-next-line no-underscore-dangle
           Object.keys(vmState.api).forEach((key) => {
             // eslint-disable-next-line no-underscore-dangle
-            vm.vm._context.api[key] = vmState.api[key];
+            vm.vm.sandbox.global.api[key] = vmState.api[key];
           });
           // eslint-disable-next-line no-underscore-dangle
-          vm.vm._context.done = (error) => {
+          vm.vm.sandbox.global.done = (error) => {
             vm.inUse = false;
             resolve(error);
           };
