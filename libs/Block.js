@@ -1,3 +1,4 @@
+const { performance } = require('perf_hooks');
 const SHA256 = require('crypto-js/sha256');
 const enchex = require('crypto-js/enc-hex');
 const log = require('loglevel');
@@ -244,6 +245,7 @@ class Block {
   }
 
   async processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash) {
+    const profStartTime  = performance.now();
     const {
       sender,
       contract,
@@ -303,6 +305,8 @@ class Block {
     transaction.databaseHash = newCurrentDatabaseHash; // eslint-disable-line
 
     transaction.calculateHash();
+    const profEndTime = performance.now();
+    log.info(`${contract}.${action} processed in ${profEndTime - profStartTime} ms`);
   }
 }
 
