@@ -130,7 +130,9 @@ async function producePendingTransactions(
             throw new Error(`Block mismatch with api \nMain: ${JSON.stringify(mainBlock, null, 2)}, \nThis: ${JSON.stringify(newBlock, null, 2)}`);
           }
         } catch (e) {
-          throw(e);
+          // Log and rethrow as generic Error to prevent any transactional retry
+          log.warn(e);
+          throw new Error("Error while procesing block");
         }
         log.info(`Transaction Callback finished for block ${newBlock.blockNumber}`);
       });
