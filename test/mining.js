@@ -170,7 +170,8 @@ async function finishPowerUpdate(poolId) {
   };
   let res = await fixture.database.findOne(poolQuery);
   let refBlockNumber;
-  while (res.updating.inProgress) {
+  let updateCount = 0;
+  while (res.updating.inProgress && updateCount < 20) {
     refBlockNumber = fixture.getNextRefBlockNumber();
     const block = {
       refHiveBlockNumber: refBlockNumber,
@@ -181,6 +182,7 @@ async function finishPowerUpdate(poolId) {
     };
     await fixture.sendBlock(block);
     res = await fixture.database.findOne(poolQuery);
+    updateCount++;
   }
 }
 
@@ -222,6 +224,7 @@ describe('mining', function () {
   afterEach((done) => {
       // runs after each test in this block
       new Promise(async (resolve) => {
+        fixture.tearDown();
         await db.dropDatabase()
         resolve();
       })
@@ -2467,5 +2470,4 @@ describe('mining', function () {
       });
 
   });
-
 });
