@@ -22,7 +22,7 @@ const GOVERNANCE_TOKEN_SYMBOL = "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'";
 // eslint-disable-next-line no-template-curly-in-string
 const GOVERNANCE_TOKEN_PRECISION = '${CONSTANTS.GOVERNANCE_TOKEN_PRECISION}$';
 // eslint-disable-next-line no-template-curly-in-string
-const GOVERNANCE_TOKEN_MIN_VALUE = '${CONSTANTS.GOVERNANCE_TOKEN_MIN_VALUE}$';
+const GOVERNANCE_TOKEN_MIN_VALUE = "'${CONSTANTS.GOVERNANCE_TOKEN_MIN_VALUE}$'";
 
 const recalcTotalEnabledApprovalWeight = async () => {
   let totalEnabledApprovalWeight = '0';
