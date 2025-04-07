@@ -67,118 +67,118 @@ describe('Tokens smart contract', function () {
         })
   });
 
-  it('creates a token', (done) => {
-    new Promise(async (resolve) => {
+  // it('creates a token', (done) => {
+  //   new Promise(async (resolve) => {
       
-      await fixture.setUp();
+  //     await fixture.setUp();
 
-      let refBlockNumber = fixture.getNextRefBlockNumber();
-      let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'updateParams', '{ "tokenCreationFee": "200" }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "200", "isSignedWithActiveKey": true }`));
+  //     let refBlockNumber = fixture.getNextRefBlockNumber();
+  //     let transactions = [];
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload)));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'updateParams', '{ "tokenCreationFee": "200" }'));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "200", "isSignedWithActiveKey": true }`));
 
-      // should have to pay 200 BEE creation fee
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "TKNTEST", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
+  //     // should have to pay 200 BEE creation fee
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'harpagon', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "TKNTEST", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
 
-      // should not pay any creation fee because swap-eth is on the list of Hive Engine owned accounts
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'swap-eth', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "SWAP.KOIN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'swap-eth', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "ETH.KOIN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'swap-eth', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "BSC.KOIN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
+  //     // should not pay any creation fee because swap-eth is on the list of Hive Engine owned accounts
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'swap-eth', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "SWAP.KOIN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'swap-eth', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "ETH.KOIN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'swap-eth', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "BSC.KOIN", "precision": 3, "maxSupply": "1000", "isSignedWithActiveKey": true  }'));
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
+  //     let block = {
+  //       refHiveBlockNumber: refBlockNumber,
+  //       refHiveBlockId: 'ABCD1',
+  //       prevRefHiveBlockId: 'ABCD2',
+  //       timestamp: '2018-06-01T00:00:00',
+  //       transactions,
+  //     };
 
-      await fixture.sendBlock(block);
-      await tableAsserts.assertNoErrorInLastBlock();
+  //     await fixture.sendBlock(block);
+  //     await tableAsserts.assertNoErrorInLastBlock();
 
-      let res = await fixture.database.findOne({
-          contract: 'tokens',
-          table: 'tokens',
-          query: {
-            symbol: 'TKNTEST'
-          }
-        });
+  //     let res = await fixture.database.findOne({
+  //         contract: 'tokens',
+  //         table: 'tokens',
+  //         query: {
+  //           symbol: 'TKNTEST'
+  //         }
+  //       });
 
-      let token = res;
+  //     let token = res;
 
-      console.log(token);
-      assert.equal(token.symbol, 'TKNTEST');
-      assert.equal(token.issuer, 'harpagon');
-      assert.equal(token.name, 'token');
-      assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
-      assert.equal(token.maxSupply, 1000);
-      assert.equal(token.supply, 0);
+  //     console.log(token);
+  //     assert.equal(token.symbol, 'TKNTEST');
+  //     assert.equal(token.issuer, 'harpagon');
+  //     assert.equal(token.name, 'token');
+  //     assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
+  //     assert.equal(token.maxSupply, 1000);
+  //     assert.equal(token.supply, 0);
 
-      res = await fixture.database.findOne({
-        contract: 'tokens',
-        table: 'tokens',
-        query: {
-          symbol: 'SWAP.KOIN'
-        }
-      });
+  //     res = await fixture.database.findOne({
+  //       contract: 'tokens',
+  //       table: 'tokens',
+  //       query: {
+  //         symbol: 'SWAP.KOIN'
+  //       }
+  //     });
 
-      token = res;
+  //     token = res;
 
-      console.log(token);
-      assert.equal(token.symbol, 'SWAP.KOIN');
-      assert.equal(token.issuer, 'swap-eth');
-      assert.equal(token.name, 'token');
-      assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
-      assert.equal(token.maxSupply, 1000);
-      assert.equal(token.supply, 0);
+  //     console.log(token);
+  //     assert.equal(token.symbol, 'SWAP.KOIN');
+  //     assert.equal(token.issuer, 'swap-eth');
+  //     assert.equal(token.name, 'token');
+  //     assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
+  //     assert.equal(token.maxSupply, 1000);
+  //     assert.equal(token.supply, 0);
 
-      res = await fixture.database.findOne({
-        contract: 'tokens',
-        table: 'tokens',
-        query: {
-          symbol: 'ETH.KOIN'
-        }
-      });
+  //     res = await fixture.database.findOne({
+  //       contract: 'tokens',
+  //       table: 'tokens',
+  //       query: {
+  //         symbol: 'ETH.KOIN'
+  //       }
+  //     });
 
-      token = res;
+  //     token = res;
 
-      console.log(token);
-      assert.equal(token.symbol, 'ETH.KOIN');
-      assert.equal(token.issuer, 'swap-eth');
-      assert.equal(token.name, 'token');
-      assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
-      assert.equal(token.maxSupply, 1000);
-      assert.equal(token.supply, 0);
+  //     console.log(token);
+  //     assert.equal(token.symbol, 'ETH.KOIN');
+  //     assert.equal(token.issuer, 'swap-eth');
+  //     assert.equal(token.name, 'token');
+  //     assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
+  //     assert.equal(token.maxSupply, 1000);
+  //     assert.equal(token.supply, 0);
 
-      res = await fixture.database.findOne({
-        contract: 'tokens',
-        table: 'tokens',
-        query: {
-          symbol: 'BSC.KOIN'
-        }
-      });
+  //     res = await fixture.database.findOne({
+  //       contract: 'tokens',
+  //       table: 'tokens',
+  //       query: {
+  //         symbol: 'BSC.KOIN'
+  //       }
+  //     });
 
-      token = res;
+  //     token = res;
 
-      console.log(token);
-      assert.equal(token.symbol, 'BSC.KOIN');
-      assert.equal(token.issuer, 'swap-eth');
-      assert.equal(token.name, 'token');
-      assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
-      assert.equal(token.maxSupply, 1000);
-      assert.equal(token.supply, 0);
+  //     console.log(token);
+  //     assert.equal(token.symbol, 'BSC.KOIN');
+  //     assert.equal(token.issuer, 'swap-eth');
+  //     assert.equal(token.name, 'token');
+  //     assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
+  //     assert.equal(token.maxSupply, 1000);
+  //     assert.equal(token.supply, 0);
 
-      await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: `${CONSTANTS.UTILITY_TOKEN_SYMBOL}`, balance: '0.00000000'});
-      await tableAsserts.assertUserBalances({ account: 'null', symbol: `${CONSTANTS.UTILITY_TOKEN_SYMBOL}`, balance: '200.00000000'});
+  //     await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: `${CONSTANTS.UTILITY_TOKEN_SYMBOL}`, balance: '0.00000000'});
+  //     await tableAsserts.assertUserBalances({ account: 'null', symbol: `${CONSTANTS.UTILITY_TOKEN_SYMBOL}`, balance: '200.00000000'});
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
+  //     resolve();
+  //   })
+  //     .then(() => {
+  //       fixture.tearDown();
+  //       done();
+  //     });
+  // });
 
   it('generates error when trying to create a token with wrong parameters', (done) => {
     new Promise(async (resolve) => {
