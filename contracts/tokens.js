@@ -423,7 +423,8 @@ actions.create = async (payload) => {
         await api.db.insert('tokens', newToken);
 
         // burn the token creation fees
-        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract) {
+
+        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract && callingContractInfo.name === 'burndollar') {
           await actions.transfer({
             to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: tokenCreationFee, isSignedWithActiveKey,
           });
