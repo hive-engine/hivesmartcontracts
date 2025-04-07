@@ -367,8 +367,8 @@ actions.create = async (payload) => {
 
   if (api.assert(authorizedCreation, 'you must have enough tokens to cover the creation fees')
     && api.assert(fromVerifiedContract || (isSignedWithActiveKey === true), 'you must use a custom_json signed with your active key')
-    && api.assert(name && typeof name === 'string', `${name}`)
-      && api.assert(symbol && typeof symbol === 'string'
+    && api.assert(name && typeof name === 'string'
+      && symbol && typeof symbol === 'string'
       && (url === undefined || (url && typeof url === 'string'))
       && ((precision && typeof precision === 'number') || precision === 0)
       && maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN(), 'invalid params')) {
@@ -424,12 +424,9 @@ actions.create = async (payload) => {
 
         // burn the token creation fees
         if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract) {
-          // if( callingContractInfo.name !== 'burndollars'){
           await actions.transfer({
             to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: tokenCreationFee, isSignedWithActiveKey,
           });
-        // }
-      }
         }
       }
     }
