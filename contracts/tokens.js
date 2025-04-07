@@ -51,6 +51,7 @@ const VERIFIED_ISSUERS = [
   'mining',
   'tokenfunds',
   'beedollar',
+  'burndollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
@@ -366,8 +367,8 @@ actions.create = async (payload) => {
 
   if (api.assert(authorizedCreation, 'you must have enough tokens to cover the creation fees')
     && api.assert(fromVerifiedContract || (isSignedWithActiveKey === true), 'you must use a custom_json signed with your active key')
-    && api.assert(name && typeof name === 'string'
-      && symbol && typeof symbol === 'string'
+    && api.assert(name && typeof name === 'string', `${name}`)
+      && api.assert(symbol && typeof symbol === 'string'
       && (url === undefined || (url && typeof url === 'string'))
       && ((precision && typeof precision === 'number') || precision === 0)
       && maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN(), 'invalid params')) {
@@ -387,7 +388,7 @@ actions.create = async (payload) => {
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('SWAP') === -1, 'invalid symbol: not allowed to use SWAP')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('ETH') === -1, 'invalid symbol: not allowed to use ETH')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('BSC') === -1, 'invalid symbol: not allowed to use BSC')
-      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1, 'invalid symbol: usage of "." is restricted')
+      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1 || callingContractInfo && callingContractInfo.name === 'burndollar', 'invalid symbol: usage of "." is restricted')
       && api.assert(api.validator.isAlphanumeric(api.validator.blacklist(name, ' ')) && name.length > 0 && name.length <= 50, 'invalid name: letters, numbers, whitespaces only, max length of 50')
       && api.assert(url === undefined || url.length <= 255, 'invalid url: max length of 255')
       && api.assert((precision >= 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
@@ -423,9 +424,12 @@ actions.create = async (payload) => {
 
         // burn the token creation fees
         if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract) {
+          // if( callingContractInfo.name !== 'burndollars'){
           await actions.transfer({
             to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: tokenCreationFee, isSignedWithActiveKey,
           });
+        // }
+      }
         }
       }
     }
