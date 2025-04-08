@@ -64,7 +64,7 @@ actions.updateParams = async (payload) => { //    this function will update the 
 
 actions.createTokenD = async (payload) => { // allow a token_owner to create the new D Token
   const { // not sure if I need name for blacklist or callingContractInfo
-    name, symbol, url, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertableAmount, feePercentage, icon, desc,
+    name, symbol, url, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertableAmount, feePercentage,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -142,6 +142,58 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         } catch (error) {
           // Handle any errors that occur during the await calls source is token.js
           console.error(error);
+        }
+      }
+    }
+  }
+};
+
+
+actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
+  const {
+
+    symbol,
+    name,
+    burnRouting,
+    feePercentage,
+    isSignedWithActiveKey,
+  } = payload;
+
+  const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
+  const finalName = name === undefined ? '' : name;
+
+  const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
+  if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
+    if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
+    && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
+    && api.assert(finalName && typeof finalName === 'string', 'token name must be string')
+    && api.assert(finalRouting && typeof finalRouting === 'string', 'burnrount must be string or null')
+    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
+    ) {
+      const token = await api.db.findOne('burnpair', { symbol });
+
+      api.assert(token !== null && token !== undefined, 'D token must exist');
+
+      if (token) {
+        if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
+          const params = await api.db.findOne('params', {});
+          const { updateParamsFee } = params;
+
+          const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
+
+          const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
+          if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
+            token.name = finalName;
+            token.burnRouting = finalRouting;
+            token.feePercentage = feePercentage;
+            await api.db.update('burnpair', token);
+
+            if (api.BigNumber(updateParamsFee).gt(0)) {
+              await api.executeSmartContract('tokens', 'transfer', {
+                to: 'null', symbol: 'BEED', quantity: updateParamsFee, isSignedWithActiveKey,
+              });
+            }
+          }
         }
       }
     }
