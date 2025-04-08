@@ -5,6 +5,33 @@
 /* eslint-disable no-continue */
 /* global actions, api */
 
+const countDecimals = value => api.BigNumber(value).dp();
+
+const verifyUtilityTokenBalance = async (account) => {
+  const beedParams = await api.db.findOne('params', {});
+  const { burnUsageFee } = beedParams;
+
+  if (api.BigNumber(burnUsageFee).lte(0)) {
+    return true;
+  }
+  const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: 'BEED' });
+  if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(burnUsageFee)) {
+    return true;
+  }
+  return false;
+};
+
+const verifyParentTokenBalance = async (account, amount, symbolFind) => {
+  if (api.BigNumber(amount).lte(0)) {
+    return true;
+  }
+  const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
+  if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(amount)) {
+    return true;
+  }
+  return false;
+};
+
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
@@ -208,21 +235,24 @@ actions.convert = async (payload) => {
     symbol, quantity, isSignedWithActiveKey,
   } = payload;
 
-  // const beedParams = await api.db.findOne('params', {});
-  // const { burnUsageFee } = beedParams;
-
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(quantity && typeof quantity === 'string' && !api.BigNumber(quantity).isNaN(), 'invalid params quantity')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')) {
     const parentPairParams = await api.db.findOne('burnpair', { parentSymbol: symbol });
     const qtyAsBigNum = api.BigNumber(quantity);
-
-    const stringThis = JSON.stringify(parentPairParams);
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
-      && api.assert(qtyAsBigNum.gte(parentPairParams.minConvertibleAmount), `amount to convert must be >= ${parentPairParams.minConvertibleAmount}`)) {
+      && api.assert(qtyAsBigNum.gte(parentPairParams.minConvertibleAmount), `amount to convert must be >= ${parentPairParams.minConvertibleAmount}`)
+    && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')) {
+      const hasEnoughBeedBalance = await verifyUtilityTokenBalance(api.sender);
+      if (!api.assert(hasEnoughBeedBalance, 'not enough BEED balance')) {
+        return false;
+      }
 
-
+      const hasEnoughParentBalance = await verifyParentTokenBalance(api.sender, quantity, symbol);
+      if (!api.assert(hasEnoughParentBalance, 'not enough parent token balance')) {
+        return false;
+      }
     }
   }
   // {

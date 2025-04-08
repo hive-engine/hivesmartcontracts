@@ -618,6 +618,14 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "123", "quantity" : "20", "isSignedWithActiveKey": true }'));
      //31 quant > min convert
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "-2", "isSignedWithActiveKey": true }'));
+     //32 quant precision mismatch
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "2.0004", "isSignedWithActiveKey": true }'));
+      //33 - 35 Not enough BEED
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "aggroed", "quantity": "980", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "1", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'aggroed', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "980", "isSignedWithActiveKey": true }'));
+      //36
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "201", "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -636,7 +644,7 @@ describe('burndollar', function () {
      let res2 = await fixture.database.findOne({
         contract: 'tokens',
         table: 'balances',
-        query: {account:'null', symbol: 'BEE'}
+        query: {account:'drewlongshot', symbol: 'URQTWO'}
       });
 
       let token = res2
@@ -645,27 +653,29 @@ describe('burndollar', function () {
      console.log( '\u001b[' + 93 + 'm' + 'Test: coverts token XXX to XXX.D' + '\u001b[0m')
   
 
+
+
+     console.log(token)
+
      res2 = await fixture.database.findOne({
-      contract: 'tokens',
-      table: 'balances',
-      query: {symbol: 'URQTWO'}
+      contract: 'marketpools',
+      table: 'pools',
+      query: {}
     });
-    
-    token = res2
-
-    // console.log(token)
 
 
+token = res2
 
-
-
-    // console.log(token)
+    console.log(token)
     // console.log(transactions[27])
     console.log("  ⚪",JSON.parse(transactionsBlock1[27].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[29].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[30].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
+    console.log("  ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0])
+    console.log("  ⚪",JSON.parse(transactionsBlock1[34].logs).errors[0])
+    console.log("  ⚪",JSON.parse(transactionsBlock1[36].logs).errors[0])
 
 
     assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'you must use a custom_json signed with your active key');
@@ -673,6 +683,11 @@ describe('burndollar', function () {
     assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string');
     assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'parent symbol must have a child .D token');
     assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], 'amount to convert must be >= 1');
+    assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], 'symbol precision mismatch');
+    assert.equal(JSON.parse(transactionsBlock1[34].logs).errors[0], 'not enough BEED balance');
+    assert.equal(JSON.parse(transactionsBlock1[36].logs).errors[0], 'not enough parent token balance');
+
+
 
       resolve();
     
