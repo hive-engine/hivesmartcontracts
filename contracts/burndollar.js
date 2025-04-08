@@ -5,6 +5,7 @@
 /* eslint-disable no-continue */
 /* global actions, api */
 
+
 const countDecimals = value => api.BigNumber(value).dp();
 
 const verifyUtilityTokenBalance = async (account) => {
@@ -27,6 +28,17 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
   }
   const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
   if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(amount)) {
+    return true;
+  }
+  return false;
+};
+
+
+const verifyMarketPools = async () => {
+//   // const childToken = `${parentSymbol}.D`;
+
+  const utilityTokenBalance = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: '' });
+  if (utilityTokenBalance) {
     return true;
   }
   return false;
@@ -243,14 +255,21 @@ actions.convert = async (payload) => {
     const qtyAsBigNum = api.BigNumber(quantity);
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
       && api.assert(qtyAsBigNum.gte(parentPairParams.minConvertibleAmount), `amount to convert must be >= ${parentPairParams.minConvertibleAmount}`)
-    && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')) {
+      && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')) {
       const hasEnoughBeedBalance = await verifyUtilityTokenBalance(api.sender);
+
       if (!api.assert(hasEnoughBeedBalance, 'not enough BEED balance')) {
         return false;
       }
 
       const hasEnoughParentBalance = await verifyParentTokenBalance(api.sender, quantity, symbol);
       if (!api.assert(hasEnoughParentBalance, 'not enough parent token balance')) {
+        return false;
+      }
+
+
+      const hasEnoughMarketPool = await verifyMarketPools();
+      if (!api.assert(hasEnoughMarketPool, 'not enough tokens in market pools')) {
         return false;
       }
     }
