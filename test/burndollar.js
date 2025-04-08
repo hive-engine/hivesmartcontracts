@@ -158,7 +158,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "URQTEST", "precision": 3, "maxSupply": "10000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTEST", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       //trans #26 does user have enough BEED enough tes ... trans28 signed active key test
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": ".5", "minConvertableAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "5000.0", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": ".5","minConvertableAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": false }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": 156, "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
@@ -298,38 +298,84 @@ describe('burndollar', function () {
        const res = await fixture.database.getBlockInfo(1);
 
      const block1 = res;
-    const transactionsBlock1 = block1.transactions;
+     const transactionsBlock1 = block1.transactions;
 
-  
-
-     res2 = await fixture.database.find({
+     let res2 = await fixture.database.findOne({
         contract: 'tokens',
         table: 'balances',
-        query: {account:'null'}
+        query: {account:'null', symbol: 'BEE'}
       });
 
       let token = res2
 
      console.log(" ")
      console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D tokencreates a D token' + '\u001b[0m')
- console.log(token)
-    console.log("  ⚪",JSON.parse(transactionsBlock1[26].logs),"... ") 
-   // console.log(token)
-  //  console.log(transactions[26])
-   // console.log(token)
-    // await tableAsserts.assertUserBalances({ account: 'null', symbol: `${CONSTANTS.UTILITY_TOKEN_SYMBOL}`, balance: '2100.00000000'});
-//      //console.log(res2)
-//     //  console.log(res4)
+     console.log (token)
+     assert.equal(token.symbol, 'BEE');
+     assert.equal(token.balance, '2100.00000000');
 
-     
+     res2 = await fixture.database.findOne({
+      contract: 'tokens',
+      table: 'balances',
+      query: {account:'null', symbol: 'BEED'}
+    });
 
-//     //console.log(`  ⚪ It creates my token ${res4.symbol}`), 
-//     //  assert.equal(res.symbol, 'URQTEST.D')
-//     //  assert.equal(res.issuer, 'drewlongshot')
-//     //  assert.equal(res.name, 'mynamissocool')
-//     //  assert.equal(JSON.parse(res.metadata).url, 'wickedhoturlhere');
-//     //  assert.equal(res.maxSupply, 20000)
-//     //  assert.equal(res.supply, 0)
+     token = res2
+     console.log(token)
+     assert.equal(token.symbol, 'BEED');
+     assert.equal(token.balance, '1000.0000');
+
+     res2 = await fixture.database.findOne({
+      contract: 'tokens',
+      table: 'tokens',
+      query: {symbol: 'URQTWO'}
+    });
+    
+    token = res2
+
+    console.log(token)
+    assert.equal(token.symbol, 'URQTWO');
+    assert.equal(token.issuer, 'drewlongshot');
+    assert.equal(token.name, 'token');
+    assert.equal(JSON.parse(token.metadata).url, 'https://token.com');
+    // !! why do I need to pass a string but mancer can pass a number?
+    assert.equal(token.maxSupply,  '20000.000');
+    assert.equal(token.supply,  '200.000');
+
+
+    res2 = await fixture.database.findOne({
+      contract: 'tokens',
+      table: 'tokens',
+      query: {symbol: 'URQTWO.D'}
+    });
+    
+    token = res2
+
+    console.log(token)
+    assert.equal(token.symbol, 'URQTWO.D');
+    assert.equal(token.issuer, 'null');
+    assert.equal(token.name, 'token');
+    assert.equal(token.precision, 2);
+    // !! why do I need to pass a string but mancer can pass a number?
+    assert.equal(token.maxSupply,  '20000.00');
+    assert.equal(token.supply, '0');
+
+    res2 = await fixture.database.findOne({
+      contract: 'burndollar',
+      table: 'burnpair',
+      query: {}
+    });
+    
+    token = res2
+
+    console.log(token)
+    assert.equal(token.symbol, 'URQTWO.D');
+    assert.equal(token.issuer, 'drewlongshot')
+    assert.equal(token.name, 'token');
+    assert.equal(token.parentSymbol,'URQTWO')
+    assert.equal(token.burnRouting, 'null')
+    assert.equal(token.minConvertableAmount,'1')
+    assert.equal(token.feePercentage,'.5')
 
 
 

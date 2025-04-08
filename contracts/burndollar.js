@@ -81,7 +81,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
     // ensure the user issuing D token is owner of the parent pair token
     const tokenIssuer = await api.db.findOneInTable('tokens', 'tokens', { issuer: api.sender, symbol });
 
-    const finalRouting = burnRouting === undefined ? null : burnRouting;
+    const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
     if (api.assert(tokenIssuer !== null, 'You must be the token issuer in order to issue D token')
     && api.assert(finalRouting === null || (typeof finalRouting === 'string'), 'burn routing must be string')
     && api.assert(minConvertableAmount && typeof minConvertableAmount === 'string' && !api.BigNumber(minConvertableAmount).isNaN() && api.BigNumber(minConvertableAmount).gte(1), 'min convert amount must be string(number) greater than 1')
@@ -95,38 +95,40 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         && api.assert(tokenDExists === null, 'D token must not already exist')
       ) {
         try {
-          const finalname = name === undefined ? '' : name;
-          await api.executeSmartContract('tokens', 'create', {
-            issuer: api.sender, isSignedWithActiveKey, name: finalname, symbol: dsymbol, precision, maxSupply,
-          });
-
-
           const finalUrl = url === undefined ? '' : url;
-          const finalicon = icon === undefined ? '' : icon;
-          const finaldesc = desc === undefined ? '' : desc;
-          const meta = {
+          const finalname = name === undefined ? '' : name;
+          let metadata = {
             url: finalUrl,
-            icon: finalicon,
-            desc: finaldesc,
           };
+          metadata = JSON.stringify(metadata);
 
-          const updateDataMeta = {
+          const newToken = {
+            issuer: api.sender,
             symbol: dsymbol,
-            metadata: meta,
+            name: finalname,
+            metadata,
+            precision,
+            maxSupply: api.BigNumber(maxSupply).toFixed(precision),
+            supply: '0',
+            circulatingSupply: '0',
+            stakingEnabled: false,
+            unstakingCooldown: 1,
+            delegationEnabled: false,
+            undelegationCooldown: 0,
           };
 
-          await api.executeSmartContract('tokens', 'updateMetadata', updateDataMeta);
+          // !! Not sure as owner is a good idea, this we the easiest way I could find a way to bypass a 100 bee fee on token creation
+          await api.executeSmartContractAsOwner('tokens', 'create', newToken);
 
 
           const burnPairParams = {
             issuer: api.sender,
             symbol: dsymbol,
-            finalname,
+            name: finalname,
             parentSymbol: symbol,
             burnRouting: finalRouting,
             minConvertableAmount,
             feePercentage,
-            callingContractInfo: 'burndollar',
           };
 
           await api.db.insert('burnpair', burnPairParams);

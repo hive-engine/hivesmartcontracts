@@ -51,7 +51,6 @@ const VERIFIED_ISSUERS = [
   'mining',
   'tokenfunds',
   'beedollar',
-  'burndollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
@@ -388,7 +387,7 @@ actions.create = async (payload) => {
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('SWAP') === -1, 'invalid symbol: not allowed to use SWAP')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('ETH') === -1, 'invalid symbol: not allowed to use ETH')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('BSC') === -1, 'invalid symbol: not allowed to use BSC')
-      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1 || callingContractInfo && callingContractInfo.name === 'burndollar', 'invalid symbol: usage of "." is restricted')
+      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1 || (callingContractInfo && callingContractInfo.name === 'burndollar'), 'invalid symbol: usage of "." is restricted')
       && api.assert(api.validator.isAlphanumeric(api.validator.blacklist(name, ' ')) && name.length > 0 && name.length <= 50, 'invalid name: letters, numbers, whitespaces only, max length of 50')
       && api.assert(url === undefined || url.length <= 255, 'invalid url: max length of 255')
       && api.assert((precision >= 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
@@ -404,6 +403,9 @@ actions.create = async (payload) => {
           url: finalUrl,
         };
 
+        if (callingContractInfo && callingContractInfo.name === 'burndollar' && api.sender === 'hive-engine') {
+          api.sender = 'null';
+        }
         metadata = JSON.stringify(metadata);
         const newToken = {
           issuer: fromVerifiedContract ? 'null' : api.sender,
@@ -423,8 +425,7 @@ actions.create = async (payload) => {
         await api.db.insert('tokens', newToken);
 
         // burn the token creation fees
-
-        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract && callingContractInfo.name === 'burndollar') {
+        if (api.BigNumber(tokenCreationFee).gt(0) && heAccounts[api.sender] === undefined && !fromVerifiedContract) {
           await actions.transfer({
             to: 'null', symbol: "'${CONSTANTS.UTILITY_TOKEN_SYMBOL}$'", quantity: tokenCreationFee, isSignedWithActiveKey,
           });
