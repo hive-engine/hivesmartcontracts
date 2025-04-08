@@ -167,7 +167,8 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
     && api.assert(finalName && typeof finalName === 'string', 'token name must be string')
-    && api.assert(finalRouting && typeof finalRouting === 'string', 'burnrount must be string or null')
+    && api.assert(api.validator.isAlphanumeric(api.validator.blacklist(finalName, ' ')) && finalName.length > 0 && finalName.length <= 50, 'invalid name: letters, numbers, whitespaces only, max length of 50')
+    && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
     && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
       const token = await api.db.findOne('burnpair', { symbol });
