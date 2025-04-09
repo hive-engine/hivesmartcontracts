@@ -443,7 +443,8 @@ actions.issue = async (payload) => {
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
-      || (callingContractInfo && callingContractInfo.name === 'beedollar');
+      || (callingContractInfo && callingContractInfo.name === 'beedollar')
+      || (callingContractInfo && callingContractInfo.name === 'burndollar');
 
   if (fromVerifiedContract
     || (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')

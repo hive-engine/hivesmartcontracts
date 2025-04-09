@@ -115,7 +115,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
   if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8, 'symbol must be string of length 8 or less to create a xxx-D token')
-  && api.assert((url === undefined || (url && typeof url === 'string')), 'url must be string')
   ) {
     // ensure the user issuing D token is owner of the parent pair token
     const tokenIssuer = await api.db.findOneInTable('tokens', 'tokens', { issuer: api.sender, symbol });
