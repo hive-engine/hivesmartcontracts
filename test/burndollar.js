@@ -728,6 +728,7 @@ it('it coverts XXX to XXX.D', (done) => {
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "20000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
     // BEE should still be 2100 burned and BEED should be at 1000
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+    //trans 27 pool?
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "2000", "isSignedWithActiveKey": true }'));
 
     let block = {
@@ -766,10 +767,10 @@ it('it coverts XXX to XXX.D', (done) => {
     query: {}
   });
 
-  token = res2
+  // token = res2
 
-  console.log (token)
-
+  // console.log (token)
+  console.log("  ⚪",JSON.parse(transactionsBlock1[27].logs).errors[0])
    
     resolve();
   

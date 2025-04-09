@@ -34,12 +34,14 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
 };
 
 
-const verifyMarketPools = async () => {
-//   // const childToken = `${parentSymbol}.D`;
+const verifyMarketPools = async (parentSymbol) => {
+  const stableToken = ['SWAP.USDT', 'SWAP.HBD', 'SWAP.DAI', 'SWAP.USDC'];
 
-  const utilityTokenBalance = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: '' });
+  const childSymbol = `${parentSymbol}.D`;
+  //   // const childToken = `${parentSymbol}.D`;
+  const utilityTokenBalance = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: 'SWAP.HIVE:BEE' });
   if (utilityTokenBalance) {
-    return true;
+    return utilityTokenBalance;
   }
   return false;
 };
@@ -268,66 +270,10 @@ actions.convert = async (payload) => {
       }
 
 
-      const hasEnoughMarketPool = await verifyMarketPools();
-      if (!api.assert(hasEnoughMarketPool, 'not enough tokens in market pools')) {
+      const hasEnoughMarketPool = await verifyMarketPools(symbol);
+      if (!api.assert(hasEnoughMarketPool === 2, JSON.stringify(hasEnoughMarketPool))) {
         return false;
       }
     }
   }
-  // {
-  //   const qtyAsBigNum = api.BigNumber(quantity);
-  //   if (api.assert(qtyAsBigNum.gte(params.minConvertibleAmount), `amount to convert must be >= ${params.minConvertibleAmount}`)
-  //     && api.assert(countDecimals(quantity) <= UTILITY_TOKEN_PRECISION, 'symbol precision mismatch')) {
-  //     const hasEnoughBalance = await verifyUtilityTokenBalance(quantity, api.sender);
-  //     if (!api.assert(hasEnoughBalance, 'not enough balance')) {
-  //       return false;
-  //     }
-
-  //     //     // subtract the conversion fee from the amount to be converted
-  //     const feePercentage = api.BigNumber(params.feePercentage);
-  //     let fee = '0';
-  //     let finalQty = qtyAsBigNum;
-  //     if (feePercentage.gt(0)) {
-  //       fee = qtyAsBigNum.multipliedBy(feePercentage).toFixed(UTILITY_TOKEN_PRECISION, api.BigNumber.ROUND_UP);
-
-  //       if (api.BigNumber(fee).lt('0.00000001')) {
-  //         fee = '0.00000001';
-  //       }
-
-  //       finalQty = qtyAsBigNum.minus(fee);
-  //     }
-
-  //     // calculate BEE price in dollars based on high liquidity Diesel Pools
-  //     // need to do it this way as we can't access external price oracles from the smart contracts system
-  //     const beePool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: 'SWAP.HIVE:BEE' });
-  //     const hbdPool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: 'SWAP.HIVE:SWAP.HBD' });
-  //     const beePriceInHive = (beePool && beePool.quotePrice) ? beePool.quotePrice : '0';
-  //     const hivePriceInHBD = (hbdPool && hbdPool.basePrice) ? hbdPool.basePrice : '0';
-  //     const beePriceInDollars = api.BigNumber(beePriceInHive).multipliedBy(hivePriceInHBD).toFixed(UTILITY_TOKEN_PRECISION, api.BigNumber.ROUND_DOWN);
-
-  //     // calculate how much BEED should be issued
-  //     const beedToIssue = finalQty.multipliedBy(beePriceInDollars).toFixed(BEED_PRECISION, api.BigNumber.ROUND_DOWN);
-  //     if (!api.assert(api.BigNumber(beedToIssue).gte('0.0001'), `resulting token issuance is too small; BEE price is ${beePriceInDollars}`)) {
-  //       return false;
-  //     }
-
-  //     // burn the tokens to be converted
-  //     if (!(await burnUtilityTokens(quantity, isSignedWithActiveKey))) {
-  //       return false;
-  //     }
-
-  //     // finally, issue the new BEED
-  //     await api.executeSmartContract('tokens', 'issue', {
-  //       to: api.sender, symbol: 'BEED', quantity: beedToIssue,
-  //     });
-
-  //     api.emit('beeConversion', {
-  //       to: api.sender, fee, bee: finalQty.toFixed(UTILITY_TOKEN_PRECISION), beed: beedToIssue, beePriceInUSD: beePriceInDollars,
-  //     });
-
-  //     return true;
-  //   }
-  // }
-
-  // return false;
 };
