@@ -728,7 +728,11 @@ it('it coverts XXX to XXX.D', (done) => {
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "20000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
     // BEE should still be 2100 burned and BEED should be at 1000
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
-    //trans 27 pool?
+    //trans 27 + 28 make pools
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "URQTWO:URQTWO.D", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "URQTWO.D:SWAP.HBD", "isSignedWithActiveKey": true }'));
+   
+   //29 results
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "2000", "isSignedWithActiveKey": true }'));
 
     let block = {
@@ -758,7 +762,7 @@ it('it coverts XXX to XXX.D', (done) => {
 
    console.log(" ")
    console.log( '\u001b[' + 93 + 'm' + 'Test: it coverts XXX to XXX.D' + '\u001b[0m')
-   console.log (token)
+   //console.log (token)
 
 
    res2 = await fixture.database.find({
@@ -767,10 +771,11 @@ it('it coverts XXX to XXX.D', (done) => {
     query: {}
   });
 
-  // token = res2
+   token = res2
 
-  // console.log (token)
-  console.log("  ⚪",JSON.parse(transactionsBlock1[27].logs).errors[0])
+  console.log (token)
+  //console.log("  ⚪",transactions[28])
+  console.log("  ⚪",JSON.parse(transactionsBlock1[29].logs))
    
     resolve();
   

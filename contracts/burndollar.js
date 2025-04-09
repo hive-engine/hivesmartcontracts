@@ -34,17 +34,67 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
 };
 
 
-const verifyMarketPools = async (parentSymbol) => {
-  const stableToken = ['SWAP.USDT', 'SWAP.HBD', 'SWAP.DAI', 'SWAP.USDC'];
-
-  const childSymbol = `${parentSymbol}.D`;
-  //   // const childToken = `${parentSymbol}.D`;
-  const utilityTokenBalance = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: 'SWAP.HIVE:BEE' });
-  if (utilityTokenBalance) {
-    return utilityTokenBalance;
-  }
-  return false;
+const calcPoolValue = async (parentSymbol) => {
 };
+
+
+const findMarketPools = async (parentSymbol) => {
+  // Create the child symbol
+  const childSymbol = `${parentSymbol}.D`;
+
+  // Define parent-child token pairs
+  const parentPair = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
+
+  try {
+    // Query the database for each token pair and associate results with elements
+    const results = await Promise.all(
+      parentPair.map(async (element) => {
+        const parentChildPool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: element });
+        return parentChildPool ? { element, pool: parentChildPool } : null; // Include element with pool data
+      }),
+    );
+
+    // Filter out null values and return elements with valid results
+    return results.filter(result => result !== null).map(result => result.element);
+  } catch (error) {
+    console.error(`Error verifying market pools: ${error.message}`);
+    return []; // Return an empty array if an error occurs
+  }
+};
+
+const findStableMarketPools = async (parentSymbol) => {
+  // Create the child symbol
+  const childSymbol = `${parentSymbol}.D`;
+
+  // Define parent-child token pairs
+  const parentPairArray = [`${parentSymbol}`, `${childSymbol}`];
+
+  // Define Stable coins
+  const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
+
+
+  // create array of market pools a user could create for a  stable coin / XXX or XXX.D
+  const stableResults = parentPairArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
+    `${sElement}:${pElement}`,
+    `${pElement}:${sElement}`,
+  ]));
+
+  try {
+    const results = await Promise.all(
+      stableResults.map(async (element) => {
+        const stablePool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: element });
+        return stablePool ? element : null; // Return the element directly if a pool is found
+      }),
+    );
+
+    // Return the valid elements
+    return results.filter(Boolean); // Remove null or undefined values
+  } catch (error) {
+    console.error(`Error verifying market pools: ${error.message}`);
+    return []; // Return an empty array if an error occurs
+  }
+};
+
 
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
@@ -270,8 +320,13 @@ actions.convert = async (payload) => {
       }
 
 
-      const hasEnoughMarketPool = await verifyMarketPools(symbol);
-      if (!api.assert(hasEnoughMarketPool === 2, JSON.stringify(hasEnoughMarketPool))) {
+      const hasEnoughMarketPool = await findMarketPools(symbol);
+      if (api.assert(hasEnoughMarketPool === null, JSON.stringify(hasEnoughMarketPool))) {
+        return false;
+      }
+
+      const hasEnoughStableMarketPool = await findStableMarketPools(symbol);
+      if (api.assert(hasEnoughStableMarketPool === null, JSON.stringify(hasEnoughStableMarketPool))) {
         return false;
       }
     }
