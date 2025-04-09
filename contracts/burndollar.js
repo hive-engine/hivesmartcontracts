@@ -33,6 +33,18 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
   return false;
 };
 
+const checkStablePosition = (tokenPair) => {
+  const [firstToken, secondToken] = tokenPair.split(':'); // Split the token pair by ":"
+
+  const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
+  // Check if the stable pair is before or after the colon
+  if (stablePairArray.includes(firstToken)) {
+    return 'base'; // Stable coin is before the colon in the marketpool and therefore is the quote price
+  } if (stablePairArray.includes(secondToken)) {
+    return 'quote'; // Stable coin is after the colon and in the market pool and therefore the base price
+  }
+  return stablePairArray; // No stable pair found in the token pair
+};
 
 const findStablePools = async (parentSymbol) => {
   // define child symbol
@@ -67,28 +79,41 @@ const findStablePools = async (parentSymbol) => {
     console.error(`Error verifying market pools: ${error.message}`);
   }
 };
+
 const findMarketPools = async (parentSymbol) => {
+  // Validate parentSymbol
+  if (!parentSymbol) {
+    return false;
+  }
+
   // Create the child symbol
   const childSymbol = `${parentSymbol}.D`;
 
   // Define parent-child token pairs
   const parentPair = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
 
-
   try {
-    // Query the database for each token pair and associate results with elements
+    // Query the database for each token pair and associate results with pool data
     const results = await Promise.all(
-      parentPair.map(async (element) => {
-        const parentChildPool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: element });
-        return parentChildPool ? { element, pool: parentChildPool } : null; // Include element with pool data
+      parentPair.map(async (tokenPair) => {
+        const parentChildPool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair });
+        // If the pool is found, return an object with tokenPair, basePrice, and quotePrice
+        return parentChildPool
+          ? {
+            tokenPair,
+            basePrice: parentChildPool.basePrice || '0', // Ensure basePrice exists, or set to null
+            quotePrice: parentChildPool.quotePrice || '0', // Ensure quotePrice exists, or set to null
+          }
+          : null; // Return null for invalid pools
       }),
     );
 
-    const returnResult = results.filter(result => result !== null).map(result => result.element);
-    return returnResult;
-    // Filter out null values and return elements with valid results
+    // Filter out null values and return valid objects
+    const validPools = results.filter(Boolean);
+    return validPools; // Return array of objects with valid pools
   } catch (error) {
-    console.error(`Error verifying market pools: ${error.message}`);
+    console.error(`Error verifying market pools for ${parentSymbol}: ${error.message}`);
+    return []; // Return an empty array in case of error
   }
 };
 
@@ -291,7 +316,7 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
 };
 
 
-actions.convert = async (payload) => {
+actions.convert = async (payload) => { // allows any user who has parent token to convert to xxx.D token given there is suffcient marketpools
   const {
     symbol, quantity, isSignedWithActiveKey,
   } = payload;
@@ -312,30 +337,13 @@ actions.convert = async (payload) => {
 
       if (api.assert(hasEnoughBeedBalance, 'not enough BEED balance')
           && api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
-          && api.assert(hasEnoughMarketPool, 'token must be in marketpool with token.D')
+          && api.assert(!hasEnoughMarketPool, JSON.stringify(hasEnoughMarketPool[0]))
           && api.assert(hasEnoughStablePool, 'stable coin marketpool is needed')) {
-        return false;
+        const quoteOrBase = checkStablePosition(hasEnoughStablePool[0]);
+
+
+        api.assert(!quoteOrBase, quoteOrBase);
       }
-
-
-      // const checkStablePosition = (tokenPair) => {
-      //   const [firstToken, secondToken] = tokenPair.split(':'); // Split the token pair by ":"
-
-      //   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
-      //   // Check if the stable pair is before or after the colon
-      //   if (stablePairArray.includes(firstToken)) {
-      //     return 'before'; // Stable coin is before the colon
-      //   } if (stablePairArray.includes(secondToken)) {
-      //     return 'after'; // Stable coin is after the colon
-      //   }
-      //   return stablePairArray; // No stable pair found in the token pair
-      // };
-
-      // const result = checkStablePosition(hasEnoughStablePool[0]);
-
-
-      // api.assert(hasEnoughStablePool, result);
-      // }
     }
   }
 };
