@@ -774,8 +774,8 @@ it('it coverts XXX to XXX.D', (done) => {
    token = res2
 
   console.log (token)
-  //console.log("  ⚪",transactions[28])
-  console.log("  ⚪",JSON.parse(transactionsBlock1[29].logs))
+   console.log("  ⚪",transactions[29].logs)
+   console.log("  ⚪",JSON.parse(transactionsBlock1[29].logs))
    
     resolve();
   

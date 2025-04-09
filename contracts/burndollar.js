@@ -26,8 +26,8 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
   if (api.BigNumber(amount).lte(0)) {
     return true;
   }
-  const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
-  if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(amount)) {
+  const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
+  if (parentTokenBalance && api.BigNumber(parentTokenBalance.balance).gte(amount)) {
     return true;
   }
   return false;
@@ -38,11 +38,12 @@ const findStablePools = async (parentSymbol) => {
   // define child symbol
   const childSymbol = `${parentSymbol}.D`;
 
+  const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
+
   // Define parent-child token pairs
   const parentPairArray = [`${parentSymbol}`, `${childSymbol}`];
 
   // Define Stable coins
-  const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
 
   // create array of market pools a user could create for a  stable coin / XXX or XXX.D
@@ -83,7 +84,8 @@ const findMarketPools = async (parentSymbol) => {
       }),
     );
 
-    return results.filter(result => result !== null).map(result => result.element);
+    const returnResult = results.filter(result => result !== null).map(result => result.element);
+    return returnResult;
     // Filter out null values and return elements with valid results
   } catch (error) {
     console.error(`Error verifying market pools: ${error.message}`);
@@ -304,25 +306,36 @@ actions.convert = async (payload) => {
       && api.assert(qtyAsBigNum.gte(parentPairParams.minConvertibleAmount), `amount to convert must be >= ${parentPairParams.minConvertibleAmount}`)
       && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')) {
       const hasEnoughBeedBalance = await verifyUtilityTokenBalance(api.sender);
-
-      if (!api.assert(hasEnoughBeedBalance, 'not enough BEED balance')) {
-        return false;
-      }
-
       const hasEnoughParentBalance = await verifyParentTokenBalance(api.sender, quantity, symbol);
-      if (!api.assert(hasEnoughParentBalance, 'not enough parent token balance')) {
-        return false;
-      }
-
       const hasEnoughMarketPool = await findMarketPools(symbol);
-      if (api.assert(hasEnoughMarketPool === null, JSON.stringify(hasEnoughMarketPool))) {
+      const hasEnoughStablePool = await findStablePools(symbol);
+
+      if (api.assert(hasEnoughBeedBalance, 'not enough BEED balance')
+          && api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
+          && api.assert(hasEnoughMarketPool, 'token must be in marketpool with token.D')
+          && api.assert(hasEnoughStablePool, 'stable coin marketpool is needed')) {
         return false;
       }
 
-      const hasEnoughStablePool = await findStablePools(symbol);
-      if (api.assert(hasEnoughStablePool === null, JSON.stringify(hasEnoughStablePool))) {
-        return false;
-      }
+
+      // const checkStablePosition = (tokenPair) => {
+      //   const [firstToken, secondToken] = tokenPair.split(':'); // Split the token pair by ":"
+
+      //   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
+      //   // Check if the stable pair is before or after the colon
+      //   if (stablePairArray.includes(firstToken)) {
+      //     return 'before'; // Stable coin is before the colon
+      //   } if (stablePairArray.includes(secondToken)) {
+      //     return 'after'; // Stable coin is after the colon
+      //   }
+      //   return stablePairArray; // No stable pair found in the token pair
+      // };
+
+      // const result = checkStablePosition(hasEnoughStablePool[0]);
+
+
+      // api.assert(hasEnoughStablePool, result);
+      // }
     }
   }
 };
