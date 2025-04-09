@@ -173,7 +173,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           });
 
 
-          // burn BEED at from the burndollar_ params table
+          // burn BEED at the rate specified from the burndollar_ params table
           if (api.BigNumber(issueDTokenFee).gt(0)) {
             await api.executeSmartContract('tokens', 'transfer', {
               to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
