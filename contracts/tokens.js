@@ -51,6 +51,7 @@ const VERIFIED_ISSUERS = [
   'mining',
   'tokenfunds',
   'beedollar',
+  'burndollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
@@ -353,7 +354,8 @@ actions.create = async (payload) => {
 
   const fromVerifiedContract = (api.sender === 'hive-engine'
       && callingContractInfo
-      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1
+      || (callingContractInfo && callingContractInfo.name === 'burndollar'));
 
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
   const utilityTokenBalance = fromVerifiedContract
@@ -403,9 +405,7 @@ actions.create = async (payload) => {
           url: finalUrl,
         };
 
-        if (callingContractInfo && callingContractInfo.name === 'burndollar' && api.sender === 'hive-engine') {
-          api.sender = 'null';
-        }
+
         metadata = JSON.stringify(metadata);
         const newToken = {
           issuer: fromVerifiedContract ? 'null' : api.sender,

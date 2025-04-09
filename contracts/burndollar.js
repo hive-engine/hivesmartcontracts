@@ -156,8 +156,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
             undelegationCooldown: 0,
           };
 
-          // !! Not sure as owner is a good idea, this we the easiest way I could find a way to bypass a 100 bee fee on token creation
-          await api.executeSmartContractAsOwner('tokens', 'create', newToken);
+          await api.executeSmartContract('tokens', 'create', newToken);
 
 
           const burnPairParams = {
