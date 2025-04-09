@@ -103,7 +103,7 @@ actions.updateParams = async (payload) => { //    this function will update the 
 
 actions.createTokenD = async (payload) => { // allow a token_owner to create the new D Token
   const { // not sure if I need name for blacklist or callingContractInfo
-    name, symbol, url, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertibleAmount, feePercentage,
+    name, symbol, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertibleAmount, feePercentage,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -125,7 +125,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
     && api.assert(finalRouting === null || (typeof finalRouting === 'string'), 'burn routing must be string')
     && api.assert(minConvertibleAmount && typeof minConvertibleAmount === 'string' && !api.BigNumber(minConvertibleAmount).isNaN() && api.BigNumber(minConvertibleAmount).gte(1), 'min convert amount must be string(number) greater than 1')
     && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
-    && api.assert(maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN() && api.BigNumber(maxSupply).gte(2000), 'max supply must be a minimum of 2000 units')
+    && api.assert(maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN() && api.BigNumber(maxSupply).gte(1000), 'max supply must be a minimum of 1000 units')
     ) {
       const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
       const dsymbol = `${symbol}.D`;
@@ -134,18 +134,14 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         && api.assert(tokenDExists === null, 'D token must not already exist')
       ) {
         try {
-          const finalUrl = url === undefined ? '' : url;
           const finalname = name === undefined ? '' : name;
-          let metadata = {
-            url: finalUrl,
-          };
+
           metadata = JSON.stringify(metadata);
 
           const newToken = {
             issuer: api.sender,
             symbol: dsymbol,
             name: finalname,
-            metadata,
             precision,
             maxSupply: api.BigNumber(maxSupply).toFixed(precision),
             supply: '0',
