@@ -746,15 +746,30 @@ it('it coverts XXX to XXX.D', (done) => {
 
    let res2 = await fixture.database.find({
       contract: 'tokens',
-      table: 'tokens',
-      query: {symbol:'URQTWO.D'}
+      table: 'balances',
+      query: {
+       account:'drewlongshot', 
+       symbol: { $in: ['URQTWO', 'URQTWO.D']},
+      }
     });
 
     let token = res2
 
    console.log(" ")
-   console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D tokencreates a D token' + '\u001b[0m')
+   console.log( '\u001b[' + 93 + 'm' + 'Test: it coverts XXX to XXX.D' + '\u001b[0m')
    console.log (token)
+
+
+   res2 = await fixture.database.find({
+    contract: 'marketpools',
+    table: 'pools',
+    query: {}
+  });
+
+  token = res2
+
+  console.log (token)
+
    
     resolve();
   
