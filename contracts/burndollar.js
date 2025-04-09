@@ -39,9 +39,9 @@ const checkStablePosition = (tokenPair) => {
   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
   // Check if the stable pair is before or after the colon
   if (stablePairArray.includes(firstToken)) {
-    return 'base'; // Stable coin is before the colon in the marketpool and therefore is the quote price
+    return 'quote'; // Stable coin is before the colon in the marketpool and therefore is the quote price
   } if (stablePairArray.includes(secondToken)) {
-    return 'quote'; // Stable coin is after the colon and in the market pool and therefore the base price
+    return 'base'; // Stable coin is after the colon and in the market pool and therefore the base price
   }
   return stablePairArray; // No stable pair found in the token pair
 };
@@ -66,9 +66,17 @@ const findStablePools = async (parentSymbol) => {
 
   try {
     const results = await Promise.all(
-      stableResults.map(async (element) => {
-        const stablePool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair: element });
-        return stablePool ? element : null; // Return the element directly if a pool is found
+      stableResults.map(async (tokenPair) => {
+        const stablePool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair });
+        return stablePool
+          ? {
+            tokenPair,
+            basePrice: stablePool.basePrice || '0',
+            quotePrice: stablePool.quotePrice || '0',
+            baseQuantity: stablePool.baseQuantity || '0',
+            quoteQuantity: stablePool.quoteQuantity || '0',
+          }
+          : null; // Return null for invalid pools // Return the element directly if a pool is found
       }),
     );
 
@@ -101,8 +109,10 @@ const findMarketPools = async (parentSymbol) => {
         return parentChildPool
           ? {
             tokenPair,
-            basePrice: parentChildPool.basePrice || '0', // Ensure basePrice exists, or set to null
-            quotePrice: parentChildPool.quotePrice || '0', // Ensure quotePrice exists, or set to null
+            basePrice: parentChildPool.basePrice || '0',
+            quotePrice: parentChildPool.quotePrice || '0',
+            baseQuantity: parentChildPool.baseQuantity || '0',
+            quoteQuantity: parentChildPool.quoteQuantity || '0',
           }
           : null; // Return null for invalid pools
       }),
@@ -130,7 +140,7 @@ actions.createSSC = async () => {
     A token owner can also decide is they want the ineffiecient portion of their token conversion to be burned or go to a DAO or another account
     This routing is to be controlled by a token issuer using burn routing field om the burndollar_burnpair collection
     */
-    await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage', 'callingContractInfo']);
+    await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'precision', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage', 'callingContractInfo']);
 
     /* For a token_contract owner to issue a new -D token the price is 1000 BEED (burn).
       the smart contrart will bootstrap the -D token into existance
@@ -337,12 +347,36 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
       if (api.assert(hasEnoughBeedBalance, 'not enough BEED balance')
           && api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
-          && api.assert(!hasEnoughMarketPool, JSON.stringify(hasEnoughMarketPool[0]))
-          && api.assert(hasEnoughStablePool, 'stable coin marketpool is needed')) {
-        const quoteOrBase = checkStablePosition(hasEnoughStablePool[0]);
+          && api.assert(hasEnoughMarketPool, 'parent token and xxx.D token must have market pool')
+          && api.assert(hasEnoughStablePool, 'pool with stable coin must exist')) {
+        const quoteOrBase = checkStablePosition(hasEnoughStablePool[0].tokenPair);
 
 
-        api.assert(!quoteOrBase, quoteOrBase);
+        if (quoteOrBase && quoteOrBase === 'base') {
+          const stablePrice = hasEnoughStablePool[0].basePrice;
+          const stableQuant = hasEnoughStablePool[0].baseQuantity;
+          const tokenNameBase = hasEnoughStablePool[0].tokenPair.split(':')[0];
+
+          const stableUSDValue = api.BigNumber(stablePrice).multipliedBy(stableQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
+
+          // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
+          const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
+
+          // users to be be informed of $500 barrier to entry/ delta pf 100 (500 vs 400) is for wiggle room for ease of use
+          api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
+        } else if (quoteOrBase && quoteOrBase === 'quote') {
+          const { quotePrice } = hasEnoughStablePool[0];
+          const quoteQuant = hasEnoughStablePool[0].quoteQuantity;
+          const tokenNameQuote = hasEnoughStablePool[0].tokenPair.split(':')[1];
+
+          const stableUSDValue = api.BigNumber(quotePrice).multipliedBy(quoteQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
+
+          // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
+          const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
+
+          // users to be be informed of $500 barrier to entry/ delta pf 100 (500 vs 400) is for wiggle room for ease of use
+          api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
+        }
       }
     }
   }
