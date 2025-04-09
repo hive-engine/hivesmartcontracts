@@ -136,8 +136,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         try {
           const finalname = name === undefined ? '' : name;
 
-          metadata = JSON.stringify(metadata);
-
           const newToken = {
             issuer: api.sender,
             symbol: dsymbol,
@@ -152,6 +150,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
             undelegationCooldown: 0,
           };
 
+          // create the new XXX.D token
           await api.executeSmartContract('tokens', 'create', newToken);
 
 
@@ -166,9 +165,16 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
             feePercentage,
           };
 
+          // insert record into burnpair table, which contains the Parent token and the params for the child (XXX.D) token
           await api.db.insert('burnpair', burnPairParams);
 
+          // issue 1000 XXX.D token to token issuer, issuer must create a market pools in order for conversions to occur(see actions.convert code)
+          await api.executeSmartContract('tokens', 'issue', {
+            to: api.sender, symbol: dsymbol, quantity: '1000',
+          });
 
+
+          // burn BEED at from the burndollar_ params table
           if (api.BigNumber(issueDTokenFee).gt(0)) {
             await api.executeSmartContract('tokens', 'transfer', {
               to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
