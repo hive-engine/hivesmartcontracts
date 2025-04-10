@@ -9,6 +9,10 @@
 const countDecimals = value => api.BigNumber(value).dp();
 
 const verifyUtilityTokenBalance = async (account) => {
+  if (!account) {
+    return false;
+  }
+
   const beedParams = await api.db.findOne('params', {});
   const { burnUsageFee } = beedParams;
 
@@ -23,6 +27,10 @@ const verifyUtilityTokenBalance = async (account) => {
 };
 
 const verifyParentTokenBalance = async (account, amount, symbolFind) => {
+  if (!account || !amount || !symbolFind) {
+    return false;
+  }
+
   if (api.BigNumber(amount).lte(0)) {
     return true;
   }
@@ -34,6 +42,9 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
 };
 
 const checkStablePosition = (tokenPair) => {
+  if (!tokenPair) {
+    return false;
+  }
   const [firstToken, secondToken] = tokenPair.split(':'); // Split the token pair by ":"
 
   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
@@ -47,6 +58,10 @@ const checkStablePosition = (tokenPair) => {
 };
 
 const findStablePools = async (parentSymbol) => {
+  if (!parentSymbol) {
+    return false;
+  }
+
   // define child symbol
   const childSymbol = `${parentSymbol}.D`;
 
@@ -128,13 +143,49 @@ const findMarketPools = async (parentSymbol) => {
 };
 
 
-const calcParentPool = async (name) => {
-  if (!name) {
+const calcParentPool = async (name, pool, price, precision) => {
+  if (!name || !pool || !price || !precision) {
     return false;
   }
 
-  return name;
+
+  const [firstToken, secondToken] = pool.tokenPair.split(':'); // Split the token pair by ":"
+
+  let quoteOrBasePosition;
+  let tokenPriceinDollars;
+  let halfPoolinUSD;
+  let fullPoolinUSD;
+
+  // Check if the match is before or after the colon
+  if (name.includes(firstToken)) {
+    // Match is before the colon in the marketpool and therefore is the quote price
+  } if (name.includes(secondToken)) {
+    quoteOrBasePosition = 'quote';
+  // Match is after the colon and in the market pool and therefore the base price
+  } if (name.includes(secondToken)) {
+    quoteOrBasePosition = 'base';
+  }
+
+  // perform calc based on first position === base
+  if (quoteOrBasePosition && quoteOrBasePosition === 'base') {
+    tokenPriceinDollars = api.BigNumber(pool.basePrice).multipliedBy(price).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    halfPoolinUSD = api.BigNumber(tokenPriceinDollars).multipliedBy(pool.baseQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    // conservative value of the pool multiple the value the halfpool by 1.95
+    fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
+
+    return fullPoolinUSD;
+  }
+
+  // perform calc based on second postion === quote
+  if (quoteOrBasePosition && quoteOrBasePosition === 'quote') {
+    tokenPriceinDollars = api.BigNumber(pool.quotePrice).multipliedBy(price).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    halfPoolinUSD = api.BigNumber(tokenPriceinDollars).multipliedBy(pool.quoteQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    // conservative value of the pool multiple the value the halfpool by 1.95
+    fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    return fullPoolinUSD;
+  }
 };
+
 
 // end utility functions
 actions.createSSC = async () => {
@@ -357,7 +408,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
       if (api.assert(hasEnoughBeedBalance, 'not enough BEED balance')
           && api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
           && api.assert(hasEnoughMarketPool, 'parent token and xxx.D token must have market pool')
-          && api.assert(hasEnoughStablePool, 'pool with stable coin must exist')) {
+          && api.assert(hasEnoughStablePool, 'token must have market pool with stable coin')) {
         const quoteOrBase = checkStablePosition(hasEnoughStablePool[0].tokenPair);
         let calcResultParentPool;
 
@@ -371,9 +422,9 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // users to be be informed of $500 barrier to entry/ delta pf 100 (500 vs 400) is for wiggle room for ease of use
+          // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
           if (api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500')) {
-            calcResultParentPool = await calcParentPool(tokenNameBase);
+            calcResultParentPool = await calcParentPool(tokenNameBase, hasEnoughMarketPool[0], stablePrice, parentPairParams.precision);
           }
         } else if (quoteOrBase && quoteOrBase === 'quote') {
           const { quotePrice } = hasEnoughStablePool[0];
@@ -385,15 +436,19 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // users to be be informed of $500 barrier to entry/ delta pf 100 (500 vs 400) is for wiggle room for ease of use
+          // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
           if (api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500')) {
-            calcResultParentPool = await calcParentPool(tokenNameQuote);
+            calcResultParentPool = await calcParentPool(tokenNameQuote, hasEnoughMarketPool[0], quotePrice, parentPairParams.precision);
           }
         } else {
           return false;
         }
 
-        api.assert(!calcResultParentPool, calcResultParentPool);
+        // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
+        if (api.assert(calcResultParentPool && calcResultParentPool >= 400, 'token pool USD value must be at least 500')) {
+
+
+        }
       }
     }
   }
