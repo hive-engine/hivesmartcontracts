@@ -518,29 +518,35 @@ actions.convert = async (payload) => { // allows any user who has parent token t
             finalQty = qtyAsBigNum.minus(fee);
           }
 
-          api.assert(finalQty === 2, 'hi');
+
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          if (!api.assert(api.BigNumber(xxxdToIssue).gte('0.0001'), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
-            return false;
+          if (!api.assert(api.BigNumber(xxxdToIssue).gt('0001'), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
+            throw new Error('resulting token issuance is too small');
           }
 
 
-          if (!(await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, isSignedWithActiveKey))) {
-            return false;
-          }
+          const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, isSignedWithActiveKey);
+
+          api.assert(burnResults, JSON.stringify(burnResults));
 
           // finally, issue the new XXX.D
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: parentPairParams.symbol, quantity: xxxdToIssue,
           });
 
+          const keyname = parentPairParams.parentSymbol;
+          const childName = parentPairParams.symbol;
+
           api.emit(`${parentPairParams.symbol} Converted`, {
-            to: api.sender, fee, parentToken: finalQty.toFixed(parentPairParams.precision), childToken: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
+
+            to: api.sender, fee, feeRouting: parentPairParams.burnRouting, [keyname]: qtyAsBigNum.toFixed(parentPairParams.precision), [childName]: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
           });
+
+          return true;
         }
       }
     }
   }
-  throw new Error('convert did not execute');
+  return false;
 };
