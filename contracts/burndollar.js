@@ -64,14 +64,12 @@ const findStablePools = async (parentSymbol) => {
 
   // define child symbol
   const childSymbol = `${parentSymbol}.D`;
+  // Define Stable coins
 
   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
   // Define parent-child token pairs
   const parentPairArray = [`${parentSymbol}`, `${childSymbol}`];
-
-  // Define Stable coins
-
 
   // create array of market pools a user could create for a  stable coin / XXX or XXX.D
   const stableResults = parentPairArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
@@ -99,7 +97,7 @@ const findStablePools = async (parentSymbol) => {
     const stableReturn = results.filter(Boolean); // Remove null or undefined values
     return stableReturn;
   } catch (error) {
-    console.error(`Error verifying market pools: ${error.message}`);
+    return false;
   }
 };
 
@@ -137,8 +135,7 @@ const findMarketPools = async (parentSymbol) => {
     const validPools = results.filter(Boolean);
     return validPools; // Return array of objects with valid pools
   } catch (error) {
-    console.error(`Error verifying market pools for ${parentSymbol}: ${error.message}`);
-    return []; // Return an empty array in case of error
+    return false;
   }
 };
 
@@ -240,34 +237,17 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, isSignedWith
       return false;
     }
   }
-
-
   return true;
 };
 
 // end utility functions
+
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
     await api.db.createTable('params');
 
-    /*
-    Every token that is created by this smart contract(burndollar) in effect has a parent token
-    the intent is that when a user burns a token XXX they would get token XXXD. There shold always be a one to one realtionship
-    However the goal is to let the token owner decided how effcient their token conversion is
-    A token owner can also decide is they want the ineffiecient portion of their token conversion to be burned or go to a DAO or another account
-    This routing is to be controlled by a token issuer using burn routing field om the burndollar_burnpair collection
-    */
     await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'precision', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage', 'callingContractInfo']);
-
-    /* For a token_contract owner to issue a new -D token the price is 1000 BEED (burn).
-      the smart contrart will bootstrap the -D token into existance
-      The underlying token must already exist using seperate established token creation smart contract.
-      token_contract owner inherits ownship of the new -D contract
-      after the creation of -D token if the token_contract owner wants to edit the paramaters of their -D token they can for 100 BEED (burn).
-      if the token and new -D token have sufficient liquidity pools then any user can burn xxx to get xxx-d for 1 BEED(burn).
-      The 1 BEED(burn) is seperate from the -D token paramters set by token_contract owner, and is not subject to their edits of a token_contract owner
-    */
 
     const params = {};
     params.issueDTokenFee = '1000';
@@ -383,16 +363,17 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           }
         } catch (error) {
           // Handle any errors that occur during the await calls source is token.js
-          console.error(error);
+          return false;
         }
       }
     }
   }
+  return true;
 };
 
 
 actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
-  //! !  Allow token issuer to controll the precision, META Data, and MAXSupply?
+  //! !  Allow token issuer to controll the precision, META Data, and MAXSupply visa viw this update?
   const {
     symbol,
     name,
@@ -441,6 +422,7 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
       }
     }
   }
+  return true;
 };
 
 
