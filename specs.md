@@ -34,3 +34,6 @@ user my or my not have done this (seperate step fro Urq contract)
 Step 3. User must create a LP between token A & B (both of which they created) must be > $1k ($500 of A + $500 of B) 
 Step 4. User must create LP of token A or B with Stable coin list provided by Jesse must be > $1k ($500 of A + or $500 of B with the offset of $500 of stable) 
 we check for 800 but we tell them 1000
+
+cryptomancer — 3/27/2025 7:48 PM
+The key point about this is that when a token is created by a smart contract, as opposed to an actual user, the new token's issuer will be set to null.  This prevents any actual user from having control over things like token metadata, minting, etc.  It's a way of instilling trust in the XXXD tokens, because seeing that a token issuer is null is how you know that there's nobody out there who can directly control the token, meaning the token is more secure and operates in a decentralized fashion.
