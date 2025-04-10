@@ -59,11 +59,12 @@ const checkStablePosition = (tokenPair) => {
 
 const findStablePools = async (parentSymbol) => {
   if (!parentSymbol) {
-    throw new Error('Missing required parameters: parentSymbol');
+    throw new Error(`Missing required parameters: findStablePools ${parentSymbol}`);
   }
 
   // define child symbol
   const childSymbol = `${parentSymbol}.D`;
+
   // Define Stable coins
 
   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
@@ -94,8 +95,9 @@ const findStablePools = async (parentSymbol) => {
     );
 
     // Return the valid elements
-    const stableReturn = results.filter(Boolean); // Remove null or undefined values
-    return stableReturn;
+
+    const stablePools = results.filter(pool => pool !== null && pool !== undefined);
+    return stablePools.length > 0 ? stablePools : false; // Return stablePools or false if empty
   } catch (error) {
     return false;
   }
@@ -104,7 +106,7 @@ const findStablePools = async (parentSymbol) => {
 const findMarketPools = async (parentSymbol) => {
   // Validate parentSymbol
   if (!parentSymbol) {
-    throw new Error('Missing required parameters: parentSymbol');
+    throw new Error(`Missing required parameters: findMarketPools ${parentSymbol}`);
   }
 
   // Create the child symbol
@@ -127,13 +129,12 @@ const findMarketPools = async (parentSymbol) => {
             baseQuantity: parentChildPool.baseQuantity || '0',
             quoteQuantity: parentChildPool.quoteQuantity || '0',
           }
-          : null; // Return null for invalid pools
+          : null; // Return false for invalid pools
       }),
     );
 
-    // Filter out null values and return valid objects
-    const validPools = results.filter(Boolean);
-    return validPools; // Return array of objects with valid pools
+    const validPools = results.filter(pool => pool !== null && pool !== undefined);
+    return validPools.length > 0 ? validPools : false; // Return validPools or false if empty
   } catch (error) {
     return false;
   }
@@ -309,13 +310,14 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
     && api.assert(maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN() && api.BigNumber(maxSupply).gte(1000), 'max supply must be a minimum of 1000 units')
     ) {
       const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
-      const dsymbol = `${symbol}.D`;
+      let dsymbol = '';
+      dsymbol = `${symbol}.D`;
       const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dsymbol });
       if (api.assert(burnAccount !== null, 'account for burn routing must exist')
         && api.assert(tokenDExists === null, 'D token must not already exist')
       ) {
         try {
-          const finalname = name === undefined ? '' : name;
+          const finalname = name === undefined ? 'null' : name;
 
           const newToken = {
             issuer: api.sender,
@@ -442,13 +444,14 @@ actions.convert = async (payload) => { // allows any user who has parent token t
       && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')) {
       const hasEnoughBeedBalance = await verifyUtilityTokenBalance(api.sender);
       const hasEnoughParentBalance = await verifyParentTokenBalance(api.sender, qtyAsBigNum, symbol);
-      const hasEnoughMarketPool = await findMarketPools(symbol);
       const hasEnoughStablePool = await findStablePools(symbol);
+      const hasEnoughMarketPool = await findMarketPools(symbol);
+
 
       if (api.assert(hasEnoughBeedBalance, 'not enough BEED balance')
           && api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
-          && api.assert(hasEnoughMarketPool, 'parent token and xxx.D token must have market pool')
-          && api.assert(hasEnoughStablePool, 'token must have market pool with stable coin')) {
+          && api.assert(hasEnoughStablePool, 'token must be in pool with a stable coin')
+          && api.assert(hasEnoughMarketPool, 'token must be in pool with xxx.d token')) {
         const quoteOrBase = checkStablePosition(hasEnoughStablePool[0].tokenPair);
         let calcResultParentPool;
 
@@ -510,7 +513,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, isSignedWithActiveKey);
 
-          api.assert(burnResults, JSON.stringify(burnResults));
+          api.assert(burnResults, 'error on token burn');
 
           // finally, issue the new XXX.D
           await api.executeSmartContract('tokens', 'issue', {
