@@ -128,6 +128,15 @@ const findMarketPools = async (parentSymbol) => {
 };
 
 
+const calcParentPool = async (name) => {
+  if (!name) {
+    return false;
+  }
+
+  return name;
+};
+
+// end utility functions
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
@@ -350,7 +359,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           && api.assert(hasEnoughMarketPool, 'parent token and xxx.D token must have market pool')
           && api.assert(hasEnoughStablePool, 'pool with stable coin must exist')) {
         const quoteOrBase = checkStablePosition(hasEnoughStablePool[0].tokenPair);
-
+        let calcResultParentPool;
 
         if (quoteOrBase && quoteOrBase === 'base') {
           const stablePrice = hasEnoughStablePool[0].basePrice;
@@ -363,7 +372,9 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           // users to be be informed of $500 barrier to entry/ delta pf 100 (500 vs 400) is for wiggle room for ease of use
-          api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
+          if (api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500')) {
+            calcResultParentPool = await calcParentPool(tokenNameBase);
+          }
         } else if (quoteOrBase && quoteOrBase === 'quote') {
           const { quotePrice } = hasEnoughStablePool[0];
           const quoteQuant = hasEnoughStablePool[0].quoteQuantity;
@@ -375,8 +386,14 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           // users to be be informed of $500 barrier to entry/ delta pf 100 (500 vs 400) is for wiggle room for ease of use
-          api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
+          if (api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500')) {
+            calcResultParentPool = await calcParentPool(tokenNameQuote);
+          }
+        } else {
+          return false;
         }
+
+        api.assert(!calcResultParentPool, calcResultParentPool);
       }
     }
   }
