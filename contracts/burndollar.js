@@ -155,6 +155,7 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
   let otherTokenPriceUSD;
   let halfPoolinUSD;
   let fullPoolinUSD;
+  let returnObject = {};
 
   // Check if the match is before or after the colon
   if (name.includes(firstToken)) {
@@ -173,16 +174,22 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     // conservative value of the pool multiple the value the halfpool by 1.95
     fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
 
-    return quoteOrBasePosition;
-  } if (quoteOrBasePosition && quoteOrBasePosition === 'quote') { // perform calc based on second postion === quote
+    returnObject = {
+      quoteToken: firstToken, quotePriceUSD: otherTokenPriceUSD, baseToken: secondToken, basePriceUSD: tokenPriceUSD, precision, poolValueUSD: fullPoolinUSD,
+    };
+  } else if (quoteOrBasePosition && quoteOrBasePosition === 'quote') { // perform calc based on second postion === quote
     // we have the price of one token from the stable pool calc, we need to calc the price of the token's pair
     otherTokenPriceUSD = api.BigNumber(pool.basePrice).multipliedBy(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
     halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.quoteQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
     // conservative value of the pool multiple the value the halfpool by 1.95
     fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
 
-    return quoteOrBasePosition;
+    returnObject = {
+      quoteToken: firstToken, quotePriceUSD: tokenPriceUSD, baseToken: secondToken, basePriceUSD: otherTokenPriceUSD, precision, poolValueUSD: fullPoolinUSD,
+    };
   }
+
+  return returnObject;
 };
 // const burnParentTokens = async (amount, isSignedWithActiveKey) => {
 
@@ -431,7 +438,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const stablePrice = hasEnoughStablePool[0].basePrice;
           otherTokenPriceinUSD = hasEnoughStablePool[0].quotePrice;
           const stableQuant = hasEnoughStablePool[0].baseQuantity;
-          const tokenNameBase = hasEnoughStablePool[0].tokenPair.split(':')[0];
+          const tokenNameBase = hasEnoughStablePool[0].tokenPair.split(':')[1];
 
           const stableUSDValue = api.BigNumber(stablePrice).multipliedBy(stableQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
@@ -445,7 +452,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
         } else if (quoteOrBase && quoteOrBase === 'quote') {
           const stableTPrice = hasEnoughStablePool[0].quotePrice;
           const quoteQuant = hasEnoughStablePool[0].quoteQuantity;
-          const tokenNameQuote = hasEnoughStablePool[0].tokenPair.split(':')[1];
+          const tokenNameQuote = hasEnoughStablePool[0].tokenPair.split(':')[0];
           otherTokenPriceinUSD = hasEnoughStablePool[0].basePrice;
 
           const stableUSDValue = api.BigNumber(stableTPrice).multipliedBy(quoteQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
@@ -462,7 +469,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
         }
 
         // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
-        if (api.assert(calcResultParentPool, 'hi')) {
+        if (api.assert(!calcResultParentPool, JSON.stringify(calcResultParentPool))) {
           // subtract the conversion fee from the amount to be converted
           // const feePercentage = api.BigNumber(parentPairParams.feePercentage);
           // let fee = '0';

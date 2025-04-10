@@ -24,17 +24,29 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
   // perform calc based on first position === base
   if (quoteOrBasePosition === 'base') {
     // we have the price of one token from the stable pool calc, we need to calc the price of the token's pair
-    otherTokenPriceUSD = api.BigNumber(pool.quotePrice).multipliedBy(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
-    halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.baseQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    otherTokenPriceUSD = api.BigNumber(pool.quotePrice)
+      .multipliedBy(tokenPriceUSD)
+      .toFixed(precision, api.BigNumber.ROUND_DOWN);
+    halfPoolinUSD = api.BigNumber(otherTokenPriceUSD)
+      .multipliedBy(pool.baseQuantity)
+      .toFixed(precision, api.BigNumber.ROUND_DOWN);
     // conservative value of the pool multiple the value the halfpool by 1.95
-    fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    fullPoolinUSD = api.BigNumber(halfPoolinUSD)
+      .multipliedBy(1.95)
+      .toFixed(precision, api.BigNumber.ROUND_DOWN);
   } else {
-    // perform calc based on second postion === quote
+    // perform calc based on second position === quote
     // we have the price of one token from the stable pool calc, we need to calc the price of the token's pair
-    otherTokenPriceUSD = api.BigNumber(pool.basePrice).multipliedBy(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
-    halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.quoteQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    otherTokenPriceUSD = api.BigNumber(pool.basePrice)
+      .multipliedBy(tokenPriceUSD)
+      .toFixed(precision, api.BigNumber.ROUND_DOWN);
+    halfPoolinUSD = api.BigNumber(otherTokenPriceUSD)
+      .multipliedBy(pool.quoteQuantity)
+      .toFixed(precision, api.BigNumber.ROUND_DOWN);
     // conservative value of the pool multiple the value the halfpool by 1.95
-    fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
+    fullPoolinUSD = api.BigNumber(halfPoolinUSD)
+      .multipliedBy(1.95)
+      .toFixed(precision, api.BigNumber.ROUND_DOWN);
   }
 
   return {
@@ -44,3 +56,5 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     fullPoolinUSD,
   };
 };
+
+export default calcParentPool;
