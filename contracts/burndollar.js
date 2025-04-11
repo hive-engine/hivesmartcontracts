@@ -208,8 +208,8 @@ const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) =
   return false;
 };
 
-const burnParentTokens = async (amount, fee, burnSymbol, toAccount, isSignedWithActiveKey) => {
-  if (!amount || !burnSymbol || !toAccount || !isSignedWithActiveKey) {
+const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedFee, isSignedWithActiveKey) => {
+  if (!amount || !burnSymbol || !toAccount || !beedFee || !isSignedWithActiveKey) {
     throw new Error('Missing required parameters: in burnParentTokens');
   }
   if (api.BigNumber(fee).gte(0) || api.BigNumber(amount).gte(0)) {
@@ -218,14 +218,26 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, isSignedWith
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
 
+    // burn the remainder to null
     const res2 = await api.executeSmartContract('tokens', 'transfer', {
       to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
     });
+
+    // burn the BEED for required
+    const res3 = await api.executeSmartContract('tokens', 'transfer', {
+      to: 'null', symbol: 'BEED', quantity: beedFee.burnUsageFee, isSignedWithActiveKey,
+    });
+
+
     // check if the tokens were sent
     if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
       return false;
     }
     if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
+      return false;
+    }
+
+    if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedFee.burnUsageFee, 'transfer')) {
       return false;
     }
   }
@@ -354,6 +366,12 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
               to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
             });
           }
+
+
+          api.emit(`${dsymbol} create and issued new token`, {
+
+            to: api.sender, usefee: minConvertibleAmount, feeRouting: burnPairParams.burnRouting, issued: '1000 units',
+          });
         } catch (error) {
           // Handle any errors that occur during the await calls source is token.js
           return error;
@@ -366,10 +384,10 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
 
 actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
-  // !! Allow token_issuer to controll the precision, META Data, and MAXSupply visa vie this update?
+  // !! Allow token_issuer to update the precision, metaData, and maxSupply in multiple tables?
   // !! As indicated in discord this smart contract will do it what we program it to,
   // !! Ultimately due to dynamic nature of this contract we either need a default or allowed access to issuer (not just any user) to those fields
-  // !! the token_issuer can only change what we allow them to change, as no other contract will have access to those
+  // !! the token_issuer can only change what we allow them to change, as no other contract will have access to those fields
   // !! (understood as discribed in discord)
   // !! Specs sheet does not say a token_issuer should be able do that  (visa vie this smart contract) or set it to some sort of default
   // !! Happy to program the intentions either way
@@ -434,6 +452,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(quantity && typeof quantity === 'string' && !api.BigNumber(quantity).isNaN(), 'invalid params quantity')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')) {
+    const contractParams = await api.db.findOne('params', {});
     const parentPairParams = await api.db.findOne('burnpair', { parentSymbol: symbol });
     const qtyAsBigNum = api.BigNumber(quantity);
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
@@ -508,7 +527,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           }
 
 
-          const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, isSignedWithActiveKey);
+          const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
           api.assert(burnResults, 'error on token burn');
 
