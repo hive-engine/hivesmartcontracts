@@ -366,7 +366,13 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
 
 actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
-  //! !  Allow token issuer to controll the precision, META Data, and MAXSupply visa viw this update?
+  // !! Allow token_issuer to controll the precision, META Data, and MAXSupply visa vie this update?
+  // !! As indicated in discord this smart contract will do it what we program it to,
+  // !! Ultimately due to dynamic nature of this contract we either need a default or allowed access to issuer (not just any user) to those fields
+  // !! the token_issuer can only change what we allow them to change, as no other contract will have access to those
+  // !! (understood as discribed in discord)
+  // !! Specs sheet does not say a token_issuer should be able do that  (visa vie this smart contract) or set it to some sort of default
+  // !! Happy to program the intentions either way
   const {
     symbol,
     name,
