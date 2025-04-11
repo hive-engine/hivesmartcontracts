@@ -62,44 +62,39 @@ const findStablePools = async (parentSymbol) => {
     throw new Error(`Missing required parameters: findStablePools ${parentSymbol}`);
   }
 
-  // define child symbol
+  // Define child symbol
   const childSymbol = `${parentSymbol}.D`;
 
-  // Define Stable coins
-
+  // Define stable coins
   const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
   // Define parent-child token pairs
   const parentPairArray = [`${parentSymbol}`, `${childSymbol}`];
 
-  // create array of market pools a user could create for a  stable coin / XXX or XXX.D
+  // Create an array of all possible token pairs
   const stableResults = parentPairArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
     `${sElement}:${pElement}`,
     `${pElement}:${sElement}`,
   ]));
 
   try {
-    const results = await Promise.all(
-      stableResults.map(async (tokenPair) => {
-        const stablePool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair });
-        return stablePool
-          ? {
-            tokenPair,
-            basePrice: stablePool.basePrice || '0',
-            quotePrice: stablePool.quotePrice || '0',
-            baseQuantity: stablePool.baseQuantity || '0',
-            quoteQuantity: stablePool.quoteQuantity || '0',
-          }
-          : null; // Return null for invalid pools // Return the element directly if a pool is found
-      }),
-    );
+    // Fetch all potential pools in a single database call
+    const stablePoolsData = await api.db.findInTable('marketpools', 'pools', {
+      tokenPair: { $in: stableResults },
+    });
 
-    // Return the valid elements
+    // Process the fetched results to construct the stablePools array
+    const stablePools = stablePoolsData.map(stablePool => ({
+      tokenPair: stablePool.tokenPair,
+      basePrice: stablePool.basePrice || '0',
+      quotePrice: stablePool.quotePrice || '0',
+      baseQuantity: stablePool.baseQuantity || '0',
+      quoteQuantity: stablePool.quoteQuantity || '0',
+    }));
 
-    const stablePools = results.filter(pool => pool !== null && pool !== undefined);
-    return stablePools.length > 0 ? stablePools : false; // Return stablePools or false if empty
+    return stablePools.length > 0 ? stablePools : null; // Return stablePools or null if empty
   } catch (error) {
-    return false;
+    return error; // Return null in case of an error
   }
 };
 
@@ -116,30 +111,26 @@ const findMarketPools = async (parentSymbol) => {
   const parentPair = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
 
   try {
-    // Query the database for each token pair and associate results with pool data
-    const results = await Promise.all(
-      parentPair.map(async (tokenPair) => {
-        const parentChildPool = await api.db.findOneInTable('marketpools', 'pools', { tokenPair });
-        // If the pool is found, return an object with tokenPair, basePrice, and quotePrice
-        return parentChildPool
-          ? {
-            tokenPair,
-            basePrice: parentChildPool.basePrice || '0',
-            quotePrice: parentChildPool.quotePrice || '0',
-            baseQuantity: parentChildPool.baseQuantity || '0',
-            quoteQuantity: parentChildPool.quoteQuantity || '0',
-          }
-          : null; // Return false for invalid pools
-      }),
-    );
+    // Use a single database query to fetch all relevant pools
+    const parentChildPools = await api.db.findInTable('marketpools', 'pools', {
+      tokenPair: { $in: parentPair },
+    });
 
-    const validPools = results.filter(pool => pool !== null && pool !== undefined);
-    return validPools.length > 0 ? validPools : false; // Return validPools or false if empty
+    // Process results and construct the valid pools array
+    const validPools = parentChildPools.map(pool => ({
+      tokenPair: pool.tokenPair,
+      basePrice: pool.basePrice || '0',
+      quotePrice: pool.quotePrice || '0',
+      baseQuantity: pool.baseQuantity || '0',
+      quoteQuantity: pool.quoteQuantity || '0',
+    }));
+
+    // Return validPools or null if no pools are found
+    return validPools.length > 0 ? validPools : null;
   } catch (error) {
-    return false;
+    return error; // Return null in case of an error
   }
 };
-
 
 const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
   if (!name || !pool || !tokenPriceUSD || !precision) {
@@ -205,7 +196,7 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     };
   }
 
-  return returnObject;
+  return returnObject || false;
 };
 
 const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) => {
@@ -365,7 +356,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           }
         } catch (error) {
           // Handle any errors that occur during the await calls source is token.js
-          return false;
+          return error;
         }
       }
     }
