@@ -437,6 +437,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
   const ordersToFetch = 25;
   let offset = 0;
   let volumeTraded = 0;
+  let numDeleted = 0;
 
   await removeExpiredOrders('sellBook');
 
@@ -512,6 +513,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
 
             api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
             await api.db.remove('sellBook', sellOrder);
+            numDeleted++;
           }
 
           // unlock remaining tokens, update the quantity to get and remove the buy order
@@ -569,6 +571,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
 
           // remove the sell order
           await api.db.remove('sellBook', sellOrder);
+          numDeleted++;
           api.emit('orderClosed', { account: sellOrder.account, type: 'sell', txId: sellOrder.txId });
 
           // update tokensLocked and the quantity to get
@@ -606,7 +609,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
       inc += 1;
     }
 
-    offset += ordersToFetch;
+    offset += ordersToFetch - numDeleted;
 
     if (api.BigNumber(buyOrder.quantity).gt(0)) {
       // get the orders that match the symbol and the price
@@ -620,6 +623,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
         { index: 'priceDec', descending: false },
         { index: '_id', descending: false },
       ]);
+      numDeleted = 0;
     }
   } while (sellOrderBook.length > 0 && api.BigNumber(buyOrder.quantity).gt(0));
 
@@ -645,6 +649,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
   const ordersToFetch = 25;
   let offset = 0;
   let volumeTraded = 0;
+  let numDeleted = 0;
 
   await removeExpiredOrders('buyBook');
 
@@ -723,6 +728,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
             }
             api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
             await api.db.remove('buyBook', buyOrder);
+            numDeleted++;
           }
 
           // add the trade to the history
@@ -778,6 +784,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
 
           // remove the buy order
           await api.db.remove('buyBook', buyOrder);
+          numDeleted++;
           api.emit('orderClosed', { account: buyOrder.account, type: 'buy', txId: buyOrder.txId });
 
           // update the quantity to get
@@ -811,7 +818,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
       inc += 1;
     }
 
-    offset += ordersToFetch;
+    offset += ordersToFetch - numDeleted;
 
     if (api.BigNumber(sellOrder.quantity).gt(0)) {
       // get the orders that match the symbol and the price
@@ -825,6 +832,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
         { index: 'priceDec', descending: true },
         { index: '_id', descending: false },
       ]);
+      numDeleted = 0;
     }
   } while (buyOrderBook.length > 0 && api.BigNumber(sellOrder.quantity).gt(0));
 
@@ -1003,6 +1011,7 @@ actions.marketBuy = async (payload) => {
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
   const ordersToFetch = 25;
+  let numDeleted = 0;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
     return;
@@ -1093,6 +1102,7 @@ actions.marketBuy = async (payload) => {
                     await api.transferTokens(sellOrder.account, symbol, qtyLeftSellOrder, 'user');
                   }
                   await api.db.remove('sellBook', sellOrder);
+		  numDeleted++;
                 }
 
                 // add the trade to the history
@@ -1138,6 +1148,7 @@ actions.marketBuy = async (payload) => {
 
                 // remove the sell order
                 await api.db.remove('sellBook', sellOrder);
+		numDeleted++;
 
                 // update tokensLocked and the quantity to get
                 hiveRemaining = api.BigNumber(hiveRemaining)
@@ -1155,7 +1166,7 @@ actions.marketBuy = async (payload) => {
             inc += 1;
           }
 
-          offset += ordersToFetch;
+          offset += ordersToFetch - numDeleted;
 
           if (api.BigNumber(hiveRemaining).gt(0)) {
             // get the orders that match the symbol and the price
@@ -1166,6 +1177,7 @@ actions.marketBuy = async (payload) => {
               { index: 'priceDec', descending: false },
               { index: '_id', descending: false },
             ]);
+            numDeleted = 0;
           }
         } while (sellOrderBook.length > 0 && api.BigNumber(hiveRemaining).gt(0));
 
@@ -1193,6 +1205,7 @@ actions.marketSell = async (payload) => {
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
   const ordersToFetch = 25;
+  let numDeleted = 0;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
     return;
@@ -1290,6 +1303,7 @@ actions.marketSell = async (payload) => {
                     await api.transferTokens(buyOrder.account, HIVE_PEGGED_SYMBOL, buyOrdertokensLocked, 'user');
                   }
                   await api.db.remove('buyBook', buyOrder);
+                  numDeleted++;
                 }
 
                 // add the trade to the history
@@ -1343,6 +1357,7 @@ actions.marketSell = async (payload) => {
 
                 // remove the buy order
                 await api.db.remove('buyBook', buyOrder);
+                numDeleted++;
 
                 // update the quantity to get
                 tokensRemaining = api.BigNumber(tokensRemaining)
@@ -1360,7 +1375,7 @@ actions.marketSell = async (payload) => {
             inc += 1;
           }
 
-          offset += ordersToFetch;
+          offset += ordersToFetch - numDeleted;
 
           if (api.BigNumber(tokensRemaining).gt(0)) {
             // get the orders that match the symbol and the price
@@ -1371,6 +1386,7 @@ actions.marketSell = async (payload) => {
               { index: 'priceDec', descending: true },
               { index: '_id', descending: false },
             ]);
+            numDeleted = 0;
           }
         } while (buyOrderBook.length > 0 && api.BigNumber(tokensRemaining).gt(0));
 
