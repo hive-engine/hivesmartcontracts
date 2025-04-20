@@ -7,6 +7,7 @@ const HIVE_PEGGED_SYMBOL = 'SWAP.HIVE';
 const HIVE_PEGGED_SYMBOL_PRESICION = 8;
 const CONTRACT_NAME = 'market';
 const MAX_ALLOWED_OPEN_ORDERS = 200;
+const ORDER_FETCH_LIMIT = 25;
 
 // trading by these accounts is blocked
 const ACCOUNT_BLACKLIST = {
@@ -434,7 +435,7 @@ const findMatchingSellOrders = async (order, tokenPrecision) => {
   } = order;
 
   const buyOrder = order;
-  const ordersToFetch = 25;
+  const ordersToFetch = ORDER_FETCH_LIMIT;
   let offset = 0;
   let volumeTraded = 0;
   let numDeleted = 0;
@@ -646,7 +647,7 @@ const findMatchingBuyOrders = async (order, tokenPrecision) => {
   } = order;
 
   const sellOrder = order;
-  const ordersToFetch = 25;
+  const ordersToFetch = ORDER_FETCH_LIMIT;
   let offset = 0;
   let volumeTraded = 0;
   let numDeleted = 0;
@@ -1010,7 +1011,7 @@ actions.marketBuy = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-  const ordersToFetch = 25;
+  const ordersToFetch = ORDER_FETCH_LIMIT;
   let numDeleted = 0;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
@@ -1166,7 +1167,7 @@ actions.marketBuy = async (payload) => {
             inc += 1;
           }
 
-          offset += ordersToFetch - numDeleted;
+	  offset += ordersToFetch - numDeleted;
 
           if (api.BigNumber(hiveRemaining).gt(0)) {
             // get the orders that match the symbol and the price
@@ -1204,7 +1205,7 @@ actions.marketSell = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-  const ordersToFetch = 25;
+  const ordersToFetch = ORDER_FETCH_LIMIT;
   let numDeleted = 0;
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
@@ -1375,7 +1376,7 @@ actions.marketSell = async (payload) => {
             inc += 1;
           }
 
-          offset += ordersToFetch - numDeleted;
+	  offset += ordersToFetch - numDeleted;
 
           if (api.BigNumber(tokensRemaining).gt(0)) {
             // get the orders that match the symbol and the price

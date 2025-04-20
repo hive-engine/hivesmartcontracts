@@ -13,7 +13,7 @@ const { assertError } = require('../libs/util/testing/Asserts');
 
 const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
 const pegContractPayload = setupContractPayload('hivepegged', './contracts/hivepegged.js');
-const mktContractPayload = setupContractPayload('market', './contracts/market.js');
+const mktContractPayload = setupContractPayload('market', './contracts/market.js', (contractCode) => contractCode.replace(/ORDER_FETCH_LIMIT = .*;/, 'ORDER_FETCH_LIMIT = 2;'));
 const oldMktContractPayload = setupContractPayload('market', './contracts/testing/market_20240727.js');
 
 const fixture = new Fixture();
