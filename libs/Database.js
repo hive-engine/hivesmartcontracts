@@ -227,18 +227,18 @@ class Database {
 
     let single = true;
     let transaction = await transactionsTable.findOne({ _id: txid }, { session: this.session });
-    
+
     if(!transaction && txid.length === 40) {
         single = false;
         transaction = await transactionsTable.findOne({ _id: txid + "-0" }, { session: this.session });
     }
-    
+
     let result = null;
 
     if (transaction) {
       const { index, blockNumber } = transaction;
       const block = await this.getBlockInfo(blockNumber);
-    
+
       if (block) {
         if (single) {
             result = Object.assign({}, { blockNumber }, block.transactions[index]);
