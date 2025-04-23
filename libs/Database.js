@@ -225,7 +225,13 @@ class Database {
   async getTransactionInfo(txid) {
     const transactionsTable = this.database.collection('transactions');
 
-    const transaction = await transactionsTable.findOne({ _id: txid }, { session: this.session });
+    let single = true;
+    let transaction = await transactionsTable.findOne({ _id: txid }, { session: this.session });
+
+    if(!transaction && txid.length === 40) {
+        single = false;
+        transaction = await transactionsTable.findOne({ _id: txid + "-0" }, { session: this.session });
+    }
 
     let result = null;
 
@@ -234,10 +240,23 @@ class Database {
       const block = await this.getBlockInfo(blockNumber);
 
       if (block) {
-        result = Object.assign({}, { blockNumber }, block.transactions[index]);
+        if (single) {
+            result = Object.assign({}, { blockNumber }, block.transactions[index]);
+        }
+        else {
+            let array = [];
+            let tId = txid + "-";
+            for(var t of block.transactions) {
+                if(t.transactionId.startsWith(tId)) {
+                    var transactionIndex = Number(t.transactionId.substring(41));
+                    array.push(Object.assign({}, { blockNumber, transactionIndex }, t));
+                }
+            }
+            array.sort((a,b) => a.transactionIndex - b.transactionIndex);
+            result = array;
+        }
       }
     }
-
     return result;
   }
 
