@@ -5,6 +5,9 @@
 /* eslint-disable no-continue */
 /* global actions, api */
 
+// define stable coins allowed in functions
+const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
+
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
 
@@ -17,7 +20,7 @@ const verifyUtilityTokenBalance = async (account) => {
   const { burnUsageFee } = beedParams;
 
   if (api.BigNumber(burnUsageFee).lte(0)) {
-    return true;
+    return false;
   }
   const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: 'BEED' });
   if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(burnUsageFee)) {
@@ -32,7 +35,7 @@ const verifyParentTokenBalance = async (account, amount, symbolFind) => {
   }
 
   if (api.BigNumber(amount).lte(0)) {
-    return true;
+    return false;
   }
   const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
   if (parentTokenBalance && api.BigNumber(parentTokenBalance.balance).gte(amount)) {
@@ -47,7 +50,7 @@ const checkStablePosition = (tokenPair) => {
   }
   const [firstToken, secondToken] = tokenPair.split(':'); // Split the token pair by ":"
 
-  const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
+
   // Check if the stable pair is before or after the colon
   if (stablePairArray.includes(firstToken)) {
     return 'base'; // Stable coin is before the colon and in the market pool and therefore the base price
@@ -64,9 +67,6 @@ const findStablePools = async (parentSymbol) => {
 
   // Define child symbol
   const childSymbol = `${parentSymbol}.D`;
-
-  // Define stable coins
-  const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
   // Define parent-child token pairs
   const parentPairArray = [`${parentSymbol}`, `${childSymbol}`];
