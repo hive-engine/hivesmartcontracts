@@ -19,9 +19,10 @@ const verifyUtilityTokenBalance = async (account) => {
   const beedParams = await api.db.findOne('params', {});
   const { burnUsageFee } = beedParams;
 
-  if (api.BigNumber(burnUsageFee).lte(0)) {
-    return false;
-  }
+
+  // this assert will trigger from token.js I assume the fee we chare must always be greater than zero
+  api.assert(api.BigNumber(burnUsageFee).gt(0));
+
   const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: 'BEED' });
   if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(burnUsageFee)) {
     return true;
