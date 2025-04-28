@@ -127,7 +127,7 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
 
 
     halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.baseQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
-    // conservative value of the pool multiple the value the halfpool by 1.95
+    // Conservative value of the pool: multiply the value of the half pool by 1.95
     fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
 
     returnObject = {
@@ -145,7 +145,7 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     }
 
     halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.quoteQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
-    // conservative value of the pool multiple the value the halfpool by 1.95
+    // Conservative value of the pool: multiply the value of the half pool by 1.95
     fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
 
     returnObject = {
@@ -153,7 +153,7 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     };
   }
 
-  return returnObject || false;
+  return returnObject;
 };
 
 const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) => {
@@ -166,38 +166,35 @@ const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) =
 };
 
 const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedFee, isSignedWithActiveKey) => {
-  if (!amount || !burnSymbol || !toAccount || !beedFee || !isSignedWithActiveKey) {
-    throw new Error('Missing required parameters: in burnParentTokens');
-  }
-  if (api.BigNumber(fee).gte(0) || api.BigNumber(amount).gte(0)) {
+  if (api.BigNumber(fee).gte(0)) {
     // tranfer fee to the burn routing if any
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
-
-    // burn the remainder to null
-    const res2 = await api.executeSmartContract('tokens', 'transfer', {
-      to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
-    });
-
-    // burn the BEED for required
-    const res3 = await api.executeSmartContract('tokens', 'transfer', {
-      to: 'null', symbol: 'BEED', quantity: beedFee.burnUsageFee, isSignedWithActiveKey,
-    });
-
-
-    // check if the tokens were sent
-    if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
-      return false;
-    }
-    if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
-      return false;
-    }
-
-    if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedFee.burnUsageFee, 'transfer')) {
-      return false;
-    }
   }
+  // burn the remainder to null
+  const res2 = await api.executeSmartContract('tokens', 'transfer', {
+    to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
+  });
+
+  // burn the BEED for required
+  const res3 = await api.executeSmartContract('tokens', 'transfer', {
+    to: 'null', symbol: 'BEED', quantity: beedFee.burnUsageFee, isSignedWithActiveKey,
+  });
+
+
+  // check if the tokens were sent
+  if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
+    return false;
+  }
+  if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
+    return false;
+  }
+
+  if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedFee.burnUsageFee, 'transfer')) {
+    return false;
+  }
+
   return true;
 };
 

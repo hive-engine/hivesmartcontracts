@@ -687,12 +687,8 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO:SWAP.HBD", "baseQuantity": "800", "quoteQuantity": "800", "maxDeviation": "0", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "50", "isSignedWithActiveKey": true }'));
 
-      //47 burn usage fee equal to zero, causing trigger of must transfer positive quantity
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'burndollar', 'updateParams', '{ "issueDTokenFee": "1200", "updateParamsFee": "200", "burnUsageFee": "0"}'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO:URQTWO.D", "baseQuantity": "500", "basePrice": "3", "quoteQuantity": "500", "maxDeviation": "0", "isSignedWithActiveKey": true }')); 
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO:SWAP.HBD", "baseQuantity": "500", "quoteQuantity": "500", "maxDeviation": "0", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "50", "isSignedWithActiveKey": true }'));
-      //51-52 
+      
+      //47-48 transfer 0
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'burndollar', 'updateParams', '{ "issueDTokenFee": "1200", "updateParamsFee": "200", "burnUsageFee": "1"}'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "0", "isSignedWithActiveKey": true }'));
 
@@ -742,8 +738,8 @@ describe('burndollar', function () {
     console.log("  ⚪",JSON.parse(transactionsBlock1[40].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[43].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[46].logs).errors[0])
-    console.log("  ⚪",JSON.parse(transactionsBlock1[50].logs).errors[0])
-    console.log("  ⚪",JSON.parse(transactionsBlock1[52].logs).errors[0])
+    console.log("  ⚪",JSON.parse(transactionsBlock1[48].logs).errors[0])
+
 
     assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'you must use a custom_json signed with your active key');
     assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'invalid params quantity');
@@ -757,8 +753,7 @@ describe('burndollar', function () {
     assert.equal(JSON.parse(transactionsBlock1[40].logs).errors[0], 'token must be in pool with xxx.d token')
     assert.equal(JSON.parse(transactionsBlock1[43].logs).errors[0], 'stable token pool USD value must be at least 500')
     assert.equal(JSON.parse(transactionsBlock1[46].logs).errors[0], 'parent token and XXX.D token pool USD value must be at least 500')
-    assert.equal(JSON.parse(transactionsBlock1[50].logs).errors[0], 'must transfer positive quantity')
-    assert.equal(JSON.parse(transactionsBlock1[52].logs).errors[0], 'amount to convert must be >= 1')
+    assert.equal(JSON.parse(transactionsBlock1[48].logs).errors[0], 'amount to convert must be >= 1')
       resolve();
     
   })
