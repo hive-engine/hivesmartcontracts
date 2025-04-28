@@ -11,33 +11,13 @@ const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
 
-const verifyUtilityTokenBalance = async (account) => {
-  if (!account) {
-    throw new Error('Missing required parameters: account');
-  }
-
-  const beedParams = await api.db.findOne('params', {});
+const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
   const { burnUsageFee } = beedParams;
 
+  const userBeed = await api.db.findOneInTable('tokens', 'balances', { account, symbol: 'BEED' });
 
-  // this assert will trigger from token.js I assume the fee we chare must always be greater than zero
-  api.assert(api.BigNumber(burnUsageFee).gt(0));
+  api.assert(userBeed && api.BigNumber(userBeed.balance).gte(burnUsageFee), 'not enough BEED balance');
 
-  const utilityTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: 'BEED' });
-  if (utilityTokenBalance && api.BigNumber(utilityTokenBalance.balance).gte(burnUsageFee)) {
-    return true;
-  }
-  return false;
-};
-
-const verifyParentTokenBalance = async (account, amount, symbolFind) => {
-  if (!account || !amount || !symbolFind) {
-    throw new Error('Missing required parameters: account, amount, symbolFind');
-  }
-
-  if (api.BigNumber(amount).lte(0)) {
-    return false;
-  }
   const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
   if (parentTokenBalance && api.BigNumber(parentTokenBalance.balance).gte(amount)) {
     return true;
@@ -459,14 +439,12 @@ actions.convert = async (payload) => { // allows any user who has parent token t
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
       && api.assert(qtyAsBigNum.gte(parentPairParams.minConvertibleAmount), `amount to convert must be >= ${parentPairParams.minConvertibleAmount}`)
       && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')) {
-      const hasEnoughBeedBalance = await verifyUtilityTokenBalance(api.sender);
-      const hasEnoughParentBalance = await verifyParentTokenBalance(api.sender, qtyAsBigNum, symbol);
+      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol);
       const hasEnoughStablePool = await findStablePools(symbol);
       const hasEnoughMarketPool = await findMarketPools(symbol);
 
 
-      if (api.assert(hasEnoughBeedBalance, 'not enough BEED balance')
-          && api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
+      if (api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
           && api.assert(hasEnoughStablePool, 'token must be in pool with a stable coin')
           && api.assert(hasEnoughMarketPool, 'token must be in pool with xxx.d token')) {
         const quoteOrBase = checkStablePosition(hasEnoughStablePool[0].tokenPair);
