@@ -75,7 +75,6 @@ const findMarketPools = async (parentSymbol) => {
   // Define parent-child token pairs
   const parentPair = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
 
-
   // Use a single database query to fetch all relevant pools
   const parentChildPools = await api.db.findInTable('marketpools', 'pools', {
     tokenPair: { $in: parentPair },
