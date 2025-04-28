@@ -405,7 +405,6 @@ actions.create = async (payload) => {
           url: finalUrl,
         };
 
-
         metadata = JSON.stringify(metadata);
         const newToken = {
           issuer: fromVerifiedContract ? 'null' : api.sender,

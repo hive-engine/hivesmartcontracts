@@ -524,7 +524,7 @@ describe('burndollar', function () {
   // });
 
 
-  // it('Fails tp update the params for the D token', (done) => {
+  // it('Fails to update the params for the D token', (done) => {
   //   new Promise(async (resolve) => {
       
   //     await fixture.setUp();
@@ -619,7 +619,7 @@ describe('burndollar', function () {
   // });
 
 
-  it('fails to covert token XXX to XXX.D', (done) => {
+  it('fails to convert token XXX to XXX.D', (done) => {
     new Promise(async (resolve) => {
       
       await fixture.setUp();
@@ -725,7 +725,7 @@ describe('burndollar', function () {
 
 
     console.log(" ")
-    console.log( '\u001b[' + 93 + 'm' + 'fails to covert token XXX to XXX.D' + '\u001b[0m')
+    console.log( '\u001b[' + 93 + 'm' + 'fails to convert token XXX to XXX.D' + '\u001b[0m')
 
     console.log(res2)
     console.log(res3)
@@ -768,7 +768,7 @@ describe('burndollar', function () {
       });
   });
 
-it('it coverts XXX to XXX.D', (done) => {
+it('it converts XXX to XXX.D', (done) => {
   new Promise(async (resolve) => {
     
     await fixture.setUp();
@@ -839,9 +839,8 @@ it('it coverts XXX to XXX.D', (done) => {
     let token = res2
 
    console.log(" ")
-   console.log( '\u001b[' + 93 + 'm' + 'Test: it coverts XXX to XXX.D' + '\u001b[0m')
+   console.log( '\u001b[' + 93 + 'm' + 'Test: it converts XXX to XXX.D' + '\u001b[0m')
    console.log (token)
-
 
    //  the correct burn % of token went to routing account
    assert.equal(token.account, 'whale');
