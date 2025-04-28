@@ -104,7 +104,6 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
   let parentTokenPrice;
   let returnObject = {};
 
-
   // Check if the match is before or after the colon
   if (name.includes(firstToken)) {
     // Match is before the colon in the marketpool and therefore is the quote price
@@ -124,7 +123,6 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     } else {
       parentTokenPrice = api.BigNumber(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
     }
-
 
     halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.baseQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
     // Conservative value of the pool: multiply the value of the half pool by 1.95
@@ -165,28 +163,29 @@ const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) =
   return false;
 };
 
-const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedFee, isSignedWithActiveKey) => {
+const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, isSignedWithActiveKey) => {
   if (api.BigNumber(fee).gte(0)) {
     // tranfer fee to the burn routing if any
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
+
+    if (isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
+      return false;
+    }
   }
   // burn the remainder to null
   const res2 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
   });
 
-  // burn the BEED for required
+  // burn the BEED for required will only perform if fee > 0
   const res3 = await api.executeSmartContract('tokens', 'transfer', {
-    to: 'null', symbol: 'BEED', quantity: beedFee.burnUsageFee, isSignedWithActiveKey,
+    to: 'null', symbol: 'BEED', quantity: beedParams.burnUsageFee, isSignedWithActiveKey,
   });
 
 
   // check if the tokens were sent
-  if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
-    return false;
-  }
   if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
     return false;
   }
@@ -205,7 +204,7 @@ actions.createSSC = async () => {
   if (tableExists === false) {
     await api.db.createTable('params');
 
-    await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'precision', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage', 'callingContractInfo']);
+    await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'precision', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage']);
 
     const params = {};
     params.issueDTokenFee = '1000';
@@ -242,15 +241,13 @@ actions.updateParams = async (payload) => { //    this function will update the 
 };
 
 actions.createTokenD = async (payload) => { // allow a token_owner to create the new D Token
-  const { // not sure if I need name for blacklist or callingContractInfo
+  const {
     name, symbol, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertibleAmount, feePercentage,
   } = payload;
 
   const params = await api.db.findOne('params', {});
   const { issueDTokenFee } = params;
-
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
-
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
@@ -258,8 +255,8 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   ) {
     // ensure the user issuing D token is owner of the parent pair token
     const tokenIssuer = await api.db.findOneInTable('tokens', 'tokens', { issuer: api.sender, symbol });
-
     const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
+
     if (api.assert(tokenIssuer !== null, 'You must be the token issuer in order to issue D token')
     && api.assert(finalRouting === null || (typeof finalRouting === 'string'), 'burn routing must be string')
     && api.assert(minConvertibleAmount && typeof minConvertibleAmount === 'string' && !api.BigNumber(minConvertibleAmount).isNaN() && api.BigNumber(minConvertibleAmount).gte(1), 'min convert amount must be string(number) greater than 1')
@@ -293,7 +290,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           // create the new XXX.D token
           await api.executeSmartContract('tokens', 'create', newToken);
 
-
           const burnPairParams = {
             issuer: api.sender,
             symbol: dsymbol,
@@ -313,14 +309,12 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
             to: api.sender, symbol: dsymbol, quantity: '1000',
           });
 
-
           // burn BEED at the rate specified from the burndollar_ params table
           if (api.BigNumber(issueDTokenFee).gt(0)) {
             await api.executeSmartContract('tokens', 'transfer', {
               to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
             });
           }
-
 
           api.emit(`${dsymbol} create and issued new token`, {
 
@@ -336,8 +330,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   return true;
 };
 
-
-actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
+actions.updateBurnPair = async (payload) => {
   // !! Allow token_issuer to update the precision, metaData, and maxSupply in multiple tables?
   // !! As indicated in discord this smart contract will do it what we program it to,
   // !! Ultimately due to dynamic nature of this contract we either need a default or allowed access to issuer (not just any user) to those fields
@@ -373,10 +366,9 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
         if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
           const params = await api.db.findOne('params', {});
           const { updateParamsFee } = params;
-
           const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
-
           const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
+
           if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
             token.name = finalName;
             token.burnRouting = finalRouting;
