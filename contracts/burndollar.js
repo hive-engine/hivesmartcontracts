@@ -247,6 +247,10 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   const params = await api.db.findOne('params', {});
   const { issueDTokenFee } = params;
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
+
+  if (api.assert(issueDTokenFee <= 0, 'fee for XXX.D creation must be greater than zero')) {
+    return false;
+  }
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
