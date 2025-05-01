@@ -203,7 +203,7 @@ actions.createSSC = async () => {
   if (tableExists === false) {
     await api.db.createTable('params');
 
-    await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'precision', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage']);
+    await api.db.createTable('burnpair', ['symbol']);
 
     const params = {};
     params.issueDTokenFee = '1000';
@@ -469,7 +469,9 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          api.assert(burnResults, 'error on token burn');
+          if(api.assert(burnResults, 'error on token burn');){
+            return false
+          }
 
           // finally, issue the new XXX.D
           await api.executeSmartContract('tokens', 'issue', {
