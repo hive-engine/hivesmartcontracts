@@ -1,0 +1,523 @@
+[33mcommit 08c373959138e3b9d65f9cb2ebe182050510f2e2[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu May 1 14:42:16 2025 -0400
+
+    review comments 5-1-25
+
+[33mcommit 11718878394af6788febeb8a8142f16be320d2d8[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 28 16:15:59 2025 -0400
+
+    making review progress
+
+[33mcommit 492efcf52db6f25513008fae572961be8ababcfe[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 28 16:05:20 2025 -0400
+
+    making review progress
+
+[33mcommit 5174a82964766364babe9294986a8ec6598568d6[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 28 15:27:27 2025 -0400
+
+    more comments
+
+[33mcommit 5da4f4c7720ca40a58f38a7f534773b3bfbc612e[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 28 15:05:30 2025 -0400
+
+    more review comments
+
+[33mcommit 710d250404c8366e8de2efa65765cd3d28bb2773[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 28 12:51:59 2025 -0400
+
+    on find market pools comment
+
+[33mcommit 91d9ccc2b2e07d04fde0bf7d55c9434beed52d66[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 28 12:01:15 2025 -0400
+
+    merded functions
+
+[33mcommit b511067e636067447058da1a0bd0450e4104ebd6[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 24 20:22:12 2025 -0400
+
+    uncomment tests
+
+[33mcommit cd5a1fffa7e99b1d64c2e19fcc2711389b716954[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 24 10:23:44 2025 -0400
+
+    :tada: addressed all Endec's comments
+
+[33mcommit d6a2c32ddd3aeff2fb5a63b2b4ef5aebd3d2fa1e[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 24 09:10:06 2025 -0400
+
+    update for Endecs review comments
+
+[33mcommit fdba7972fe20161f77a21342b8d1aee8cd3097b9[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Fri Apr 11 13:49:59 2025 -0400
+
+    just onemore lint to go
+
+[33mcommit 3b48601714b6a92c002d589dc8b615599bd46f97[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Fri Apr 11 13:47:33 2025 -0400
+
+    All Done
+
+[33mcommit 5f1439963fada969d31395b8fb8b8c2209576044[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Fri Apr 11 13:17:14 2025 -0400
+
+    :tada: added 1 BEED covert fee finishing final test
+
+[33mcommit da440194f9e0db44b66cb62a7a8e963b79a99323[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Fri Apr 11 08:11:08 2025 -0400
+
+    :tada: single DB call instead of map over the array
+
+[33mcommit 12a69aeef94e97d0c7a8657825277c4f1422de85[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Fri Apr 11 07:57:01 2025 -0400
+
+    :tada: single DB call instead of map over the array
+
+[33mcommit 8828ace6cc1ce1453f611aeccda40683cbfa81e6[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 17:40:39 2025 -0400
+
+     resolving delta
+
+[33mcommit 1f862092c2ffe5acdf075384a1d770fc0a61d209[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 17:30:58 2025 -0400
+
+    :tada: all done maybeexpect letting user change max supply or prescision
+
+[33mcommit 762d43c7aac9e7300fc3fc481ff32f1b16e79773[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 17:08:29 2025 -0400
+
+    :tada: bug free in test so far
+
+[33mcommit fcc43414f10f2762bb35ad1d99ff773dc0793806[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 15:23:31 2025 -0400
+
+    :tada: finalizing testing
+
+[33mcommit 604b12770074db03e6f26fbd6b867283c9d3ec15[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 13:21:10 2025 -0400
+
+    :tada: ALL DONE...testing next
+
+[33mcommit 45178eb12bafc3c57d8bec23e69a18480b0c7a0b[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 12:37:45 2025 -0400
+
+    :bug: final bug before test revamp
+
+[33mcommit 44f75e3e6374bd790705aab35a212b330e0d9c92[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 10:51:11 2025 -0400
+
+    :tada: resolve bug
+
+[33mcommit 595e5d03e4910cae88ad23598c6b7ae57a8f912a[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 10:18:24 2025 -0400
+
+    :bug: on calcParentPool not returning
+
+[33mcommit 5e70b861ca52d0573195aa4f8ff06b63b340194f[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 08:32:21 2025 -0400
+
+    parent token assert > 400 USD complete
+
+[33mcommit 9f7a62ff8f5aeafde9051427614447aba6abf28a[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Thu Apr 10 07:45:54 2025 -0400
+
+    calc postistion and value of parent pool
+
+[33mcommit cf9e163dcf8b211b4b66864d78b6d8b54624d226[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 16:31:12 2025 -0400
+
+    near end of market logic
+
+[33mcommit 0dac15127cacf29507f8230fe4f3f61dad0331d2[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 14:35:37 2025 -0400
+
+    manipulate pools
+
+[33mcommit d6c8c6b70cfbfa6995bbf9282ad0ee606fc5cfd0[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 13:46:58 2025 -0400
+
+    happy with zmarket pool progress
+
+[33mcommit 98e777dcf06d8a44480e3e926264e50ddd1d06e2[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 11:41:57 2025 -0400
+
+    more progress on market pools
+
+[33mcommit f7df9873e33c34e94ba16df8d7311a35cdbda20a[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 10:49:19 2025 -0400
+
+    got pool logic working
+
+[33mcommit eb680e53e33b058dcdaa028875014fadaaaaa8fa[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 08:23:42 2025 -0400
+
+    some progress on market pool
+
+[33mcommit 345f91bf1714f9368f657a856a43a02aa6467b32[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 08:10:10 2025 -0400
+
+    about to work on pools
+
+[33mcommit 19f801c125ca0ad85d503b48695e651a52ce9340[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 08:00:02 2025 -0400
+
+    working on pools
+
+[33mcommit a87b08b81c5078b1ac8c5b348d623e3a3f2f403c[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 07:55:33 2025 -0400
+
+    :tada: issuer now gets 100 tokens minimum
+
+[33mcommit 441dd58e56eb3af90fe1de1a5bf3a0aacfd872ce[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 07:38:57 2025 -0400
+
+    add issuance of 1000 to XXX.D
+
+[33mcommit 912c48e2e431ff56f082cc2c9889fc18086d74d0[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Wed Apr 9 07:30:09 2025 -0400
+
+    quick remove urls
+
+[33mcommit 30f073f259502a234c8bbfd2bd0b5181383bea48[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 22:02:13 2025 -0400
+
+    got rid of as owner in burndollar
+
+[33mcommit 50efc6265d2cd7f3a80e84f11253a372f40f3a9b[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 21:51:11 2025 -0400
+
+    who can the XXX.D be issued to
+
+[33mcommit abfe6e96b690d3f4c4c46478d2be2bc8f9d1b78f[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 16:05:48 2025 -0400
+
+    good first attempt on market pools
+
+[33mcommit 33db9e198dda055c2fd1d1ad49c62a45a455fa1e[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 15:37:56 2025 -0400
+
+    about to do the market pool scripting
+
+[33mcommit 1e89cc0f17cc9d43b6b4136f64da81f6f192db23[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 15:09:06 2025 -0400
+
+    working on 5th test
+
+[33mcommit bcc8be2013a69fd9fad6d96bc1f85b755dfc5604[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 14:10:11 2025 -0400
+
+    :tada: 4th test working
+
+[33mcommit 0c602df0c4b45853ecbf288d931335528de8b565[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 13:35:49 2025 -0400
+
+    :tada: 4 tests working
+
+[33mcommit 81b39170ff166f7d88b43b0dc2a6b68d40c865f3[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Tue Apr 8 12:08:49 2025 -0400
+
+    :tada: huge success got 3 working tests on burndollar without impacting other tests
+
+[33mcommit 44075b13f552541c0fe1443a391f40ba947d18db[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 7 16:19:37 2025 -0400
+
+    :tada: 3 working tests
+
+[33mcommit b3f3c00a6e56461d569f2159a4a3eaadd9ba11ca[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 7 16:02:23 2025 -0400
+
+    working tests
+
+[33mcommit 5215798777ed9e049248c5a7a09d6628b5b1753b[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 7 15:51:49 2025 -0400
+
+     add all
+
+[33mcommit e9f72ff985a6547c5c3ce4b76137dcbb0206948e[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 7 15:41:44 2025 -0400
+
+    :tada: three working tests
+
+[33mcommit 0428921336f3bb0bf87a411063b3e51f98f09737[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 7 12:04:53 2025 -0400
+
+    most bugs fixed on burndollar going to induce some :bugs: by changing code?
+
+[33mcommit fdc776cb3178eece1bda2f7af8f866039decf71d[m
+Author: Andrew D Urquhart <andrewurq@gmail.com>
+Date:   Mon Apr 7 11:45:36 2025 -0400
+
+    :bug: did a rebase of upstream due to unintended bugs on bee dollar and token.js fixed as of this commit
+
+[33mcommit 8365eedfcd2ebeee6d672e44cd641f49fbfeb574[m[33m ([m[1;31mupstream/main[m[33m, [m[1;31mupstream/HEAD[m[33m)[m
+Merge: 4582bcf 6ae8065
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Tue Feb 25 22:40:52 2025 +0100
+
+    Merge branch 'qa'
+
+[33mcommit 6ae806518551af57b286fcc359c507ebc996f266[m[33m ([m[1;31mupstream/common[m[33m)[m
+Merge: a273397 ca5e5fd
+Author: eonwarped <34953718+eonwarped@users.noreply.github.com>
+Date:   Tue Feb 25 14:39:55 2025 -0500
+
+    Merge pull request #99 from hive-engine/preventDuplicateProcessing
+    
+    prevent transactional retry on session
+
+[33mcommit ca5e5fdaf4e2dbd83045dcae51aa9fa5b3c5982e[m[33m ([m[1;31mupstream/preventDuplicateProcessing[m[33m)[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Mon Feb 24 22:28:18 2025 +0100
+
+    prevent transactional retry on session
+
+[33mcommit 4582bcf0a6404968e89fcc84940c3ba9f0e41c2e[m[33m ([m[1;33mtag: ivm_v1.0.0[m[33m)[m
+Merge: a959139 994db60
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Wed Feb 19 19:26:43 2025 +0100
+
+    Merge branch 'qa'
+
+[33mcommit 994db6046a5a53fbc7406835c7f71409f3084127[m
+Merge: 539fddf 9867116
+Author: eonwarped <34953718+eonwarped@users.noreply.github.com>
+Date:   Wed Feb 19 12:53:38 2025 -0500
+
+    Merge pull request #97 from hive-engine/ivm_node22
+    
+    Add back node 22 support and tests
+
+[33mcommit 986711692b96a34954789e216cb8cb4964be7e00[m[33m ([m[1;31mupstream/ivm_node22[m[33m)[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Wed Feb 19 18:52:11 2025 +0100
+
+    add readme notes for node 20+
+
+[33mcommit fbc48ac70081fcf1c7118cddcddfb4b1845f6313[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Wed Feb 19 18:40:40 2025 +0100
+
+    add back node 22 support and tests
+
+[33mcommit de3a3468cec017d99c9026e673a05f45ef2d3027[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Wed Feb 19 18:26:09 2025 +0100
+
+    remove comments
+
+[33mcommit a9591396abc86f7b286604347db0803def50830d[m
+Merge: 2d6449a 539fddf
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Wed Feb 19 18:11:17 2025 +0100
+
+    Merge branch 'qa'
+
+[33mcommit 539fddf69b515f2670e1c1c7baefddce78ccd9ab[m
+Merge: 9e36013 c709423
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Tue Feb 18 18:56:10 2025 +0100
+
+    Merge branch 'common' into qa
+
+[33mcommit c70942323b3ab7288f05877cd21d5bbc325b06ac[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Tue Feb 18 18:53:00 2025 +0100
+
+    security updates
+
+[33mcommit 9e360134c67d48e149127740d32ef111db8df909[m
+Merge: cfe1fcf a273397
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Tue Feb 18 18:51:45 2025 +0100
+
+    Merge branch 'common' into qa
+
+[33mcommit cfe1fcf2b12060128b30ebcf69cb153212e93533[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Tue Feb 18 18:42:46 2025 +0100
+
+    security updates
+
+[33mcommit a273397c27d266c3596f9157157ea7eaf4de364c[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Tue Feb 18 16:42:23 2025 +0100
+
+    increment version for m2
+
+[33mcommit 81307547b994286f6db0d040bf2cca9367b2dd76[m[33m ([m[1;31mupstream/use_isolated_vm[m[33m)[m
+Merge: 20c6261 be94502
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Tue Feb 18 16:39:16 2025 +0100
+
+    Merge remote-tracking branch 'hive/qa' into use_isolated_vm
+
+[33mcommit be94502c2f560165bc27309b870d59fe51d4def2[m
+Merge: 2d74e92 95efe54
+Author: eonwarped <34953718+eonwarped@users.noreply.github.com>
+Date:   Tue Feb 18 09:27:02 2025 -0500
+
+    Merge pull request #91 from Endecs/feature/market-order-limit
+    
+    Market order limit [Requires all nodes to update]
+
+[33mcommit 20c6261b972faaabe2b592032a2df555cde914b8[m
+Merge: 761e8d8 2d74e92
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Sat Feb 15 00:05:31 2025 +0100
+
+    Merge remote-tracking branch 'hive/qa' into use_isolated_vm
+
+[33mcommit 2d6449a25ab15c2f35e9056220d064c0f03820be[m
+Merge: 02ab153 2d74e92
+Author: cryptomancer <8011332+bt-cryptomancer@users.noreply.github.com>
+Date:   Fri Feb 14 18:52:59 2025 +0000
+
+    Merge remote-tracking branch 'hive/qa'
+
+[33mcommit 2d74e924dfd12181e43b994134cde628e34c0fc1[m
+Merge: d7da22d 07d7291
+Author: eonwarped <34953718+eonwarped@users.noreply.github.com>
+Date:   Fri Feb 14 13:52:33 2025 -0500
+
+    Merge pull request #94 from hive-engine/miningFix
+    
+    Remove equipField and miningPowerField
+
+[33mcommit d7da22dde1f59270c9b312fe0369e32f45cfaae4[m
+Merge: f3ddb64 cc98f23
+Author: eonwarped <34953718+eonwarped@users.noreply.github.com>
+Date:   Fri Feb 14 13:52:16 2025 -0500
+
+    Merge pull request #93 from hive-engine/witnessRotation
+    
+    Rotate proposer when changing witnesses
+
+[33mcommit 07d72916477b39d49ce2b234f80ac20058a485ef[m[33m ([m[1;31mupstream/miningFix[m[33m)[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Wed Feb 12 19:52:00 2025 +0100
+
+    remove equipField and miningPowerField
+
+[33mcommit 95efe549efd9fb9202b8d437904c8a709f2c1f70[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:58:27 2025 +0200
+
+    fixed test
+
+[33mcommit e6bd8a7f402ae91e286f8a57bba88d0d30b6f167[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:55:36 2025 +0200
+
+    missed deleting of openOrders
+
+[33mcommit ad60705f7e8b5b2b5071efd70fde59c885f314af[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:54:44 2025 +0200
+
+    reverted and adjusted tests
+
+[33mcommit 4ec647172b578ef272e9c11a8bca2be6055d017c[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:51:34 2025 +0200
+
+    Revert "added more tests for new limit order logic"
+    
+    This reverts commit fd450855f5e21b9c677ba5ad52fd70d5f215b75c.
+
+[33mcommit 22ec9fb7f7f5d9af58811f15e4d5508cf5e8eb77[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:51:01 2025 +0200
+
+    Revert "Renamed entries to openOrders"
+    
+    This reverts commit 4659b56002e111854791068eaf8a8dccb4f2cd4c.
+
+[33mcommit 029f9467b705bfd0618b86341ce2dd4ae8f06bc4[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:50:50 2025 +0200
+
+    Revert "test fix"
+    
+    This reverts commit 34e14087b46547a9df0f0c8e6e839b3a9a847578.
+
+[33mcommit 9d8881126eb160db66d5ba183b6eaa2f7b3cebba[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:47:50 2025 +0200
+
+    Revert "Added increment functionality to database update"
+    
+    This reverts commit 19d526c2e5307f92a05576732b0195d13bc244c3.
+
+[33mcommit 27a0d22f34bc22f9bca47b93cc6ab63501eaded1[m
+Merge: 1865fcb 02ab153
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:46:10 2025 +0200
+
+    Merge branch 'main' into feature/market-order-limit
+
+[33mcommit 1865fcb71a8bf24ffe4f10c019137c6480d347cd[m
+Author: Endecs <info@endecs.com>
+Date:   Wed Feb 12 16:43:54 2025 +0200
+
+    simplified counting orders with new count() database function
+
+[33mcommit 761e8d8d6830a85791f844301a8d5446c12cbfc6[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Tue Feb 11 22:45:10 2025 +0100
+
+    drop equippedNft fields for miningPower, should deprecate unused feature
+
+[33mcommit cc98f233e4b5991e234e766294b6718263c4d847[m[33m ([m[1;31mupstream/witnessRotation[m[33m)[m
+Author: eonwarped <eonwarped@gmail.com>
+Date:   Mon Feb 10 21:20:43 2025 +0100
+
+    rotate proposer when changing witnesses

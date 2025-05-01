@@ -203,7 +203,7 @@ actions.createSSC = async () => {
   if (tableExists === false) {
     await api.db.createTable('params');
 
-    await api.db.createTable('burnpair', ['issuer', 'symbol', 'name', 'precision', 'parentSymbol', 'burnRouting', 'minConvertibleAmount', 'feePercentage']);
+    await api.db.createTable('burnpair', ['symbol']);
 
     const params = {};
     params.issueDTokenFee = '1000';
