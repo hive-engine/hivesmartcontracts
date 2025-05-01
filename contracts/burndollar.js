@@ -359,7 +359,9 @@ actions.updateBurnPair = async (payload) => {
     ) {
       const token = await api.db.findOne('burnpair', { symbol });
 
-      api.assert(token !== null && token !== undefined, 'D token must exist');
+      if (api.assert(token !== null && token !== undefined, 'D token must exist')) {
+        return false;
+      }
 
       if (token) {
         if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
