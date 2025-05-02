@@ -243,27 +243,32 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   const {
     name, symbol, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertibleAmount, feePercentage,
   } = payload;
-
+  const burnPairParams = {};
   const params = await api.db.findOne('params', {});
   const { issueDTokenFee } = params;
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
 
-  if (api.assert(issueDTokenFee <= 0, 'fee for XXX.D creation must be greater than zero')) {
-    return false;
+  if (api.assert(issueDTokenFee >= 0, `fee for XXX.D creation must be greater than zero ${issueDTokenFee}`)) {
+    api.assert(1 === 2, 'meow');
   }
+
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8, 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
     // ensure the user issuing D token is owner of the parent pair token
-    const tokenIssuer = await api.db.findOneInTable('tokens', 'tokens', { issuer: api.sender, symbol });
+    const tokenIssuer = await api.db.findOneInTable('tokens', 'tokens', { symbol });
     const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
 
-    if (api.assert(tokenIssuer !== null, 'You must be the token issuer in order to issue D token')
-    && api.assert(finalRouting === null || (typeof finalRouting === 'string'), 'burn routing must be string')
-    && api.assert(minConvertibleAmount && typeof minConvertibleAmount === 'string' && !api.BigNumber(minConvertibleAmount).isNaN() && api.BigNumber(minConvertibleAmount).gte(1), 'min convert amount must be string(number) greater than 1')
-    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
+    if (api.assert(tokenIssuer.issuer === api.sender, 'You must be the token issuer in order to issue D token')
+    && api.assert(api.isValidAccountName(finalRouting), 'burn routing must be string')
+    && api.assert(minConvertibleAmount && typeof minConvertibleAmount === 'string' && !api.BigNumber(minConvertibleAmount).isNaN() && api.BigNumber(minConvertibleAmount).gte(0), 'min convert amount must be string(number) greater than 0')
+    ) {
+      burnPairParams.minConvertibleAmount = minConvertibleAmount;
+    }
+
+    if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 10000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
     && api.assert(maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN() && api.BigNumber(maxSupply).gte(1000), 'max supply must be a minimum of 1000 units')
     ) {
       const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
@@ -293,16 +298,15 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           // create the new XXX.D token
           await api.executeSmartContract('tokens', 'create', newToken);
 
-          const burnPairParams = {
-            issuer: api.sender,
-            symbol: dsymbol,
-            precision,
-            name: finalname,
-            parentSymbol: symbol,
-            burnRouting: finalRouting,
-            minConvertibleAmount,
-            feePercentage,
-          };
+
+          burnPairParams.issuer = api.sender;
+          burnPairParams.symbol = dsymbol;
+          burnPairParams.precision = precision;
+          burnPairParams.name = finalname;
+          burnPairParams.parentSymbol = symbol;
+          burnPairParams.burnRouting = finalRouting;
+          burnPairParams.feePercentage = feePercentage;
+
 
           // insert record into burnpair table, which contains the Parent token and the params for the child (XXX.D) token
           await api.db.insert('burnpair', burnPairParams);
