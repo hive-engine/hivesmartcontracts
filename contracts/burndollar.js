@@ -268,6 +268,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
     if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 10000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
+      let finalName = '';
       let dsymbol = '';
       dsymbol = `${symbol}.D`;
       const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dsymbol });
@@ -275,11 +276,11 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
        && api.assert(tokenDExists === null, 'D token must not already exist')
        && api.assert((precision > 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
       ) {
-        const finalname = `The token ${symbol} is the parent of this dollar token ${dsymbol} `;
+        finalName = `${symbol} is the parent of ${symbol} dollar`;
 
         const newToken = {
           symbol: dsymbol,
-          name: finalname,
+          name: finalName,
           precision,
           maxSupply: `${Number.MAX_SAFE_INTEGER}`,
 
@@ -291,7 +292,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         burnPairParams.issuer = api.sender;
         burnPairParams.symbol = dsymbol;
         burnPairParams.precision = precision;
-        burnPairParams.name = finalname;
+        burnPairParams.name = finalName;
         burnPairParams.parentSymbol = symbol;
         burnPairParams.burnRouting = finalRouting;
         burnPairParams.feePercentage = feePercentage;
@@ -339,8 +340,6 @@ actions.updateBurnPair = async (payload) => {
   if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
   && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
-  && api.assert(finalName && typeof finalName === 'string', 'token name must be string')
-  && api.assert(api.validator.isAlphanumeric(api.validator.blacklist(finalName, ' ')) && finalName.length > 0 && finalName.length <= 50, 'invalid name: letters, numbers, whitespaces only, max length of 50')
   && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
   && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
@@ -358,7 +357,6 @@ actions.updateBurnPair = async (payload) => {
           const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
 
           if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
-            token.name = finalName;
             token.burnRouting = finalRouting;
             token.feePercentage = feePercentage;
             await api.db.update('burnpair', token);
