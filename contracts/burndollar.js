@@ -338,6 +338,9 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 };
 
 actions.updateBurnPair = async (payload) => {
+  /* Note the name, precision, metadata, and maxsupply fields
+    that exist on other tokens are controlled by the burndollar
+    contract and not editable by the user on a XXX.D token */
   const {
     symbol,
     burnRouting,
