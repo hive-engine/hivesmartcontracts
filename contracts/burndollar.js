@@ -237,7 +237,7 @@ actions.updateParams = async (payload) => { //    this function will update the 
 
 actions.createTokenD = async (payload) => { // allow a token_owner to create the new D Token
   const {
-    name, symbol, precision, maxSupply, isSignedWithActiveKey, burnRouting, minConvertibleAmount, feePercentage,
+    symbol, precision, isSignedWithActiveKey, burnRouting, minConvertibleAmount, feePercentage,
   } = payload;
 
   const burnPairParams = {};
@@ -267,7 +267,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
     }
 
     if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 10000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
-      && api.assert(maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN() && api.BigNumber(maxSupply).gte(1000), 'max supply must be a minimum of 1000 units')
     ) {
       let dsymbol = '';
       dsymbol = `${symbol}.D`;
@@ -276,20 +275,14 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
        && api.assert(tokenDExists === null, 'D token must not already exist')
        && api.assert((precision > 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
       ) {
-        const finalname = name === undefined ? 'null' : name;
+        const finalname = `The token ${symbol} is the parent of this dollar token ${dsymbol} `;
 
         const newToken = {
-          issuer: api.sender,
           symbol: dsymbol,
           name: finalname,
           precision,
-          maxSupply: api.BigNumber(maxSupply).toFixed(precision),
-          supply: '0',
-          circulatingSupply: '0',
-          stakingEnabled: false,
-          unstakingCooldown: 1,
-          delegationEnabled: false,
-          undelegationCooldown: 0,
+          maxSupply: `${Number.MAX_SAFE_INTEGER}`,
+
         };
 
         // create the new XXX.D token
