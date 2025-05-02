@@ -190,8 +190,6 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
   if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedFee.burnUsageFee, 'transfer')) {
     return false;
   }
-
-  return true;
 };
 
 // end utility functions
@@ -266,12 +264,12 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
       burnPairParams.minConvertibleAmount = minConvertibleAmount;
     }
 
-    if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 10000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
+    if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 1000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
       let finalName = '';
-      let dsymbol = '';
-      dsymbol = `${symbol}.D`;
-      const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dsymbol });
+      let dSymbol = '';
+      dSymbol = `${symbol}.D`;
+      const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dSymbol });
       if (api.assert(api.isValidAccountName(api.sender), 'account for burn routing must exist')
        && api.assert(tokenDExists === null, 'D token must not already exist')
        && api.assert((precision > 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
@@ -279,7 +277,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         finalName = `${symbol} is the parent of ${symbol} dollar`;
 
         const newToken = {
-          symbol: dsymbol,
+          symbol: dSymbol,
           name: finalName,
           precision,
           maxSupply: `${Number.MAX_SAFE_INTEGER}`,
@@ -290,9 +288,8 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
         await api.executeSmartContract('tokens', 'create', newToken);
 
         burnPairParams.issuer = api.sender;
-        burnPairParams.symbol = dsymbol;
+        burnPairParams.symbol = dSymbol;
         burnPairParams.precision = precision;
-        burnPairParams.name = finalName;
         burnPairParams.parentSymbol = symbol;
         burnPairParams.burnRouting = finalRouting;
         burnPairParams.feePercentage = feePercentage;
@@ -302,7 +299,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
         // issue 1000 XXX.D token to token issuer, issuer must create a market pools in order for conversions to occur(see actions.convert code)
         await api.executeSmartContract('tokens', 'issue', {
-          to: api.sender, symbol: dsymbol, quantity: '1000',
+          to: api.sender, symbol: dSymbol, quantity: '1000',
         });
 
         // burn BEED at the rate specified from the burndollar_ params table
@@ -311,10 +308,8 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
             to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
           });
         }
-
-        api.emit(`${dsymbol} create and issued new token`, {
-
-          to: api.sender, usefee: minConvertibleAmount, feeRouting: burnPairParams.burnRouting, issued: '1000 units',
+        api.emit('issued new token dollar token', {
+          usefee: minConvertibleAmount, feeRouting: burnPairParams.burnRouting, dSymbol,
         });
       }
     }
@@ -339,9 +334,9 @@ actions.updateBurnPair = async (payload) => {
   const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
   if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
-  && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
-  && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
-  && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
+    && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
+    && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
+    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 1000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
       const token = await api.db.findOne('burnpair', { symbol });
 
@@ -371,7 +366,6 @@ actions.updateBurnPair = async (payload) => {
       }
     }
   }
-  return true;
 };
 
 actions.convert = async (payload) => { // allows any user who has parent token to convert to xxx.D token given there is suffcient marketpools
