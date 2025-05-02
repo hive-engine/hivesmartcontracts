@@ -655,11 +655,11 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "2000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       // trans 26 active key
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "20", "isSignedWithActiveKey": false }')) 
-      // 27 Invalid precision
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 9, "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      // 27-28 
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "isSignedWithActiveKey": true }'));
       // trans 29 not enough BEED
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "isSignedWithActiveKey": true }'));
       // trans 30 invalid quant
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : 20, "isSignedWithActiveKey": true }'));
       // trans 31 +32 invalid symbol
@@ -697,7 +697,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "WHALE", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'tokens', 'issue', '{ "symbol": "WHALE", "name": "token", "quantity": "2000", "to": "whale", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'tokens', 'transfer', '{ "symbol": "WHALE", "to": "drewlongshot", "quantity": "100", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "WHALE", "quantity" : "10", "feePercentage": ".5", "precision": 2, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "WHALE", "quantity" : "10", "feePercentage": ".5", "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -715,7 +715,6 @@ describe('burndollar', function () {
     console.log(" ")
     console.log( '\u001b[' + 93 + 'm' + 'fails to convert token XXX to XXX.D' + '\u001b[0m')
     console.log("  ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
-    console.log("  ⚪",JSON.parse(transactionsBlock1[27].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[29].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[30].logs).errors[0])
     console.log("  ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
@@ -731,7 +730,6 @@ describe('burndollar', function () {
     console.log("  ⚪",JSON.parse(transactionsBlock1[56].logs).errors[0])
 
     assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'you must use a custom_json signed with your active key');
-    assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'invalid precision');
     assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'you must have enough BEED tokens cover the creation fees');
     assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'invalid params quantity');
     assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], 'symbol must be string');
@@ -790,7 +788,7 @@ it('it converts XXX to XXX.D', (done) => {
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token",  "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "20000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
     // BEE should still be 2100 burned and BEED should be at 1000
-    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "burnRouting": "whale", "feePercentage": ".1", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "burnRouting": "whale", "feePercentage": ".1", "minConvertibleAmount": "1", "maxSupply": "20000", "isSignedWithActiveKey": true }'));
     //trans 27 - 30 make pools
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "URQTWO:URQTWO.D", "isSignedWithActiveKey": true }'));
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "URQTWO.D:SWAP.HBD", "isSignedWithActiveKey": true }'));
@@ -831,7 +829,7 @@ it('it converts XXX to XXX.D', (done) => {
    //  the correct burn % of token went to routing account
    assert.equal(token.account, 'whale');
    assert.equal(token.symbol, 'URQTWO');
-   assert.equal(token.balance, '400.00');
+   assert.equal(token.balance, '400.000');
 
     res2 = await fixture.database.findOne({
     contract: 'tokens',
@@ -865,7 +863,7 @@ it('it converts XXX to XXX.D', (done) => {
   //drewlongshot got his token converted to token.D
     assert.equal(token.account, 'drewlongshot');
     assert.equal(token.symbol, 'URQTWO.D');
-   assert.equal(token.balance, '3600.00');
+   assert.equal(token.balance, '3600.000');
 
    res2 = await fixture.database.findOne({
     contract: 'tokens',
