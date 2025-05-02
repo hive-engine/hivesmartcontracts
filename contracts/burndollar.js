@@ -255,7 +255,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
-   && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8, 'symbol must be string of length 8 or less to create a xxx-D token')
+   && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
     // ensure the user issuing D token is owner of the parent pair token
     const tokenIssuer = await api.db.findOneInTable('tokens', 'tokens', { symbol });
@@ -271,11 +271,10 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
     if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 10000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
     && api.assert(maxSupply && typeof maxSupply === 'string' && !api.BigNumber(maxSupply).isNaN() && api.BigNumber(maxSupply).gte(1000), 'max supply must be a minimum of 1000 units')
     ) {
-      const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
       let dsymbol = '';
       dsymbol = `${symbol}.D`;
       const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dsymbol });
-      if (api.assert(burnAccount !== null, 'account for burn routing must exist')
+      if (api.assert(api.isValidAccountName(api.sender), 'account for burn routing must exist')
         && api.assert(tokenDExists === null, 'D token must not already exist')
       ) {
         try {
@@ -445,7 +444,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
             calcResultParentPool = await calcParentPool(tokenNameQuote, hasEnoughMarketPool[0], stableTPrice, parentPairParams.precision);
           }
         } else {
-          throw new Error('error in quote or base if statement');
+
         }
 
         // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
@@ -467,8 +466,8 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          if (!api.assert(api.BigNumber(xxxdToIssue).gt('0001'), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
-            throw new Error('resulting token issuance is too small');
+          if (!api.assert(api.BigNumber(xxxdToIssue).gt('0.0001'), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
+            return false;
           }
 
 
@@ -488,8 +487,6 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
             to: api.sender, fee, feeRouting: parentPairParams.burnRouting, [keyname]: qtyAsBigNum.toFixed(parentPairParams.precision), [childName]: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
           });
-
-          return true;
         }
       }
     }
