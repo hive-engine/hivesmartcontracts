@@ -338,23 +338,15 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 };
 
 actions.updateBurnPair = async (payload) => {
-  // !! Allow token_issuer to update the precision, metaData, and maxSupply in multiple tables?
-  // !! As indicated in discord this smart contract will do it what we program it to,
-  // !! Ultimately due to dynamic nature of this contract we either need a default or allowed access to issuer (not just any user) to those fields
-  // !! the token_issuer can only change what we allow them to change, as no other contract will have access to those fields
-  // !! (understood as discribed in discord)
-  // !! Specs sheet does not say a token_issuer should be able do that  (visa vie this smart contract) or set it to some sort of default
-  // !! Happy to program the intentions either way
   const {
     symbol,
-    name,
     burnRouting,
     feePercentage,
     isSignedWithActiveKey,
   } = payload;
 
   const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
-  const finalName = name === undefined ? '' : name;
+
 
   const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
   if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
