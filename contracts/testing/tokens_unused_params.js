@@ -273,6 +273,9 @@ actions.transferOwnership = async (payload) => {
         if (api.assert(api.isValidAccountName(finalTo), 'invalid to')) {
           token.issuer = finalTo;
           await api.db.update('tokens', token);
+          api.emit('transferOwnership', {
+              from: api.sender, to: finalTo, symbol
+          });
         }
       }
     }
