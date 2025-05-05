@@ -266,7 +266,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
     if (api.assert(tokenParent.issuer === api.sender, 'You must be the token issuer in order to issue D token')
      && api.assert(api.isValidAccountName(finalRouting), 'burn routing must be string')
-     && api.assert(minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(0), `min convert amount mustgfg be string(number) greater than 1 ${minAmountConvertible} ${typeof minAmountConvertible}`)
+     && api.assert(minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(0), 'min convert amount must be string(number) greater than 1')
     ) {
       if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 1000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
       ) {
