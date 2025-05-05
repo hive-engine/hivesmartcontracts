@@ -257,7 +257,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
-  if (api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
+  if (api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
   // ensure the user issuing D token is owner of the parent pair token
@@ -392,8 +392,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
     const qtyAsBigNum = api.BigNumber(quantity);
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
-
-  && api.assert(qtyAsBigNum.gte(parentPairParams.minConvertibleAmount), `amount to convert must be >= 1 ${qtyAsBigNum}  ${parentPairParams.minConvertibleAmount}`)) {
+    && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
       const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol);
       const hasEnoughStablePool = await findStablePools(symbol);
       const hasEnoughMarketPool = await findMarketPools(symbol);
@@ -483,6 +482,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
         }
       }
     }
+    return false;
   }
   return false;
 };
