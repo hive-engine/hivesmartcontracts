@@ -257,6 +257,11 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
 
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
+  if (!isSignedWithActiveKey || isSignedWithActiveKey === false) {
+    api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key');
+    return false;
+  }
+
   if (api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
@@ -322,10 +327,8 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   return true;
 };
 
-actions.updateBurnPair = async (payload) => {
-/* Note the name, precision, metadata, and maxsupply fields
-  that exist on other tokens are controlled by the burndollar
-  contract and not editable by the user on a XXX.D token */
+
+actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
   const {
     symbol,
     burnRouting,
@@ -335,34 +338,26 @@ actions.updateBurnPair = async (payload) => {
 
   const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
 
-
   const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
   if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
     && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
-    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 1000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
+    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
       const token = await api.db.findOne('burnpair', { symbol });
 
-      if (api.assert(token !== null && token !== undefined, 'D token must exist')) {
-        return false;
-      }
+      api.assert(token !== null && token !== undefined, 'D token must exist');
 
       if (token) {
         if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
           const params = await api.db.findOne('params', {});
           const { updateParamsFee } = params;
-          let authorizedCreation;
 
-          if (updateParamsFee && updateParamsFee === 0) {
-            authorizedCreation = true;
-          } else {
-            const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
-            authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
-          }
+          const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
 
-          if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the update properties fees')) {
+          const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
+          if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
             token.burnRouting = finalRouting;
             token.feePercentage = feePercentage;
             await api.db.update('burnpair', token);
@@ -377,6 +372,7 @@ actions.updateBurnPair = async (payload) => {
       }
     }
   }
+  return true;
 };
 
 actions.convert = async (payload) => { // allows any user who has parent token to convert to xxx.D token given there is suffcient marketpools
