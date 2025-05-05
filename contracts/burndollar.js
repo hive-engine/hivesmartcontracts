@@ -11,12 +11,21 @@ const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
 
-const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
+const verifyTokenBalance = async (account, beedParams, amount, symbolFind, toggle) => {
   const { burnUsageFee } = beedParams;
 
+
+  if (toggle === 'toggleOn') { // ensure XXX.D token was created
+    const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
+
+    if (!createD) {
+      return false;
+    }
+  }
   const userBeed = await api.db.findOneInTable('tokens', 'balances', { account, symbol: 'BEED' });
 
   api.assert(userBeed && api.BigNumber(userBeed.balance).gte(burnUsageFee), 'not enough BEED balance');
+
 
   const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
   if (parentTokenBalance && api.BigNumber(parentTokenBalance.balance).gte(amount)) {
@@ -299,6 +308,9 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           // create the new XXX.D token
           await api.executeSmartContract('tokens', 'create', newToken);
 
+          verifyTokenBalance(api.sender, params, 0, dSymbol, 'toggleOn');
+
+
           burnPairParams.issuer = api.sender;
           burnPairParams.symbol = dSymbol;
           burnPairParams.precision = tokenParent.precision;
@@ -392,7 +404,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
     && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
-      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol);
+      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol, 'toggleOff');
       const hasEnoughStablePool = await findStablePools(symbol);
       const hasEnoughMarketPool = await findMarketPools(symbol);
 
