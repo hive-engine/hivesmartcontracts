@@ -46,51 +46,37 @@ const checkStablePosition = (tokenPair) => {
   return false; // No stable pair found in the token pair
 };
 
-const findStablePools = async (parentSymbol) => {
+const findMarketPools = async (parentSymbol, toggle) => {
 // Define child symbol
   const childSymbol = `${parentSymbol}.D`;
+  let poolData;
 
+  if (toggle === 'stable') {
   // Define parent-child token pairs
-  const parentPairArray = [`${parentSymbol}`, `${childSymbol}`];
+    const stableParentArray = [`${parentSymbol}`, `${childSymbol}`];
 
-  // Create an array of all possible token pairs
-  const stableResults = parentPairArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
-    `${sElement}:${pElement}`,
-    `${pElement}:${sElement}`,
-  ]));
+    // Create an array of all possible token pairs
+    const stableResults = stableParentArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
+      `${sElement}:${pElement}`,
+      `${pElement}:${sElement}`,
+    ]));
 
+    poolData = await api.db.findInTable('marketpools', 'pools', {
+      tokenPair: { $in: stableResults },
+    });
+  }
 
-  // Fetch all potential pools in a single database call
-  const stablePoolsData = await api.db.findInTable('marketpools', 'pools', {
-    tokenPair: { $in: stableResults },
-  });
-
-  // Process the fetched results to construct the stablePools array
-  const stablePools = stablePoolsData.map(stablePool => ({
-    tokenPair: stablePool.tokenPair,
-    basePrice: stablePool.basePrice || '0',
-    quotePrice: stablePool.quotePrice || '0',
-    baseQuantity: stablePool.baseQuantity || '0',
-    quoteQuantity: stablePool.quoteQuantity || '0',
-  }));
-
-  return stablePools.length > 0 ? stablePools : null; // Return stablePools or null if empty
-};
-
-const findMarketPools = async (parentSymbol) => {
-// Create the child symbol
-  const childSymbol = `${parentSymbol}.D`;
-
+  if (toggle === 'market') {
   // Define parent-child token pairs
-  const parentPair = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
+    const marketParentArray = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
 
-  // Use a single database query to fetch all relevant pools
-  const parentChildPools = await api.db.findInTable('marketpools', 'pools', {
-    tokenPair: { $in: parentPair },
-  });
-
+    // Use a single database query to fetch all relevant pools
+    poolData = await api.db.findInTable('marketpools', 'pools', {
+      tokenPair: { $in: marketParentArray },
+    });
+  }
   // Process results and construct the valid pools array
-  const validPools = parentChildPools.map(pool => ({
+  const validPools = poolData.map(pool => ({
     tokenPair: pool.tokenPair,
     basePrice: pool.basePrice || '0',
     quotePrice: pool.quotePrice || '0',
@@ -405,8 +391,8 @@ actions.convert = async (payload) => { // allows any user who has parent token t
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
     && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
       const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol, 'toggleOff');
-      const hasEnoughStablePool = await findStablePools(symbol);
-      const hasEnoughMarketPool = await findMarketPools(symbol);
+      const hasEnoughStablePool = await findMarketPools(symbol, 'stable');
+      const hasEnoughMarketPool = await findMarketPools(symbol, 'market');
 
       if (api.assert(hasEnoughParentBalance, 'not enough parent token to convert')
         && api.assert(hasEnoughStablePool, 'token must be in pool with a stable coin')
