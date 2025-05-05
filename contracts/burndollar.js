@@ -443,19 +443,17 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const feePercentage = api.BigNumber(parentPairParams.feePercentage);
           let fee = '0';
           let finalQty = qtyAsBigNum;
+
           if (feePercentage.gt(0)) {
             fee = qtyAsBigNum.multipliedBy(feePercentage).toFixed(parentPairParams.precision, api.BigNumber.ROUND_UP);
 
-            if (api.BigNumber(fee).lt('0.00000001')) {
-              fee = '0.00000001';
-            }
             finalQty = qtyAsBigNum.minus(fee);
           }
 
 
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          if (!api.assert(api.BigNumber(xxxdToIssue).gt('0.0001'), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
+          if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.compairMinimum), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
 
@@ -476,7 +474,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
           api.emit('Converted token to dollar token', {
 
-            symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, [keyname]: qtyAsBigNum.toFixed(parentPairParams.precision), [childName]: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
+            symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: qtyAsBigNum.toFixed(parentPairParams.precision), childSymbol: childName, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
           });
         }
       }
