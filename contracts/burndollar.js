@@ -187,7 +187,7 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
     return false;
   }
 
-  if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedFee.burnUsageFee, 'transfer')) {
+  if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedParams.burnUsageFee, 'transfer')) {
     return false;
   }
 };
