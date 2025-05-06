@@ -26,7 +26,6 @@ const verifyTokenBalance = async (account, beedParams, amount, symbolFind, toggl
 
   api.assert(userBeed && api.BigNumber(userBeed.balance).gte(burnUsageFee), 'not enough BEED balance');
 
-
   const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
   if (parentTokenBalance && api.BigNumber(parentTokenBalance.balance).gte(amount)) {
     return true;
@@ -61,9 +60,15 @@ const findMarketPools = async (parentSymbol, toggle) => {
       `${pElement}:${sElement}`,
     ]));
 
-    poolData = await api.db.findInTable('marketpools', 'pools', {
+    const multiPoolData = await api.db.findInTable('marketpools', 'pools', {
       tokenPair: { $in: stableResults },
     });
+
+    // in the case token is in multiple pools find the one with the largest quantity of base+quote
+    poolData = multiPoolData.length > 0 ? [multiPoolData.reduce((max, item) => {
+      const totalQuantity = item.baseQuantity + item.quoteQuantity;
+      return totalQuantity > (max.baseQuantity + max.quoteQuantity) ? item : max;
+    }, multiPoolData[0])] : [];
   }
 
   if (toggle === 'market') {
