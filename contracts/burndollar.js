@@ -14,7 +14,6 @@ const countDecimals = value => api.BigNumber(value).dp();
 const verifyTokenBalance = async (account, beedParams, amount, symbolFind, toggle) => {
   const { burnUsageFee } = beedParams;
 
-
   if (toggle === 'toggleOn') { // ensure XXX.D token was created
     const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
 
@@ -95,7 +94,6 @@ const findMarketPools = async (parentSymbol, toggle) => {
 
 const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
   const [firstToken, secondToken] = pool.tokenPair.split(':');
-
   let quoteOrBasePosition;
   let otherTokenPriceUSD;
   let halfPoolinUSD;
@@ -111,7 +109,6 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     quoteOrBasePosition = 'quote';
     // Match is after the colon and in the market pool and therefore the base price
   }
-
   // perform calc based on first position === base
   if (quoteOrBasePosition && quoteOrBasePosition === 'base') {
   // we have the price of one token from the stable pool calc, we need to calc the price of the token's pair
@@ -122,11 +119,9 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     } else {
       parentTokenPrice = api.BigNumber(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
     }
-
     halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.baseQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
     // Conservative value of the pool: multiply the value of the half pool by 1.95
     fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
-
     returnObject = {
       quoteToken: firstToken, quotePriceUSD: otherTokenPriceUSD, baseToken: secondToken, basePriceUSD: tokenPriceUSD, precision, poolValueUSD: fullPoolinUSD, parentPrice: parentTokenPrice,
     };
@@ -140,16 +135,13 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     } else {
       parentTokenPrice = api.BigNumber(otherTokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
     }
-
     halfPoolinUSD = api.BigNumber(otherTokenPriceUSD).multipliedBy(pool.quoteQuantity).toFixed(precision, api.BigNumber.ROUND_DOWN);
     // Conservative value of the pool: multiply the value of the half pool by 1.95
     fullPoolinUSD = api.BigNumber(halfPoolinUSD).multipliedBy(1.95).toFixed(precision, api.BigNumber.ROUND_DOWN);
-
     returnObject = {
       quoteToken: firstToken, quotePriceUSD: tokenPriceUSD, baseToken: secondToken, basePriceUSD: otherTokenPriceUSD, precision, poolValueUSD: fullPoolinUSD, parentPrice: parentTokenPrice,
     };
   }
-
   return returnObject;
 };
 
@@ -168,7 +160,6 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
-
     if (isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
       return false;
     }
@@ -186,12 +177,10 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
   if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
     return false;
   }
-
   if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedParams.burnUsageFee, 'transfer')) {
     return false;
   }
 };
-
 // end utility functions
 
 actions.createSSC = async () => {
@@ -206,7 +195,6 @@ actions.createSSC = async () => {
     params.minAmountConvertible = '1';
     params.dTokenToIssuer = '1000';
     params.compairMinimum = '1';
-
 
     await api.db.insert('params', params);
   }
@@ -223,18 +211,15 @@ actions.updateParams = async (payload) => { //    this function will update the 
 
   const params = await api.db.findOne('params', {});
 
-
   if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(params.compairMinimum)) {
     params.issueDTokenFee = issueDTokenFee;
   }
-
   if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(params.compairMinimum)) {
     params.updateParamsFee = updateParamsFee;
   }
   if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(params.compairMinimum)) {
     params.burnUsageFee = burnUsageFee;
   }
-
   await api.db.update('params', params);
 };
 
@@ -257,14 +242,12 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
     api.assert(issueDTokenFee >= 0, `fee for XXX.D creation must be greater than zero ${issueDTokenFee}`);
     return false;
   }
-
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (!isSignedWithActiveKey || isSignedWithActiveKey === false) {
     api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key');
     return false;
   }
-
   if (api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
@@ -287,20 +270,16 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
        && api.assert((tokenParent.precision > 0 && tokenParent.precision <= 8) && (Number.isInteger(tokenParent.precision)), 'invalid precision')
         ) {
           finalName = `${symbol} is the parent of ${symbol} dollar`;
-
           const newToken = {
             symbol: dSymbol,
             name: finalName,
             precision: tokenParent.precision,
             maxSupply: `${Number.MAX_SAFE_INTEGER}`,
-
           };
-
           // create the new XXX.D token
           await api.executeSmartContract('tokens', 'create', newToken);
 
           verifyTokenBalance(api.sender, params, 0, dSymbol, 'toggleOn');
-
 
           burnPairParams.issuer = api.sender;
           burnPairParams.symbol = dSymbol;
@@ -316,7 +295,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: dSymbol, quantity: params.dTokenToIssuer,
           });
-
           // burn BEED at the rate specified from the burndollar_ params table
           if (api.BigNumber(issueDTokenFee).gt(0)) {
             await api.executeSmartContract('tokens', 'transfer', {
@@ -333,7 +311,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   return true;
 };
 
-
 actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
   const {
     symbol,
@@ -343,8 +320,8 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
   } = payload;
 
   const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
-
   const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
+
   if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
@@ -359,10 +336,9 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
         if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
           const params = await api.db.findOne('params', {});
           const { updateParamsFee } = params;
-
           const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
-
           const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
+
           if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
             token.burnRouting = finalRouting;
             token.feePercentage = feePercentage;
@@ -409,14 +385,12 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const stablePrice = hasEnoughStablePool[0].basePrice;
           const stableQuant = hasEnoughStablePool[0].baseQuantity;
           const tokenNameBase = hasEnoughStablePool[0].tokenPair.split(':')[1];
-
           const stableUSDValue = api.BigNumber(stablePrice).multipliedBy(stableQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
-
           if (finalValueQuote && finalValueQuote < 400) {
             api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
             return false;
@@ -452,17 +426,12 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
             finalQty = qtyAsBigNum.minus(fee);
           }
-
-
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.compairMinimum), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
-
-
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
-
           api.assert(burnResults, 'error on token burn');
 
           // finally, issue the new XXX.D
@@ -474,7 +443,6 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const childName = parentPairParams.symbol;
 
           api.emit('Converted token to dollar token', {
-
             symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: qtyAsBigNum.toFixed(parentPairParams.precision), childSymbol: childName, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
           });
         }
