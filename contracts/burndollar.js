@@ -308,7 +308,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
       }
     }
   }
-  return true;
 };
 
 actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
@@ -354,7 +353,6 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
       }
     }
   }
-  return true;
 };
 
 actions.convert = async (payload) => { // allows any user who has parent token to convert to xxx.D token given there is suffcient marketpools
@@ -423,7 +421,6 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
           if (feePercentage.gt(0)) {
             fee = qtyAsBigNum.multipliedBy(feePercentage).toFixed(parentPairParams.precision, api.BigNumber.ROUND_UP);
-
             finalQty = qtyAsBigNum.minus(fee);
           }
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
