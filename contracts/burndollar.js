@@ -414,6 +414,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
 
         // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
         if (api.assert(calcResultParentPool && calcResultParentPool.poolValueUSD >= 400, 'parent token and XXX.D token pool USD value must be at least 500')) {
+        // subtract the conversion fee from the amount to be converted
           const feePercentage = api.BigNumber(parentPairParams.feePercentage);
           let fee = '0';
           let finalQty = qtyAsBigNum;
@@ -428,10 +429,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
             return false;
           }
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
-
-          if (api.assert(burnResults, 'error on token burn')) {
-            return false;
-          }
+          api.assert(burnResults, 'error on token burn');
 
           // finally, issue the new XXX.D
           await api.executeSmartContract('tokens', 'issue', {
@@ -447,6 +445,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
         }
       }
     }
+    return false;
   }
   return false;
 };
