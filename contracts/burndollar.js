@@ -445,7 +445,6 @@ actions.convert = async (payload) => { // allows any user who has parent token t
         }
       }
     }
-    return false;
   }
   return false;
 };
