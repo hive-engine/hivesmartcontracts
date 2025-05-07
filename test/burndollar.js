@@ -714,7 +714,7 @@ describe('burndollar', function () {
   //     });
   // });
 
-it('it converts XXX to XXX.D', (done) => {
+it('it converts XXX to XXX.D  ', (done) => {
   new Promise(async (resolve) => {
     
     await fixture.setUp();
