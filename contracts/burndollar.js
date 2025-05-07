@@ -207,6 +207,9 @@ actions.updateParams = async (payload) => { //    this function will update the 
     issueDTokenFee,
     updateParamsFee,
     burnUsageFee,
+    minAmountConvertible,
+    dTokenToIssuer,
+    compairMinimum,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -219,6 +222,15 @@ actions.updateParams = async (payload) => { //    this function will update the 
   }
   if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(params.compairMinimum)) {
     params.burnUsageFee = burnUsageFee;
+  }
+  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(params.compairMinimum)) {
+    params.minAmountConvertible = minAmountConvertible;
+  }
+  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(params.compairMinimum)) {
+    params.dTokenToIssuer = dTokenToIssuer;
+  }
+  if (compairMinimum && typeof compairMinimum === 'string' && !api.BigNumber(compairMinimum).isNaN()) {
+    params.compairMinimum = compairMinimum;
   }
   await api.db.update('params', params);
 };
