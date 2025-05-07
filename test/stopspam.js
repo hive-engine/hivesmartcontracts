@@ -1,0 +1,118 @@
+/* eslint-disable */
+const assert = require('assert').strict;
+const { MongoClient } = require('mongodb');
+
+const { CONSTANTS } = require('../libs/Constants');
+const { Database } = require('../libs/Database');
+const blockchain = require('../plugins/Blockchain');
+const { Transaction } = require('../libs/Transaction');
+const { setupContractPayload } = require('../libs/util/contractUtil');
+const { Fixture, conf } = require('../libs/util/testing/Fixture');
+const { TableAsserts } = require('../libs/util/testing/TableAsserts');
+const { assertError } = require('../libs/util/testing/Asserts');
+
+
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
+const ContractPayload = setupContractPayload('stopspam', './contracts/stopspam.js');
+const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
+
+const fixture = new Fixture();
+const tableAsserts = new TableAsserts(fixture);
+
+// test cases for stopspam smart contract
+describe('stopspam', function () {
+  this.timeout(200000);
+
+  before((done) => {
+    new Promise(async (resolve) => {
+      client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
+      db = await client.db(conf.databaseName);
+      await db.dropDatabase();
+      resolve();
+    })
+      .then(() => {
+        done()
+      })
+  });
+  
+  after((done) => {
+    new Promise(async (resolve) => {
+      await client.close();
+      resolve();
+    })
+      .then(() => {
+        done()
+      })
+  });
+
+  beforeEach((done) => {
+    new Promise(async (resolve) => {
+      db = await client.db(conf.databaseName);
+      resolve();
+    })
+      .then(() => {
+        done()
+      })
+  });
+
+  afterEach((done) => {
+    // runs after each test in this block
+    new Promise(async (resolve) => {
+      fixture.tearDown();
+      await db.dropDatabase()
+      resolve();
+    })
+      .then(() => {
+        done()
+      })
+  });
+
+  it('updates parameters', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "minConvertibleAmount": "5.5", "feePercentage": "0.025" }'));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getBlockInfo(1);
+
+      const block1 = res;
+      const transactionsBlock1 = block1.transactions;
+
+      // check if the params updated OK
+      const params = await fixture.database.findOne({
+        contract: 'beedollar',
+        table: 'params',
+        query: {}
+      });
+
+      console.log(params);
+
+      assert.equal(params.minConvertibleAmount, '5.5');
+      assert.equal(params.feePercentage, '0.025');
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+
+});
