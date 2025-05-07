@@ -430,8 +430,8 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           }
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if(api.assert(burnResults, 'error on token burn');){
-            return false
+          if (api.assert(burnResults, 'error on token burn')) {
+            return false;
           }
 
           // finally, issue the new XXX.D
