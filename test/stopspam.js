@@ -78,7 +78,8 @@ describe('stopspam', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4"}'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'addAccount', '{ "allowList": ["drew","tim"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'addAccount', '{ "allowList": ["drew","tim"] , "denyList": ["god0","god1"] }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'addAccount', '{ "allowList": ["gus","todd"] , "denyList": ["god2","god3"] }'))
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -105,8 +106,6 @@ describe('stopspam', function () {
       console.log( '\u001b[' + 93 + 'm' + 'Test: update params on stopspam.js' + '\u001b[0m')
       console.log("26  ⚪",JSON.parse(transactionsBlock1[4].logs))
       console.log(params);
-      // console.log("26  ⚪",JSON.parse(transactionsBlock1[4].logs))
-      // console.log(transactions[4])
 
 
       resolve();
