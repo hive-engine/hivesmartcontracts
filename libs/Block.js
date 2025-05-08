@@ -286,6 +286,9 @@ class Block {
           database, transaction, this.blockNumber, this.timestamp,
           this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout,
         );
+
+
+        console.log(results.logs.events);
       }
     } else {
       results = { logs: { errors: ['the parameters sender, contract and action are required'] } };

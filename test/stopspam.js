@@ -157,9 +157,9 @@ describe('stopspam', function () {
 
       console.log(" ")
       console.log( '\u001b[' + 93 + 'm' + 'Test: counts transactions by user' + '\u001b[0m')
-      console.log("  ⚪ ",JSON.parse(transactionsBlock1[4].logs))
-      console.log("  ⚪ ",JSON.parse(transactionsBlock1[5].logs))
-      console.log("  ⚪ ",JSON.parse(transactionsBlock1[6].logs))
+      // console.log("  ⚪ ",JSON.parse(transactionsBlock1[4].logs))
+      // console.log("  ⚪ ",JSON.parse(transactionsBlock1[5].logs))
+      // console.log("  ⚪ ",JSON.parse(transactionsBlock1[6].logs))
 
 
       resolve();
