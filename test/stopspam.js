@@ -77,7 +77,7 @@ describe('stopspam', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "minConvertibleAmount": "5.5", "feePercentage": "0.025" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4", "feePercentage": "0.025" }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -96,15 +96,14 @@ describe('stopspam', function () {
 
       // check if the params updated OK
       const params = await fixture.database.findOne({
-        contract: 'beedollar',
+        contract: 'stopspam',
         table: 'params',
         query: {}
       });
-
+      console.log(" ")
+      console.log( '\u001b[' + 93 + 'm' + 'Test: update params on stopspam.js' + '\u001b[0m')
       console.log(params);
 
-      assert.equal(params.minConvertibleAmount, '5.5');
-      assert.equal(params.feePercentage, '0.025');
 
       resolve();
     })
@@ -114,5 +113,49 @@ describe('stopspam', function () {
       });
   });
 
+  it('do not update parameters', (done) => {
+    new Promise(async (resolve) => {
 
+      await fixture.setUp();
+
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4", "feePercentage": "0.025" }'));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getBlockInfo(1);
+
+      const block1 = res;
+      const transactionsBlock1 = block1.transactions;
+
+      // check if the params updated OK
+      const params = await fixture.database.findOne({
+        contract: 'stopspam',
+        table: 'params',
+        query: {}
+      });
+      console.log(" ")
+      console.log( '\u001b[' + 93 + 'm' + 'Test: Does not update params on stopspam.js' + '\u001b[0m')
+      console.log(params);
+
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
 });

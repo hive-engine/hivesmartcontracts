@@ -12,7 +12,7 @@ actions.createSSC = async () => {
 
     const params = {};
 
-    params.numberOfFreeTransActions = '3';
+    params.numberOfFreeTx = '3';
     params.timeTillFeeSeconds = '3';
     params.multiTransactionFee = '.1';
     params.restrictAccounts = {};
@@ -27,17 +27,30 @@ actions.updateParams = async (payload) => {
   if (api.sender !== api.owner) return;
 
   const {
-    minConvertibleAmount,
-    feePercentage,
+    numberOfFreeTx,
+    timeTillFeeSeconds,
+    multiTransactionFee,
+    restrictAccounts,
+    authorizedAccounts,
   } = payload;
 
   const params = await api.db.findOne('params', {});
 
-  if (minConvertibleAmount && typeof minConvertibleAmount === 'string' && !api.BigNumber(minConvertibleAmount).isNaN() && api.BigNumber(minConvertibleAmount).gte(0)) {
-    params.minConvertibleAmount = minConvertibleAmount;
+  if (numberOfFreeTx && typeof numberOfFreeTx === 'string' && !api.BigNumber(numberOfFreeTx).isNaN() && api.BigNumber(numberOfFreeTx).gte(0)) {
+    params.numberOfFreeTx = numberOfFreeTx;
   }
-  if (feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0)) {
-    params.feePercentage = feePercentage;
+  if (timeTillFeeSeconds && typeof timeTillFeeSeconds === 'string' && !api.BigNumber(timeTillFeeSeconds).isNaN() && api.BigNumber(timeTillFeeSeconds).gte(0)) {
+    params.timeTillFeeSeconds = timeTillFeeSeconds;
+  }
+  if (multiTransactionFee && typeof multiTransactionFee === 'string' && !api.BigNumber(multiTransactionFee).isNaN() && api.BigNumber(multiTransactionFee).gte(0)) {
+    params.multiTransactionFee = multiTransactionFee;
+  }
+  if (restrictAccounts && typeof restrictAccounts === 'object') {
+    params.multiTransactionFee = multiTransactionFee;
+  }
+
+  if (authorizedAccounts && typeof authorizedAccounts === 'object') {
+    params.authorizedAccounts = authorizedAccounts;
   }
 
   await api.db.update('params', params);
