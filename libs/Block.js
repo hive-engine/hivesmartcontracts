@@ -288,7 +288,7 @@ class Block {
         );
 
 
-        console.log(results.logs.events);
+        // console.log(results.logs.events);
       }
     } else {
       results = { logs: { errors: ['the parameters sender, contract and action are required'] } };

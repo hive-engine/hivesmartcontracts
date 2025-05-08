@@ -44,7 +44,6 @@ actions.updateParams = async (payload) => {
     params.multiTransactionFee = multiTransactionFee;
   }
 
-
   await api.db.update('params', params);
 };
 
@@ -71,11 +70,29 @@ actions.addAccount = async (payload) => {
   params.allowList = finalAllow;
   params.denyList = finalDeny;
 
-  // Update the database with merged allowList
   await api.db.update('params', params);
 };
 
 
-actions.countTrans = async (payload) => {
+actions.removeAccount = async (payload) => {
+  if (api.sender !== api.owner) return;
 
+  const { allowList, denyList } = payload;
+
+  const params = await api.db.findOne('params', {});
+
+  let finalAllow = params.allowList ? [...params.allowList] : [];
+  let finalDeny = params.denyList ? [...params.denyList] : [];
+
+  if (Array.isArray(allowList) && allowList.length > 0) {
+    finalAllow = finalAllow.filter(user => !allowList.includes(user));
+  }
+
+  if (Array.isArray(denyList) && denyList.length > 0) {
+    finalDeny = finalDeny.filter(user => !denyList.includes(user));
+  }
+  params.allowList = finalAllow;
+  params.denyList = finalDeny;
+
+  await api.db.update('params', params);
 };
