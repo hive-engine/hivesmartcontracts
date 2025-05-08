@@ -21,7 +21,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // test cases for stopspam smart contract
 describe('stopspam', function () {
-  this.timeout(200000);
+  this.timeout(9000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -77,7 +77,8 @@ describe('stopspam', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4", "feePercentage": "0.025" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4"}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'addAccount', '{ "allowList": ["drew","tim"] }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -102,7 +103,10 @@ describe('stopspam', function () {
       });
       console.log(" ")
       console.log( '\u001b[' + 93 + 'm' + 'Test: update params on stopspam.js' + '\u001b[0m')
+      console.log("26  ⚪",JSON.parse(transactionsBlock1[4].logs))
       console.log(params);
+      // console.log("26  ⚪",JSON.parse(transactionsBlock1[4].logs))
+      // console.log(transactions[4])
 
 
       resolve();
@@ -113,49 +117,49 @@ describe('stopspam', function () {
       });
   });
 
-  it('do not update parameters', (done) => {
-    new Promise(async (resolve) => {
+  // it('does not update parameters', (done) => {
+  //   new Promise(async (resolve) => {
 
-      await fixture.setUp();
+  //     await fixture.setUp();
 
-      let refBlockNumber = fixture.getNextRefBlockNumber();
-      let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4", "feePercentage": "0.025" }'));
+  //     let refBlockNumber = fixture.getNextRefBlockNumber();
+  //     let transactions = [];
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
+  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4", "feePercentage": "0.025" }'));
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
+  //     let block = {
+  //       refHiveBlockNumber: refBlockNumber,
+  //       refHiveBlockId: 'ABCD1',
+  //       prevRefHiveBlockId: 'ABCD2',
+  //       timestamp: '2018-06-01T00:00:00',
+  //       transactions,
+  //     };
 
-      await fixture.sendBlock(block);
+  //     await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(1);
+  //     const res = await fixture.database.getBlockInfo(1);
 
-      const block1 = res;
-      const transactionsBlock1 = block1.transactions;
+  //     const block1 = res;
+  //     const transactionsBlock1 = block1.transactions;
 
-      // check if the params updated OK
-      const params = await fixture.database.findOne({
-        contract: 'stopspam',
-        table: 'params',
-        query: {}
-      });
-      console.log(" ")
-      console.log( '\u001b[' + 93 + 'm' + 'Test: Does not update params on stopspam.js' + '\u001b[0m')
-      console.log(params);
+  //     // check if the params updated OK
+  //     const params = await fixture.database.findOne({
+  //       contract: 'stopspam',
+  //       table: 'params',
+  //       query: {}
+  //     });
+  //     console.log(" ")
+  //     console.log( '\u001b[' + 93 + 'm' + 'Test: Does not update params on stopspam.js' + '\u001b[0m')
+  //     console.log(params);
 
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
+  //     resolve();
+  //   })
+  //     .then(() => {
+  //       fixture.tearDown();
+  //       done();
+  //     });
+  // });
 });

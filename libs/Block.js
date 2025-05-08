@@ -245,7 +245,7 @@ class Block {
   }
 
   async processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash) {
-    const profStartTime  = performance.now();
+    const profStartTime = performance.now();
     const {
       sender,
       contract,
@@ -280,6 +280,15 @@ class Block {
           results = { logs: { errors: ['registerTick unauthorized'] } };
         }
       } else {
+        // await SmartContracts.executeSmartContract('stopspam', 'countTrans', {
+        //   account: api.sender,
+        //   time: this.timestamp,
+        //   transaction,
+        //   block: this.blockNumber,
+        //   refblock: this.refHiveBlockNumber,
+        //   prevBlock: this.prevRefHiveBlockId,
+        // });
+
         results = await SmartContracts.executeSmartContract(// eslint-disable-line
           database, transaction, this.blockNumber, this.timestamp,
           this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout,

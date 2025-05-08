@@ -5,6 +5,7 @@
 /* eslint-disable no-continue */
 /* global actions, api */
 
+
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
@@ -15,13 +16,12 @@ actions.createSSC = async () => {
     params.numberOfFreeTx = '3';
     params.timeTillFeeSeconds = '3';
     params.multiTransactionFee = '.1';
-    params.restrictAccounts = {};
-    params.authorizedAccounts = {};
+    params.denyList = [];
+    params.allowList = [];
 
     await api.db.insert('params', params);
   }
 };
-
 
 actions.updateParams = async (payload) => {
   if (api.sender !== api.owner) return;
@@ -30,8 +30,6 @@ actions.updateParams = async (payload) => {
     numberOfFreeTx,
     timeTillFeeSeconds,
     multiTransactionFee,
-    restrictAccounts,
-    authorizedAccounts,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -45,13 +43,34 @@ actions.updateParams = async (payload) => {
   if (multiTransactionFee && typeof multiTransactionFee === 'string' && !api.BigNumber(multiTransactionFee).isNaN() && api.BigNumber(multiTransactionFee).gte(0)) {
     params.multiTransactionFee = multiTransactionFee;
   }
-  if (restrictAccounts && typeof restrictAccounts === 'object') {
-    params.multiTransactionFee = multiTransactionFee;
+
+
+  await api.db.update('params', params);
+};
+
+
+actions.addAccount = async (payload) => {
+  if (api.sender !== api.owner) return;
+
+  const { allowList, denyList } = payload;
+
+  const params = await api.db.findOne('params', {});
+
+  let finalAllow = params.allowList ? [...params.allowList] : [];
+  let finalDeny = params.denyList ? [...params.denyList] : [];
+
+  // Merge new values if they exist
+  if (Array.isArray(allowList) && allowList.length > 0) {
+    finalAllow = [...finalAllow, ...allowList];
   }
 
-  if (authorizedAccounts && typeof authorizedAccounts === 'object') {
-    params.authorizedAccounts = authorizedAccounts;
+  if (Array.isArray(denyList) && denyList.length > 0) {
+    finalDeny = [...finalDeny, ...denyList];
   }
 
+  params.allowList = finalAllow;
+  params.denyList = finalDeny;
+
+  // Update the database with merged allowList
   await api.db.update('params', params);
 };
