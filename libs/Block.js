@@ -112,6 +112,8 @@ class Block {
       const filteredTransactions = [];
       const transactionsCountBySender = {};
 
+      SmartContracts.executeSmartContract('stopspam', 'countTrans', perUserTxLimit);
+
       for (let idx = 0; idx < this.transactions.length; idx += 1) {
         const tx = this.transactions[idx];
 
@@ -280,15 +282,6 @@ class Block {
           results = { logs: { errors: ['registerTick unauthorized'] } };
         }
       } else {
-        // await SmartContracts.executeSmartContract('stopspam', 'countTrans', {
-        //   account: api.sender,
-        //   time: this.timestamp,
-        //   transaction,
-        //   block: this.blockNumber,
-        //   refblock: this.refHiveBlockNumber,
-        //   prevBlock: this.prevRefHiveBlockId,
-        // });
-
         results = await SmartContracts.executeSmartContract(// eslint-disable-line
           database, transaction, this.blockNumber, this.timestamp,
           this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout,
@@ -306,7 +299,6 @@ class Block {
 
     // get the database hash
     newCurrentDatabaseHash = database.getDatabaseHash();
-
 
     log.info('Tx results: ', results);
     transaction.addLogs(results.logs);

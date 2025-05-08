@@ -13,7 +13,7 @@ const conf = {
   databaseURL: 'mongodb://localhost:27017',
   databaseName: 'testssc',
   streamNodes: ['https://api.hive.blog'],
-  enablePerUserTxLimit: false
+  enablePerUserTxLimit: false,
 };
 
 class Fixture {

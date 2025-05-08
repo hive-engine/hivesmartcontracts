@@ -74,3 +74,8 @@ actions.addAccount = async (payload) => {
   // Update the database with merged allowList
   await api.db.update('params', params);
 };
+
+
+actions.countTrans = async (payload) => {
+
+};
