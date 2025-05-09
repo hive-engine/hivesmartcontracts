@@ -107,18 +107,18 @@ describe('stopspam', function () {
       
 
       console.log(" ")
-      console.log( '\u001b[' + 93 + 'm' + 'Test: counts transactions by user' + '\u001b[0m')
+      console.log( '\u001b[' + 93 + 'm' + 'Test: updates parameters' + '\u001b[0m')
 
-      console.log(transactions[4])
-      console.log(transactions[5])
-      console.log(transactions[6])
+      // console.log(transactions[4])
+      // console.log(transactions[5])
+      // console.log(transactions[6])
 
       // console.log("  ⚪ ",JSON.parse(transactionsBlock1[4].logs))
       // console.log("  ⚪ ",JSON.parse(transactionsBlock1[5].logs))
       // console.log("  ⚪ ",JSON.parse(transactionsBlock1[6].logs))
 
 
-  //     resolve();
+     resolve();
     })
       .then(() => {
         fixture.tearDown();
