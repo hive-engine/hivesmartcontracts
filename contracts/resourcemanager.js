@@ -57,6 +57,7 @@ actions.addAccount = async (payload) => {
 
   let finalAllow = params.allowList ? [...params.allowList] : [];
   let finalDeny = params.denyList ? [...params.denyList] : [];
+  // windows write this on end of line \R\N
 
   // Merge new values if they exist
   if (Array.isArray(allowList) && allowList.length > 0) {
