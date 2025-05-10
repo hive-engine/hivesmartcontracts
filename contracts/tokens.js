@@ -354,8 +354,7 @@ actions.create = async (payload) => {
 
   const fromVerifiedContract = (api.sender === 'hive-engine'
       && callingContractInfo
-      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1
-      || (callingContractInfo && callingContractInfo.name === 'burndollar'));
+      && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
 
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
   const utilityTokenBalance = fromVerifiedContract
@@ -389,7 +388,7 @@ actions.create = async (payload) => {
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('SWAP') === -1, 'invalid symbol: not allowed to use SWAP')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('ETH') === -1, 'invalid symbol: not allowed to use ETH')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('BSC') === -1, 'invalid symbol: not allowed to use BSC')
-      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1 || (callingContractInfo && callingContractInfo.name === 'burndollar'), 'invalid symbol: usage of "." is restricted')
+      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1, 'invalid symbol: usage of "." is restricted')
       && api.assert(api.validator.isAlphanumeric(api.validator.blacklist(name, ' ')) && name.length > 0 && name.length <= 50, 'invalid name: letters, numbers, whitespaces only, max length of 50')
       && api.assert(url === undefined || url.length <= 255, 'invalid url: max length of 255')
       && api.assert((precision >= 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
@@ -442,8 +441,7 @@ actions.issue = async (payload) => {
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
-      || (callingContractInfo && callingContractInfo.name === 'beedollar')
-      || (callingContractInfo && callingContractInfo.name === 'burndollar');
+      || (callingContractInfo && callingContractInfo.name === 'beedollar');
 
   if (fromVerifiedContract
     || (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
