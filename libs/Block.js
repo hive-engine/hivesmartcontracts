@@ -150,9 +150,9 @@ class Block {
       const transaction = this.transactions[i];
       log.info('Processing tx ', transaction);
 
-      userActionCount[tx.sender] = (userActionCount[tx.sender] ?? 1) + 1;
+      userActionCount[transaction.sender] = (userActionCount[transaction.sender] ?? 0) + 1;
 
-      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCount[tx.sender]); // eslint-disable-line
+      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCount[transaction.sender]); // eslint-disable-line
 
       currentDatabaseHash = transaction.databaseHash;
 
