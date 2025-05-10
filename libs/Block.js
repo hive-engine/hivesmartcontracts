@@ -107,12 +107,10 @@ class Block {
   }
 
   applyPerUserTxLimit() {
-    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601) {
+    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601 && this.refHiveBlockNumber < 95935754) {
       const perUserTxLimit = 20;
       const filteredTransactions = [];
       const transactionsCountBySender = {};
-
-      SmartContracts.executeSmartContract('stopspam', 'countTrans', perUserTxLimit);
 
       for (let idx = 0; idx < this.transactions.length; idx += 1) {
         const tx = this.transactions[idx];
