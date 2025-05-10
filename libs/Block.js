@@ -286,10 +286,21 @@ class Block {
           results = { logs: { errors: ['registerTick unauthorized'] } };
         }
       } else {
+         
+        if (this.refHiveBlockNumber >= 95935754 && userActionCount > 1) {
+          const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee', payload: null}
           results = await SmartContracts.executeSmartContract(// eslint-disable-line
-          database, transaction, this.blockNumber, this.timestamp,
-          this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout, userActionCount,
-        );
+            database, resourceManagerTx, this.blockNumber, this.timestamp,
+            this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout
+          );
+        }
+
+        if ((results?.logs?.errors?.length ?? 0) === 0) {
+          results = await SmartContracts.executeSmartContract(// eslint-disable-line
+            database, transaction, this.blockNumber, this.timestamp,
+            this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout
+          );
+        }
       }
     } else {
       results = { logs: { errors: ['the parameters sender, contract and action are required'] } };

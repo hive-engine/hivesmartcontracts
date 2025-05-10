@@ -539,22 +539,8 @@ class SmartContracts {
           contract, contractVersion,
         )));
       }
-      let error = null;
-      let resourceManagerError = null;
 
-      if (refHiveBlockId >= 95935754 && userActionCount > 1) {
-        const resourceManagerContract = await database.findContract({ name: 'resourcemanager' });
-        if (resourceManagerContract === null) {
-          return { logs: { errors: ['contract doesn\'t exist'] } };
-        }
-
-        const rmcCode = resourceManagerContract.code;
-        resourceManagerError = await SmartContracts.runContractCode(vmState, rmcCode, jsVMTimeout);
-      }
-      if (resourceManagerError === null) {
-        error = await SmartContracts.runContractCode(vmState, contractCode, jsVMTimeout);
-      }
-
+      const error = await SmartContracts.runContractCode(vmState, contractCode, jsVMTimeout);
       if (error) {
         const { name, message } = error;
         if (name && typeof name === 'string'
