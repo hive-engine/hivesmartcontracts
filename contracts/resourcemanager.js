@@ -15,7 +15,7 @@ actions.createSSC = async () => {
   const params = {};
 
   params.numberOfFreeTx = '1';
-  params.multiTransactionFee = '.001';
+  params.multiTransactionFee = '0.001';
   params.burnSymbol = 'BEED';
   params.denyList = [];
   params.allowList = [];
@@ -118,9 +118,14 @@ actions.burnFee = async () => {
     return;
   }
 
+  // no burn needed for any acc on allowList
+  if (params.allowList.includes(api.sender)) {
+    return;
+  }
+
   // if code is here burn BEED for multi transaction use
   const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
-    to: 'null', symbol: params.burnSymbol, quantity: params.multiTransactionFee,
+    to: 'null', symbol: params.burnSymbol, quantity: params.multiTransactionFee, isSignedWithActiveKey: true,
   });
 
   api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', params.burnSymbol, params.multiTransactionFee), 'not enough tokens for multiTransaction fee');
