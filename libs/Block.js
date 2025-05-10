@@ -143,10 +143,16 @@ class Block {
 
     let relIndex = 0;
     const allowCommentContract = this.refHiveBlockNumber > 54560500;
+
+    const userActionCount = {};
+
     for (let i = 0; i < nbTransactions; i += 1) {
       const transaction = this.transactions[i];
       log.info('Processing tx ', transaction);
-      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash); // eslint-disable-line
+
+      userActionCount[tx.sender] = (userActionCount[tx.sender] ?? 1) + 1;
+
+      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCount[tx.sender]); // eslint-disable-line
 
       currentDatabaseHash = transaction.databaseHash;
 
@@ -244,7 +250,7 @@ class Block {
     }
   }
 
-  async processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash) {
+  async processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCount) {
     const profStartTime = performance.now();
     const {
       sender,
@@ -280,13 +286,10 @@ class Block {
           results = { logs: { errors: ['registerTick unauthorized'] } };
         }
       } else {
-        results = await SmartContracts.executeSmartContract(// eslint-disable-line
+          results = await SmartContracts.executeSmartContract(// eslint-disable-line
           database, transaction, this.blockNumber, this.timestamp,
-          this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout,
+          this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout, userActionCount,
         );
-
-
-        console.log(results.logs.events, this.refHiveBlockNumber);
       }
     } else {
       results = { logs: { errors: ['the parameters sender, contract and action are required'] } };

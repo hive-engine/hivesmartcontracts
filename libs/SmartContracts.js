@@ -359,7 +359,7 @@ class SmartContracts {
 
   // execute the smart contract and perform actions on the database if needed
   static async executeSmartContract(
-    database, transaction, blockNumber, timestamp, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
+    database, transaction, blockNumber, timestamp, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout, userActionCount,
   ) {
     try {
       const {
@@ -538,8 +538,21 @@ class SmartContracts {
           contract, contractVersion,
         )));
       }
+      let error = null;
+      let resourceManagerError = null;
 
-      const error = await SmartContracts.runContractCode(vmState, contractCode, jsVMTimeout);
+      if (refHiveBlockId >= 95935754 && userActionCount > 1) {
+        const resourceManagerContract = await database.findContract({ name: 'resourcemanager' });
+        if (resourceManagerContract === null) {
+          return { logs: { errors: ['contract doesn\'t exist'] } };
+        }
+
+        const rmcCode = resourceManagerContract.code;
+        resourceManagerError = await SmartContracts.runContractCode(vmState, rmcCode, jsVMTimeout);
+      }
+      if (resourceManagerError === null) {
+        error = await SmartContracts.runContractCode(vmState, contractCode, jsVMTimeout);
+      }
 
       if (error) {
         const { name, message } = error;
