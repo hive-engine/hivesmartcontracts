@@ -51,7 +51,6 @@ const VERIFIED_ISSUERS = [
   'mining',
   'tokenfunds',
   'beedollar',
-  'burndollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
