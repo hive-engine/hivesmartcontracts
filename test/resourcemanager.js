@@ -13,14 +13,14 @@ const { assertError } = require('../libs/util/testing/Asserts');
 
 
 const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const ContractPayload = setupContractPayload('stopspam', './contracts/stopspam.js');
+const ContractPayload = setupContractPayload('resourcemanager', './contracts/resourcemanager.js');
 const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
-// test cases for stopspam smart contract
-describe('stopspam', function () {
+// test cases for resourcemanager smart contract
+describe('resourcemanager', function () {
   this.timeout(4000);
 
   before((done) => {
@@ -78,9 +78,9 @@ describe('stopspam', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "harpagon", "quantity": "100000", "isSignedWithActiveKey": true }`));
-      transactions.push(new Transaction(refBlockNumber+1, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'updateParams', '{ "numberOfFreeTx": "4"}'));
-      transactions.push(new Transaction(refBlockNumber+1, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'addAccount', '{ "allowList": ["drew","tim"] , "denyList": ["hate","hate1"] }'));
-      transactions.push(new Transaction(refBlockNumber+1, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'stopspam', 'addAccount', '{ "allowList": ["gus","todd"] , "denyList": ["hate2","hate3"] }'))
+      transactions.push(new Transaction(refBlockNumber+1, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{ "numberOfFreeTx": "4"}'));
+      transactions.push(new Transaction(refBlockNumber+1, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'addAccount', '{ "allowList": ["drew","tim"] , "denyList": ["hate","hate1"] }'));
+      transactions.push(new Transaction(refBlockNumber+1, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'addAccount', '{ "allowList": ["gus","todd"] , "denyList": ["hate2","hate3"] }'))
       transactions.push(new Transaction(refBlockNumber+2, fixture.getNextTxId(), 'harpagon', 'tokens', 'transfer', '{ "symbol": "BEE", "quantity": "1", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber+2, fixture.getNextTxId(), 'harpagon', 'tokens', 'transfer', '{ "symbol": "BEE", "quantity": "2", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber+2, fixture.getNextTxId(), 'harpagon', 'tokens', 'transfer', '{ "symbol": "BEE", "quantity": "3", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -101,7 +101,7 @@ describe('stopspam', function () {
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
       const params = await fixture.database.findOne({
-        contract: 'stopspam',
+        contract: 'resourcemanager',
         table: 'params',
         query: {}
       });
