@@ -9,18 +9,18 @@
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
-    await api.db.createTable('params');
-
-    const params = {};
-
-    params.numberOfFreeTx = '3';
-    params.timeTillFeeSeconds = '3';
-    params.multiTransactionFee = '.1';
-    params.denyList = [];
-    params.allowList = [];
-
-    await api.db.insert('params', params);
+    await api.db.createTable('params', ['numberOfFreeTx', 'multiTransactionFee', 'denyList', 'allowList']);
   }
+
+  const params = {};
+
+  params.numberOfFreeTx = '1';
+  params.multiTransactionFee = '.001';
+  params.burnSymbol = 'BEED';
+  params.denyList = [];
+  params.allowList = [];
+
+  await api.db.insert('params', params);
 };
 
 actions.updateParams = async (payload) => {
@@ -28,24 +28,36 @@ actions.updateParams = async (payload) => {
 
   const {
     numberOfFreeTx,
-    timeTillFeeSeconds,
     multiTransactionFee,
+    burnSymbol,
+
   } = payload;
 
   const params = await api.db.findOne('params', {});
 
-  if (numberOfFreeTx && typeof numberOfFreeTx === 'string' && !api.BigNumber(numberOfFreeTx).isNaN() && api.BigNumber(numberOfFreeTx).gte(0)) {
+  if (numberOfFreeTx && typeof numberOfFreeTx === 'string' && !api.BigNumber(numberOfFreeTx).isNaN() && api.BigNumber(numberOfFreeTx).gte(1)) {
     params.numberOfFreeTx = numberOfFreeTx;
   }
-  if (timeTillFeeSeconds && typeof timeTillFeeSeconds === 'string' && !api.BigNumber(timeTillFeeSeconds).isNaN() && api.BigNumber(timeTillFeeSeconds).gte(0)) {
-    params.timeTillFeeSeconds = timeTillFeeSeconds;
-  }
+
   if (multiTransactionFee && typeof multiTransactionFee === 'string' && !api.BigNumber(multiTransactionFee).isNaN() && api.BigNumber(multiTransactionFee).gte(0)) {
     params.multiTransactionFee = multiTransactionFee;
   }
 
+  if (burnSymbol && typeof burnSymbol === 'string') {
+    params.burnSymbol = burnSymbol;
+  }
+
+
   await api.db.update('params', params);
 };
+
+const transferIsSuccessful = (result, action, from, to, symbol, quantity) => result.errors === undefined
+    && result.events && result.events.find(el => el.contract === 'tokens'
+    && el.event === action
+    && el.data.from === from
+    && el.data.to === to
+    && api.BigNumber(el.data.quantity).eq(quantity)
+    && el.data.symbol === symbol) !== undefined;
 
 
 actions.addAccount = async (payload) => {
@@ -96,4 +108,20 @@ actions.removeAccount = async (payload) => {
   params.denyList = finalDeny;
 
   await api.db.update('params', params);
+};
+
+
+actions.burnFee = async () => {
+  const params = await api.db.findOne('params', {});
+
+  if (params.numberOfFreeTx <= api.userActionCount) {
+    return;
+  }
+
+  // if code is here burn BEED for multi transaction use
+  const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
+    to: 'null', symbol: params.burnSymbol, quantity: params.multiTransactionFee,
+  });
+
+  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', params.burnSymbol, params.multiTransactionFee), 'not enough tokens for multiTransaction fee');
 };

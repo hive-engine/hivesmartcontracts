@@ -457,6 +457,7 @@ class SmartContracts {
           transactionId,
           blockNumber,
           action,
+          userActionCount,
           payload: JSON.parse(JSON.stringify(payloadObj)),
           BigNumber: ivmBigNumber,
           logs: new ivm.Reference(() => new ivm.ExternalCopy(JSON.parse(JSON.stringify(results.logs)))),
