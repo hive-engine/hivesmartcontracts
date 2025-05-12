@@ -132,15 +132,18 @@ actions.burnFee = async () => {
     senderOnDenyList.actionCount = (senderOnDenyList.actionCount || 0) + 1;
     senderOnDenyList.lastAction = nowTimestamp;
 
-    api.debug(`diffHours: ${diffHours}, actionCount: ${senderOnDenyList.actionCount}, max: ${params.denyMaxTx}`);
+    if (diffHours >= 24)
+      senderOnDenyList.actionCount = 1;
 
-    api.assert(!(diffHours < 24 && senderOnDenyList.actionCount > params.denyMaxTx), 'max transaction limit per day reached.');
-    
-    params.denyList[denyEntryIndex] = senderOnDenyList;
-    await api.db.update('params', params);
+    if (api.assert(diffHours >= 24 || senderOnDenyList.actionCount <= params.denyMaxTx, 'max transaction limit per day reached.')) {
+      params.denyList[denyEntryIndex] = senderOnDenyList;
+      await api.db.update('params', params);
+    }
+    else {
+      return;
+    }
   }
 
-  api.debug(`Name: ${api.sender} - free: ${params.numberOfFreeTx} - userActionCount: ${api.userActionCount}`);
   if (api.userActionCount <= params.numberOfFreeTx) {
     return;
   }
