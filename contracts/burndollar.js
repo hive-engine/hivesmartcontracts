@@ -5,7 +5,6 @@
 /* eslint-disable no-continue */
 /* global actions, api */
 
-// define stable coins allowed in functions
 const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
 // begin utility functions
@@ -22,7 +21,6 @@ const verifyTokenCreation = async (symbolFind) => {
 const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
   const finalAmount = amount || beedParams.burnUsageFee;
   const finalSymbol = symbolFind || beedParams.burnToken;
-
   const findTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: finalSymbol });
 
   if (findTokenBalance && api.BigNumber(findTokenBalance.balance).gte(finalAmount)) {
@@ -34,25 +32,21 @@ const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
 const checkStablePosition = (tokenPair) => {
   const [firstToken, secondToken] = tokenPair.split(':');
 
-  // Check if the stable pair is before or after the colon
   if (stablePairArray.includes(firstToken)) {
-    return 'base'; // Stable coin is before the colon and in the market pool and therefore the base price
+    return 'base';
   } if (stablePairArray.includes(secondToken)) {
-    return 'quote'; // Stable coin is after the colon in the marketpool and therefore is the quote price
+    return 'quote';
   }
-  return false; // No stable pair found in the token pair
+  return false;
 };
 
 const findMarketPools = async (parentSymbol, toggle) => {
-// Define child symbol
   const childSymbol = `${parentSymbol}.D`;
   let poolData;
 
   if (toggle === 'stable') {
-  // Define parent-child token pairs
     const stableParentArray = [`${parentSymbol}`, `${childSymbol}`];
 
-    // Create an array of all possible token pairs
     const stableResults = stableParentArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
       `${sElement}:${pElement}`,
       `${pElement}:${sElement}`,
@@ -70,15 +64,13 @@ const findMarketPools = async (parentSymbol, toggle) => {
   }
 
   if (toggle === 'market') {
-  // Define parent-child token pairs
     const marketParentArray = [`${parentSymbol}:${childSymbol}`, `${childSymbol}:${parentSymbol}`];
 
-    // Use a single database query to fetch all relevant pools
     poolData = await api.db.findInTable('marketpools', 'pools', {
       tokenPair: { $in: marketParentArray },
     });
   }
-  // Process results and construct the valid pools array
+
   const validPools = poolData.map(pool => ({
     tokenPair: pool.tokenPair,
     basePrice: pool.basePrice || '0',
@@ -87,7 +79,6 @@ const findMarketPools = async (parentSymbol, toggle) => {
     quoteQuantity: pool.quoteQuantity || '0',
   }));
 
-  // Return validPools or null if no pools are found
   return validPools.length > 0 ? validPools : null;
 };
 
@@ -100,19 +91,15 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
   let parentTokenPrice;
   let returnObject = {};
 
-  // Check if the match is before or after the colon
+
   if (name.includes(firstToken)) {
-  // Match is before the colon in the marketpool and therefore is the quote price
     quoteOrBasePosition = 'base';
   } if (name.includes(secondToken)) {
     quoteOrBasePosition = 'quote';
-    // Match is after the colon and in the market pool and therefore the base price
   }
-  // perform calc based on first position === base
+
   if (quoteOrBasePosition && quoteOrBasePosition === 'base') {
-  // we have the price of one token from the stable pool calc, we need to calc the price of the token's pair
     otherTokenPriceUSD = api.BigNumber(pool.quotePrice).multipliedBy(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
-    // determine if base token is the xxx.D
     if (!name.includes('.D')) {
       parentTokenPrice = api.BigNumber(otherTokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
     } else {
@@ -124,11 +111,10 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
     returnObject = {
       quoteToken: firstToken, quotePriceUSD: otherTokenPriceUSD, baseToken: secondToken, basePriceUSD: tokenPriceUSD, precision, poolValueUSD: fullPoolinUSD, parentPrice: parentTokenPrice,
     };
-  } else if (quoteOrBasePosition && quoteOrBasePosition === 'quote') { // perform calc based on second postion === quote
+  } else if (quoteOrBasePosition && quoteOrBasePosition === 'quote') { // perform calc based on second position === quote
   // we have the price of one token from the stable pool calc, we need to calc the price of the token's pair
     otherTokenPriceUSD = api.BigNumber(pool.basePrice).multipliedBy(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
 
-    // determine if quote token is the xxx.D
     if (!name.includes('.D')) {
       parentTokenPrice = api.BigNumber(tokenPriceUSD).toFixed(precision, api.BigNumber.ROUND_DOWN);
     } else {
@@ -154,8 +140,7 @@ const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) =
 };
 
 const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, isSignedWithActiveKey) => {
-  if (api.BigNumber(fee).gte(0)) {
-  // tranfer fee to the burn routing if any
+  if (api.BigNumber(fee).gt(0)) {
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
@@ -163,16 +148,14 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
       return false;
     }
   }
-  // burn the remainder to null
+
   const res2 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
   });
 
-  // burn the BEED for required will only perform if fee > 0
   const res3 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: 'BEED', quantity: beedParams.burnUsageFee, isSignedWithActiveKey,
   });
-  // check if the tokens were sent
   if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
     return false;
   }
@@ -200,7 +183,7 @@ actions.createSSC = async () => {
   }
 };
 
-actions.updateParams = async (payload) => { //    this function will update the parameters of the burndollar_params collection
+actions.updateParams = async (payload) => {
   if (api.sender !== api.owner) return;
 
   const {
@@ -238,7 +221,7 @@ actions.updateParams = async (payload) => { //    this function will update the 
   await api.db.update('params', params);
 };
 
-actions.createTokenD = async (payload) => { // allow a token_owner to create the new D Token
+actions.createTokenD = async (payload) => {
   const {
     symbol, isSignedWithActiveKey, burnRouting, feePercentage,
   } = payload;
@@ -266,7 +249,6 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   if (api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
-  // ensure the user issuing D token is owner of the parent pair token
     const tokenParent = await api.db.findOneInTable('tokens', 'tokens', { symbol });
     const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
 
@@ -291,7 +273,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
             precision: tokenParent.precision,
             maxSupply: `${Number.MAX_SAFE_INTEGER}`,
           };
-          // create the new XXX.D token
+
           await api.executeSmartContract('tokens', 'create', newToken);
 
           const tokenCreated = verifyTokenCreation(dSymbol);
@@ -307,14 +289,13 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           burnPairParams.burnRouting = finalRouting;
           burnPairParams.feePercentage = feePercentage;
 
-          // insert record into burnpair table, which contains the Parent token and the params for the child (XXX.D) token
           await api.db.insert('burnpair', burnPairParams);
 
           // issue 1000 XXX.D token to token issuer, issuer must create a market pools in order for conversions to occur(see actions.convert code)
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: dSymbol, quantity: params.dTokenToIssuer,
           });
-          // burn BEED at the rate specified from the burndollar_ params table
+
           if (api.BigNumber(issueDTokenFee).gt(0)) {
             await api.executeSmartContract('tokens', 'transfer', {
               to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
@@ -329,7 +310,7 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
   }
 };
 
-actions.updateBurnPair = async (payload) => { //    this function will update the parameters of the D token in the burnpair table
+actions.updateBurnPair = async (payload) => {
   const {
     symbol,
     burnRouting,
@@ -374,7 +355,7 @@ actions.updateBurnPair = async (payload) => { //    this function will update th
   }
 };
 
-actions.convert = async (payload) => { // allows any user who has parent token to convert to xxx.D token given there is suffcient marketpools
+actions.convert = async (payload) => {
   const {
     symbol, quantity, isSignedWithActiveKey,
   } = payload;
@@ -406,10 +387,10 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const tokenNameBase = hasEnoughStablePool[0].tokenPair.split(':')[1];
           const stableUSDValue = api.BigNumber(stablePrice).multipliedBy(stableQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
+          // calulate the conservative value of the pool multiple the value of one side by 1.95, 1.95 used to ensure pools are not overvalued
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
+          // users to be be informed of $500 barrier to entry/ the difference of $100 (500 vs 400) is for wiggle room for ease of use
           if (finalValueQuote && finalValueQuote < 400) {
             api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
             return false;
@@ -422,10 +403,10 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const tokenNameQuote = hasEnoughStablePool[0].tokenPair.split(':')[0];
           const stableUSDValue = api.BigNumber(stableTPrice).multipliedBy(quoteQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // marketpool balance the value of 1 token versus the other to get a conservative value of the pool multiple the value of one side by 1.95
+          // calulate the conservative value of the pool multiple the value of one side by 1.95, 1.95 used to ensure pools are not overvalued
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
+          // users to be be informed of $500 barrier to entry/ the difference of $100 (500 vs 400) is for wiggle room for ease of use
           if (finalValueQuote && finalValueQuote < 400) {
             api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
             return false;
@@ -433,9 +414,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           calcResultParentPool = await calcParentPool(tokenNameQuote, hasEnoughMarketPool[0], stableTPrice, parentPairParams.precision);
         }
 
-        // users to be be informed of $500 barrier to entry/ delta of 100 (500 vs 400) is for wiggle room for ease of use
         if (api.assert(calcResultParentPool && calcResultParentPool.poolValueUSD >= 400, 'parent token and XXX.D token pool USD value must be at least 500')) {
-        // subtract the conversion fee from the amount to be converted
           const feePercentage = api.BigNumber(parentPairParams.feePercentage);
           let fee = '0';
           let finalQty = qtyAsBigNum;
@@ -452,7 +431,6 @@ actions.convert = async (payload) => { // allows any user who has parent token t
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
           api.assert(burnResults, 'error on token burn');
 
-          // finally, issue the new XXX.D
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: parentPairParams.symbol, quantity: xxxdToIssue,
           });
