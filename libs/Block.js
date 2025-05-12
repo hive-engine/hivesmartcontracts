@@ -260,6 +260,7 @@ class Block {
     } = transaction;
 
     let results = null;
+    let burnResults = null;
     let newCurrentDatabaseHash = currentDatabaseHash;
 
     // init the database hash for that transactions
@@ -290,18 +291,35 @@ class Block {
         // always execute burnFee to keep logic more dynamic in future without updating core.
         if (this.refHiveBlockNumber >= 95935754 && userActionCount) {
             const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee', payload: null}
-            results = await SmartContracts.executeSmartContract(// eslint-disable-line
+            burnResults = await SmartContracts.executeSmartContract(// eslint-disable-line
               database, resourceManagerTx, this.blockNumber, this.timestamp,
               this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout, userActionCount
             );
         }
 
-        if ((results?.logs?.errors?.length ?? 0) === 0) {
+        if ((burnResults?.logs?.errors?.length ?? 0) === 0) {
           results = await SmartContracts.executeSmartContract(// eslint-disable-line
             database, transaction, this.blockNumber, this.timestamp,
             this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout
           );
         }
+
+        // Merge burnResults with results.
+        if (this.refHiveBlockNumber >= 95935754 && userActionCount) 
+        {
+          results = results ?? {};
+          results.logs = {
+            events: [
+              ...(burnResults?.logs?.events ?? []),
+              ...(results?.logs?.events ?? [])
+            ],
+            errors: [
+              ...(burnResults?.logs?.errors ?? []),
+              ...(results?.logs?.errors ?? [])
+            ],
+          };
+        }
+
       }
     } else {
       results = { logs: { errors: ['the parameters sender, contract and action are required'] } };
