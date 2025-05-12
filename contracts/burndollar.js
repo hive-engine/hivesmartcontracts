@@ -174,9 +174,9 @@ actions.createSSC = async () => {
     params.issueDTokenFee = '1000'; // BEED quantity
     params.updateParamsFee = '100'; // BEED quantity
     params.burnUsageFee = '1'; // BEED quantity
-    params.minAmountConvertible = '1'; // XXX.d token minimum convert quantity;
+    params.minAmountConvertible = '1'; // XXX.d token minimum convert quantity issuer can update this;
     params.dTokenToIssuer = '1000'; // XXX.d token issued
-    params.contractConstantMinimum = '1'; // this parameter is used to ensure that when any parameter is updated the value is >= 1
+    params.contractConstantMinimum = '1'; // this parameter is used to ensure that when any parameter is updated the value is >= 1, issuer cannot update this field
     params.burnToken = 'BEED';
 
     await api.db.insert('params', params);
@@ -249,7 +249,7 @@ actions.createTokenD = async (payload) => {
      && api.assert(api.isValidAccountName(finalRouting), 'burn routing must be a valid Hive account name')
      && api.assert(minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(contractConstantMinimum), 'min convert amount must be string(number) greater than 1')
     ) {
-      if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 1000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
+      if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && countDecimals(feePercentage) <= 4, 'fee percentage must be between 0 and 1 / 0% and 100%')
       ) {
         let finalName = '';
         let dSymbol = '';
