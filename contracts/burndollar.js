@@ -232,17 +232,14 @@ actions.createTokenD = async (payload) => {
     issueDTokenFee,
     minAmountConvertible,
     contractConstantMinimum,
-
   } = params;
+
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: params.burnToken });
 
-  if (!api.assert(issueDTokenFee >= 0, `fee for XXX.D creation must be greater than zero ${issueDTokenFee}`)) {
-    return false;
-  }
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
-   && api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
+   && api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
     const tokenParent = await api.db.findOneInTable('tokens', 'tokens', { symbol });
@@ -331,7 +328,7 @@ actions.updateBurnPair = async (payload) => {
         if (api.assert(token.issuer === api.sender, 'must be the issuer')) {
           const params = await api.db.findOne('params', {});
           const { updateParamsFee } = params;
-          const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
+          const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: params.burnToken });
           const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
 
           if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
