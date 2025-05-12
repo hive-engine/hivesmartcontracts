@@ -227,8 +227,6 @@ actions.createTokenD = async (payload) => {
   const params = await api.db.findOne('params', {});
   const {
     issueDTokenFee,
-    minAmountConvertible,
-    contractConstantMinimum,
   } = params;
 
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: params.burnToken });
@@ -244,7 +242,6 @@ actions.createTokenD = async (payload) => {
 
     if (api.assert(tokenParent.issuer === api.sender, 'You must be the token issuer in order to issue D token')
      && api.assert(api.isValidAccountName(finalRouting), 'burn routing must be a valid Hive account name')
-     && api.assert(minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(contractConstantMinimum), 'min convert amount must be string(number) greater than 1')
     ) {
       if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && countDecimals(feePercentage) <= 4, 'fee percentage must be between 0 and 1 / 0% and 100%')
       ) {
@@ -292,7 +289,7 @@ actions.createTokenD = async (payload) => {
             });
           }
           api.emit('issued new token dollar stablecoin', {
-            usefee: params.minAmountConvertible, feeRouting: burnPairParams.burnRouting, dSymbol,
+            convertPercentage: feePercentage, feeRouting: burnPairParams.burnRouting, dSymbol,
           });
         }
       }
@@ -428,7 +425,7 @@ actions.convert = async (payload) => {
           const childName = parentPairParams.symbol;
 
           api.emit('Converted token to dollar token', {
-            symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: qtyAsBigNum.toFixed(parentPairParams.precision), childSymbol: childName, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
+            symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: parentPairParams.precision, childSymbol: childName, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
           });
         }
       }
