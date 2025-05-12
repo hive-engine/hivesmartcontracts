@@ -753,6 +753,7 @@ class SmartContracts {
           refHiveBlockNumber: getApiProp('refHiveBlockNumber'),
           hiveBlockTimestamp: getApiProp('hiveBlockTimestamp'),
           contractVersion: getApiProp('contractVersion'),
+          userActionCount: getApiProp('userActionCount'),
           db: {
             createTable: applyWrapper(getDbProp('createTable')),
             addIndexes: applyWrapper(getDbProp('addIndexes')),
