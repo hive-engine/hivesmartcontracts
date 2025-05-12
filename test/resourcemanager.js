@@ -91,7 +91,7 @@ describe('resourcemanager', function () {
      await fixture.sendBlock(block);
   }
 
-  it('one action is free', (done) => {
+  it('one action per block is free', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -101,7 +101,7 @@ describe('resourcemanager', function () {
       // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "1", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.5", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -112,9 +112,31 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getBlockInfo(2);
 
-      //TODO: Check if transfer was successfully
+      let txLogs = JSON.parse(res.transactions[0].logs);
+      assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.50000000' });
+      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.5' });
+
+      ++refBlockNumber;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.5", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+      res = await fixture.database.getBlockInfo(3);
+
+      txLogs = JSON.parse(res.transactions[0].logs);
+      assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.00000000' });
+      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '1.00000000' });
 
      resolve();
     })
@@ -124,7 +146,7 @@ describe('resourcemanager', function () {
       });
   });
 
-  it('two actions costs', (done) => {
+  it('two or more actions costs', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -148,8 +170,56 @@ describe('resourcemanager', function () {
 
       const res = await fixture.database.getBlockInfo(2);
 
-      //TODO: Check if transfer was successfully
-      //TODO: Check if drew balance has now 0.997 BEED (0.002 sent away + 0.001 burned)
+      const logs0 = JSON.parse(res.transactions[0].logs);
+      const logs1 = JSON.parse(res.transactions[1].logs);
+
+      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 3, 'Second transaction should succeed but incur burn');
+
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.99700000' });
+      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.00200000' });
+
+     resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('more actions more costs', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      // one transaction should be free
+      let refBlockNumber = 95935754;
+      transactions = [];
+      for(let i = 0; i < 50; i++) {
+        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      }
+      
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getBlockInfo(2);
+
+      const logs0 = JSON.parse(res.transactions[0].logs);
+      const logs1 = JSON.parse(res.transactions[1].logs);
+
+      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 3, 'Second transaction should succeed but incur burn');
+
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.90100000' });
+      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.05000000' });
 
      resolve();
     })
@@ -184,8 +254,15 @@ describe('resourcemanager', function () {
 
       const res = await fixture.database.getBlockInfo(2);
 
-      //TODO: Check if one transfer was successfully
-      //TODO: Second transaction has to be blocked
+      // first tx (addAccount) has no errors
+      const log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!log0.errors || log0.errors.length === 0);
+
+      const logs1 = JSON.parse(res.transactions[1].logs);
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+
+      const logs2 = JSON.parse(res.transactions[2].logs);
+      assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
 
      resolve();
     })
@@ -219,9 +296,15 @@ describe('resourcemanager', function () {
       await fixture.sendBlock(block);
 
       let res = await fixture.database.getBlockInfo(2);
+      const log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!log0.errors || log0.errors.length === 0);
 
-      //TODO: Check if one transfer was successfully
-      //TODO: Second transaction has to be blocked
+      let logs1 = JSON.parse(res.transactions[1].logs);
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+
+      let logs2 = JSON.parse(res.transactions[2].logs);
+      assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
+
       refBlockNumber = 95935755;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -238,10 +321,13 @@ describe('resourcemanager', function () {
 
       res = await fixture.database.getBlockInfo(3);
 
-      // TODO: first tx should go through as 24h are over.
-      //TODO: Second transaction has to be blocked
+      logs1 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
 
-     resolve();
+      logs2 = JSON.parse(res.transactions[1].logs);
+      assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
+
+      resolve();
     })
       .then(() => {
         fixture.tearDown();
