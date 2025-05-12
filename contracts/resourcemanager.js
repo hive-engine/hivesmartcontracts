@@ -51,7 +51,6 @@ actions.updateParams = async (payload) => {
     params.burnSymbol = burnSymbol;
   }
 
-
   await api.db.update('params', params);
 };
 
@@ -68,7 +67,8 @@ actions.addAccount = async (payload) => {
   if (api.sender !== api.owner) return;
 
   const { allowList, denyList } = payload;
-
+  const blockDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
+  const timestamp = blockDate.getTime();
   const params = await api.db.findOne('params', {});
 
   let finalDeny = params.denyList ? [...params.denyList] : [];
@@ -77,7 +77,8 @@ actions.addAccount = async (payload) => {
     for (const name of denyList) {
       const alreadyExists = finalDeny.some(entry => entry.name === name);
       if (!alreadyExists) {
-        finalDeny.push({ name, count: 0, lastAction: api.hiveBlockTimestamp });
+        
+        finalDeny.push({ name, actionCount: 0, lastAction: timestamp });
       }
     }
   }
@@ -124,21 +125,23 @@ actions.burnFee = async () => {
 
   // check if user is on deny list
   if (senderOnDenyList) {
-    const lastAction = new Date(senderOnDenyList.lastAction);
-    const now = new Date(`${api.hiveBlockTimestamp}.000Z`);
-    const diffHours = (now - lastAction) / (1000 * 60 * 60);
-    api.debug(diffHours);
-
+    const nowTimestamp = new Date(`${api.hiveBlockTimestamp}.000Z`).getTime();
+    const lastActionTimestamp = senderOnDenyList.lastAction;
+    const diffHours = (nowTimestamp - lastActionTimestamp) / (1000 * 60 * 60);
+  
     senderOnDenyList.actionCount = (senderOnDenyList.actionCount || 0) + 1;
-    senderOnDenyList.lastAction = api.hiveBlockTimestamp;
+    senderOnDenyList.lastAction = nowTimestamp;
 
-    api.assert(senderOnDenyList.count > params.denyMaxTx, 'max transaction limit per day reached.');
+    api.debug(`diffHours: ${diffHours}, actionCount: ${senderOnDenyList.actionCount}, max: ${params.denyMaxTx}`);
+
+    api.assert(!(diffHours < 24 && senderOnDenyList.actionCount > params.denyMaxTx), 'max transaction limit per day reached.');
     
     params.denyList[denyEntryIndex] = senderOnDenyList;
     await api.db.update('params', params);
   }
 
-  if (params.numberOfFreeTx <= api.userActionCount) {
+  api.debug(`Name: ${api.sender} - free: ${params.numberOfFreeTx} - userActionCount: ${api.userActionCount}`);
+  if (api.userActionCount <= params.numberOfFreeTx) {
     return;
   }
 
