@@ -294,7 +294,7 @@ actions.createTokenD = async (payload) => {
               to: 'null', symbol: params.burnToken, quantity: issueDTokenFee, isSignedWithActiveKey,
             });
           }
-          api.emit('issued new token dollar token', {
+          api.emit('issued new token dollar stablecoin', {
             usefee: params.minAmountConvertible, feeRouting: burnPairParams.burnRouting, dSymbol,
           });
         }
