@@ -256,7 +256,7 @@ describe('burndollar', function () {
       assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
       assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
       assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], `You must be the token issuer in order to issue D token`);
-      assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], `burn routing must be string`);
+      assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], `burn routing must be a valid Hive account name`);
       assert.equal(JSON.parse(transactionsBlock1[33].logs).errors[0], `fee percentage must be between 0 and 1 / 0% and 100%`);
       assert.equal(JSON.parse(transactionsBlock1[36].logs).errors[0], `D token must not already exist`);
 
