@@ -83,7 +83,7 @@ describe('resourcemanager', function () {
        refHiveBlockNumber: refBlockNumber,
        refHiveBlockId: 'ABCD1',
        prevRefHiveBlockId: 'ABCD2',
-       timestamp: '2018-06-01T00:00:00',
+       timestamp: '2025-05-12T16:30:00',
        transactions,
      };
      
@@ -124,7 +124,7 @@ describe('resourcemanager', function () {
       });
   });
 
-  it('two actions', (done) => {
+  it('two actions costs', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -158,4 +158,41 @@ describe('resourcemanager', function () {
         done();
       });
   });
+
+  it('add to denyList', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      // one transaction should be free
+      let refBlockNumber = 95935754;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'addAccount', '{"denyList": ["drew", "satoshi"]}' ));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getBlockInfo(2);
+
+      //TODO: Check if one transfer was successfully
+      //TODO: Second transaction has to be blocked
+
+     resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+  
 });
