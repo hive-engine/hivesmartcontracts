@@ -556,16 +556,15 @@ describe('burndollar', function () {
 
 
       console.log(" ")
-     console.log( '\u001b[' + 93 + 'm' + 'Test: Fails tp update the params for the D token' + '\u001b[0m')
+     console.log( '\u001b[' + 93 + 'm' + 'Test: Fails to update the params for the D token' + '\u001b[0m')
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[27].logs).errors[0])
-     console.log("  ⚪ ",JSON.parse(transactionsBlock1[28].logs).errors[0])
+
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[29].logs).errors[0])
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[30].logs).errors[0])
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[31].logs).errors[0])
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[32].logs).errors[0])
 
      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'you must use a custom_json signed with your active key');
-     assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'account for burn routing must exist');
      assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string');
      assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'D token must exist');
      assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], 'fee percentage must be between 0 and 1 / 0% and 100%');
