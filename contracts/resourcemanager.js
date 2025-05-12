@@ -14,7 +14,8 @@ actions.createSSC = async () => {
 
   const params = {};
 
-  params.numberOfFreeTx = '1';
+  params.numberOfFreeTx = 1;
+  params.denyMaxTx = 1;
   params.multiTransactionFee = '0.001';
   params.burnSymbol = 'BEED';
   params.denyList = [];
@@ -67,25 +68,20 @@ actions.addAccount = async (payload) => {
 
   const params = await api.db.findOne('params', {});
 
-  let finalAllow = params.allowList ? [...params.allowList] : [];
   let finalDeny = params.denyList ? [...params.denyList] : [];
-  // windows write this on end of line \R\N
-
-  // Merge new values if they exist
-  if (Array.isArray(allowList) && allowList.length > 0) {
-    finalAllow = [...finalAllow, ...allowList];
-  }
 
   if (Array.isArray(denyList) && denyList.length > 0) {
-    finalDeny = [...finalDeny, ...denyList];
+    for (const name of denyList) {
+      const alreadyExists = finalDeny.some(entry => entry.name === name);
+      if (!alreadyExists) {
+        finalDeny.push({ name, count: 0, lastAction: api.hiveBlockTimestamp });
+      }
+    }
   }
 
-  params.allowList = finalAllow;
   params.denyList = finalDeny;
-
   await api.db.update('params', params);
 };
-
 
 actions.removeAccount = async (payload) => {
   if (api.sender !== api.owner) return;
@@ -113,6 +109,31 @@ actions.removeAccount = async (payload) => {
 
 actions.burnFee = async () => {
   const params = await api.db.findOne('params', {});
+  const sender = api.sender;
+  let denyEntryIndex = -1;
+  let senderOnDenyList = params.denyList.find((entry, index) => {
+    if (entry.name === sender) {
+      denyEntryIndex = index;
+      return true;
+    }
+    return false;
+  });
+
+  // check if user is on deny list
+  if (senderOnDenyList) {
+    const lastAction = new Date(senderOnDenyList.lastAction);
+    const now = new Date(`${api.hiveBlockTimestamp}.000Z`);
+    const diffHours = (now - lastAction) / (1000 * 60 * 60);
+    api.debug(diffHours);
+
+    senderOnDenyList.actionCount = (senderOnDenyList.actionCount || 0) + 1;
+    senderOnDenyList.lastAction = api.hiveBlockTimestamp;
+
+    api.assert(senderOnDenyList.count > params.denyMaxTx, 'max transaction limit per day reached.');
+    
+    params.denyList[denyEntryIndex] = senderOnDenyList;
+    await api.db.update('params', params);
+  }
 
   if (params.numberOfFreeTx <= api.userActionCount) {
     return;
