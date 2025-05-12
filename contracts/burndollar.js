@@ -417,7 +417,10 @@ actions.convert = async (payload) => {
             return false;
           }
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
-          api.assert(burnResults, 'error on token burn');
+
+          if (!api.assert(burnResults, 'error on token burn')) {
+            return false;
+          }
 
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: parentPairParams.symbol, quantity: xxxdToIssue,
