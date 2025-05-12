@@ -192,30 +192,27 @@ actions.updateParams = async (payload) => {
     burnUsageFee,
     minAmountConvertible,
     dTokenToIssuer,
-    contractConstantMinimum,
     burnToken,
   } = payload;
 
   const params = await api.db.findOne('params', {});
 
-  if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(params.contractConstantMinimum)) {
+  if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(minAmountConvertible)) {
     params.issueDTokenFee = issueDTokenFee;
   }
-  if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(params.contractConstantMinimum)) {
+  if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(minAmountConvertible)) {
     params.updateParamsFee = updateParamsFee;
   }
-  if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(params.contractConstantMinimum)) {
+  if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(minAmountConvertible)) {
     params.burnUsageFee = burnUsageFee;
   }
-  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(params.contractConstantMinimum)) {
+  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(1)) {
     params.minAmountConvertible = minAmountConvertible;
   }
-  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(params.contractConstantMinimum)) {
+  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(minAmountConvertible)) {
     params.dTokenToIssuer = dTokenToIssuer;
   }
-  if (contractConstantMinimum && typeof contractConstantMinimum === 'string' && !api.BigNumber(contractConstantMinimum).isNaN()) {
-    params.contractConstantMinimum = contractConstantMinimum;
-  }
+
   if (burnToken && typeof burnToken === 'string') {
   }
   await api.db.update('params', params);
@@ -312,7 +309,6 @@ actions.updateBurnPair = async (payload) => {
   } = payload;
 
   const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
-
 
   if (api.isValidAccountName(finalRouting), 'account for burn routing must exist') {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
