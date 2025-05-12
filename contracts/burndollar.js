@@ -20,12 +20,12 @@ const verifyTokenCreation = async (symbolFind) => {
 };
 
 const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
-  const { burnUsageFee, burnToken } = beedParams;
+  const finalAmount = amount || beedParams.burnUsageFee;
+  const finalSymbol = symbolFind || beedParams.burnToken;
 
-  const userBeed = await api.db.findOneInTable('tokens', 'balances', { account, symbol: burnToken });
-  const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
+  const findTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: finalSymbol });
 
-  if (userBeed && api.BigNumber(userBeed.balance).gte(burnUsageFee) && parentTokenBalance && api.BigNumber(parentTokenBalance.balance).gte(amount)) {
+  if (findTokenBalance && api.BigNumber(findTokenBalance.balance).gte(finalAmount)) {
     return true;
   }
   return false;
@@ -210,7 +210,7 @@ actions.updateParams = async (payload) => { //    this function will update the 
     minAmountConvertible,
     dTokenToIssuer,
     compairMinimum,
-    burtoken,
+    burnToken,
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -233,8 +233,7 @@ actions.updateParams = async (payload) => { //    this function will update the 
   if (compairMinimum && typeof compairMinimum === 'string' && !api.BigNumber(compairMinimum).isNaN()) {
     params.compairMinimum = compairMinimum;
   }
-  if (burtoken && typeof burtoken === 'string') {
-    params.burtoken = burtoken;
+  if (burnToken && typeof burnToken === 'string') {
   }
   await api.db.update('params', params);
 };
@@ -389,11 +388,13 @@ actions.convert = async (payload) => { // allows any user who has parent token t
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
     && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
+      const hasEnoughUtilityToken = await verifyTokenBalance(api.sender, contractParams);
       const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol);
       const hasEnoughStablePool = await findMarketPools(symbol, 'stable');
       const hasEnoughMarketPool = await findMarketPools(symbol, 'market');
 
       if (api.assert(hasEnoughParentBalance, 'not enough token balance')
+        && api.assert(hasEnoughUtilityToken, 'not enough utility tokens')
         && api.assert(hasEnoughStablePool, 'token must be in pool with a stable coin')
         && api.assert(hasEnoughMarketPool, 'token must be in pool with xxx.d token')) {
         const quoteOrBase = checkStablePosition(hasEnoughStablePool[0].tokenPair);
