@@ -169,7 +169,7 @@ actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
     await api.db.createTable('params');
-    await api.db.createTable('burnpair', ['symbol']);
+    await api.db.createTable('burnpair', ['symbol', 'parentSymbol']);
     const params = {};
     params.issueDTokenFee = '1000'; // BEED quantity
     params.updateParamsFee = '100'; // BEED quantity
