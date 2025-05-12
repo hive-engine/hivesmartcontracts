@@ -318,7 +318,7 @@ actions.updateBurnPair = async (payload) => {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
     && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
-    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1), 'fee percentage must be between 0 and 1 / 0% and 100%')
+    && api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && countDecimals(feePercentage) <= 4, 'fee percentage must be between 0 and 1 / 0% and 100%')
     ) {
       const token = await api.db.findOne('burnpair', { symbol });
 
