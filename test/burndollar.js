@@ -250,7 +250,6 @@ describe('burndollar', function () {
       console.log("33  ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0])
       console.log("36  ⚪",JSON.parse(transactionsBlock1[36].logs).errors[0])
 
-
       assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'you must have enough BEED tokens cover the creation fees');
       assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'you must use a custom_json signed with your active key');
       assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
@@ -329,7 +328,7 @@ describe('burndollar', function () {
       let token = res2
 
      console.log(" ")
-     console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D tokencreates a D token' + '\u001b[0m')
+     console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D token' + '\u001b[0m')
 
      console.log (token)
      assert.equal(token.symbol, 'BEE');
@@ -373,7 +372,7 @@ describe('burndollar', function () {
     console.log(token)
     assert.equal(token.symbol, 'URQTWO.D');
     assert.equal(token.issuer, 'null');
-    assert.equal(token.name, 'URQTWO is the parent of URQTWO dollar');
+    assert.equal(token.name, 'URQTWO stablecoin');
     assert.equal(token.precision, 3);
     assert.equal(token.supply, '1000.000')
 

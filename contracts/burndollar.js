@@ -255,7 +255,7 @@ actions.createTokenD = async (payload) => {
         let dSymbol = '';
         dSymbol = `${symbol}.D`;
         const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dSymbol });
-        if (api.assert(api.isValidAccountName(burnRouting), 'account for burn routing must exist')
+        if (api.assert(api.isValidAccountName(finalRouting), 'account for burn routing must exist')
        && api.assert(tokenDExists === null, 'D token must not already exist')
        && api.assert((tokenParent.precision > 0) && (Number.isInteger(tokenParent.precision)), 'invalid precision')
         ) {
