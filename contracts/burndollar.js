@@ -174,8 +174,8 @@ actions.createSSC = async () => {
     params.issueDTokenFee = '1000'; // BEED quantity
     params.updateParamsFee = '100'; // BEED quantity
     params.burnUsageFee = '1'; // BEED quantity
-    params.minAmountConvertible = '1'; // XXX.d token quantity;
-    params.dTokenToIssuer = '1000'; // XXX.d token quantity
+    params.minAmountConvertible = '1'; // XXX.d token minimum convert quantity;
+    params.dTokenToIssuer = '1000'; // XXX.d token issued
     params.contractConstantMinimum = '1'; // this parameter is used to ensure that when any parameter is updated the value is >= 1
     params.burnToken = 'BEED';
 
@@ -236,17 +236,13 @@ actions.createTokenD = async (payload) => {
   } = params;
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
 
-  if (issueDTokenFee <= 0) {
-    api.assert(issueDTokenFee >= 0, `fee for XXX.D creation must be greater than zero ${issueDTokenFee}`);
+  if (!api.assert(issueDTokenFee >= 0, `fee for XXX.D creation must be greater than zero ${issueDTokenFee}`)) {
     return false;
   }
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
-  if (!isSignedWithActiveKey || isSignedWithActiveKey === false) {
-    api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key');
-    return false;
-  }
-  if (api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
+  if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
+    && api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
     const tokenParent = await api.db.findOneInTable('tokens', 'tokens', { symbol });
