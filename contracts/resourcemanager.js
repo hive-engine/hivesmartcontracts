@@ -149,8 +149,12 @@ actions.burnFee = async () => {
   if (params.allowList.includes(api.sender)) {
     return;
   }
-
+  
   // if code is here burn BEED for multi transaction use
+  api.emit('burnFee', {
+    from: api.sender, to: 'null', symbol: params.burnSymbol, fee: params.multiTransactionFee,
+  });
+
   const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: params.burnSymbol, quantity: params.multiTransactionFee, isSignedWithActiveKey: true,
   });
