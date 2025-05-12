@@ -401,8 +401,7 @@ actions.convert = async (payload) => {
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           // users to be be informed of $500 barrier to entry/ the difference of $100 (500 vs 400) is for wiggle room for ease of use
-          if (finalValueQuote && finalValueQuote < 400) {
-            api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500');
+          if (!api.assert(finalValueQuote && finalValueQuote >= 400, 'stable token pool USD value must be at least 500')) {
             return false;
           }
           calcResultParentPool = await calcParentPool(tokenNameQuote, hasEnoughMarketPool[0], stableTPrice, parentPairParams.precision);
