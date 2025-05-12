@@ -286,13 +286,14 @@ class Block {
           results = { logs: { errors: ['registerTick unauthorized'] } };
         }
       } else {
-         
-        if (this.refHiveBlockNumber >= 95935754 && userActionCount > 1) {
-          const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee', payload: null}
-          results = await SmartContracts.executeSmartContract(// eslint-disable-line
-            database, resourceManagerTx, this.blockNumber, this.timestamp,
-            this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout
-          );
+        
+        // always execute burnFee to keep logic more dynamic in future without updating core.
+        if (this.refHiveBlockNumber >= 959357541) {
+            const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee', payload: null}
+            results = await SmartContracts.executeSmartContract(// eslint-disable-line
+              database, resourceManagerTx, this.blockNumber, this.timestamp,
+              this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout, userActionCount
+            );
         }
 
         if ((results?.logs?.errors?.length ?? 0) === 0) {
