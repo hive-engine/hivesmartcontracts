@@ -9,7 +9,6 @@ const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
-
 const verifyTokenCreation = async (symbolFind) => {
   const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
 
@@ -46,7 +45,6 @@ const findMarketPools = async (parentSymbol, toggle) => {
 
   if (toggle === 'stable') {
     const stableParentArray = [`${parentSymbol}`, `${childSymbol}`];
-
     const stableResults = stableParentArray.flatMap(pElement => stablePairArray.flatMap(sElement => [
       `${sElement}:${pElement}`,
       `${pElement}:${sElement}`,
@@ -212,10 +210,13 @@ actions.updateParams = async (payload) => {
     params.dTokenToIssuer = dTokenToIssuer;
   }
   if (burnToken && typeof burnToken === 'string') {
-    params.burnToken = burnToken;
+    const findToken = api.db.findOneInTable('tokens', 'tokens', { symbol: burnToken });
+
+    if (findToken) {
+      params.burnToken = burnToken;
+    }
   }
 
-  api.assert(1 === 3, JSON.stringify(payload));
   await api.db.update('params', params);
 };
 
