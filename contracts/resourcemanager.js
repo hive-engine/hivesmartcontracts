@@ -43,6 +43,10 @@ actions.updateParams = async (payload) => {
     params.multiTransactionFee = multiTransactionFee;
   }
 
+  if (denyMaxTx && typeof denyMaxTx === 'string' && !api.BigNumber(denyMaxTx).isNaN() && api.BigNumber(denyMaxTx).gte(0)) {
+    params.denyMaxTx = denyMaxTx;
+  }
+
   if (burnSymbol && typeof burnSymbol === 'string') {
     params.burnSymbol = burnSymbol;
   }
