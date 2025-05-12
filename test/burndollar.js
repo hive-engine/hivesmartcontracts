@@ -697,8 +697,8 @@ describe('burndollar', function () {
     assert.equal(JSON.parse(transactionsBlock1[33].logs).errors[0], 'parent symbol must have a child .D token');
     assert.equal(JSON.parse(transactionsBlock1[34].logs).errors[0], 'amount to convert must be >= 1');
     assert.equal(JSON.parse(transactionsBlock1[35].logs).errors[0], 'symbol precision mismatch');
-    assert.equal(JSON.parse(transactionsBlock1[37].logs).errors[0], 'not enough BEED balance');
-    assert.equal(JSON.parse(transactionsBlock1[39].logs).errors[0], 'not enough parent token to convert');
+    assert.equal(JSON.parse(transactionsBlock1[37].logs).errors[0], 'not enough token balance');
+    assert.equal(JSON.parse(transactionsBlock1[39].logs).errors[0], 'not enough token balance');
     assert.equal(JSON.parse(transactionsBlock1[40].logs).errors[0], 'token must be in pool with a stable coin')
     assert.equal(JSON.parse(transactionsBlock1[42].logs).errors[0], 'token must be in pool with xxx.d token')
     assert.equal(JSON.parse(transactionsBlock1[47].logs).errors[0], 'stable token pool USD value must be at least 500')
