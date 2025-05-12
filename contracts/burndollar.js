@@ -314,7 +314,7 @@ actions.updateBurnPair = async (payload) => {
   const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
   const burnAccount = await api.db.findOneInTable('tokens', 'balances', { account: burnRouting });
 
-  if (api.assert(burnAccount !== null, 'account for burn routing must exist')) {
+  if (api.isValidAccountName(burnAccount), 'account for burn routing must exist')) {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
     && api.assert(finalRouting && typeof finalRouting === 'string', 'burnroute must be string or null')
