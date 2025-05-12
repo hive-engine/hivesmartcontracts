@@ -154,12 +154,12 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
   });
 
   const res3 = await api.executeSmartContract('tokens', 'transfer', {
-    to: 'null', symbol: 'BEED', quantity: beedParams.burnUsageFee, isSignedWithActiveKey,
+    to: 'null', symbol: beedParams.burnToken, quantity: beedParams.burnUsageFee, isSignedWithActiveKey,
   });
   if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
     return false;
   }
-  if (!isTokenTransferVerified(res3, api.sender, 'null', 'BEED', beedParams.burnUsageFee, 'transfer')) {
+  if (!isTokenTransferVerified(res3, api.sender, 'null', beedParams.burnToken, beedParams.burnUsageFee, 'transfer')) {
     return false;
   }
 };
@@ -171,12 +171,12 @@ actions.createSSC = async () => {
     await api.db.createTable('params');
     await api.db.createTable('burnpair', ['symbol']);
     const params = {};
-    params.issueDTokenFee = '1000';
-    params.updateParamsFee = '100';
-    params.burnUsageFee = '1';
-    params.minAmountConvertible = '1';
-    params.dTokenToIssuer = '1000';
-    params.compairMinimum = '1';
+    params.issueDTokenFee = '1000'; // BEED quantity
+    params.updateParamsFee = '100'; // BEED quantity
+    params.burnUsageFee = '1'; // BEED quantity
+    params.minAmountConvertible = '1'; // XXX.d token quantity;
+    params.dTokenToIssuer = '1000'; // XXX.d token quantity
+    params.contractConstantMinimum = '1'; // this parameter is used to ensure that when any parameter is updated the value is >= 1
     params.burnToken = 'BEED';
 
     await api.db.insert('params', params);
@@ -192,29 +192,29 @@ actions.updateParams = async (payload) => {
     burnUsageFee,
     minAmountConvertible,
     dTokenToIssuer,
-    compairMinimum,
+    contractConstantMinimum,
     burnToken,
   } = payload;
 
   const params = await api.db.findOne('params', {});
 
-  if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(params.compairMinimum)) {
+  if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(params.contractConstantMinimum)) {
     params.issueDTokenFee = issueDTokenFee;
   }
-  if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(params.compairMinimum)) {
+  if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(params.contractConstantMinimum)) {
     params.updateParamsFee = updateParamsFee;
   }
-  if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(params.compairMinimum)) {
+  if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(params.contractConstantMinimum)) {
     params.burnUsageFee = burnUsageFee;
   }
-  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(params.compairMinimum)) {
+  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(params.contractConstantMinimum)) {
     params.minAmountConvertible = minAmountConvertible;
   }
-  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(params.compairMinimum)) {
+  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(params.contractConstantMinimum)) {
     params.dTokenToIssuer = dTokenToIssuer;
   }
-  if (compairMinimum && typeof compairMinimum === 'string' && !api.BigNumber(compairMinimum).isNaN()) {
-    params.compairMinimum = compairMinimum;
+  if (contractConstantMinimum && typeof contractConstantMinimum === 'string' && !api.BigNumber(contractConstantMinimum).isNaN()) {
+    params.contractConstantMinimum = contractConstantMinimum;
   }
   if (burnToken && typeof burnToken === 'string') {
   }
@@ -231,7 +231,7 @@ actions.createTokenD = async (payload) => {
   const {
     issueDTokenFee,
     minAmountConvertible,
-    compairMinimum,
+    contractConstantMinimum,
 
   } = params;
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
@@ -254,7 +254,7 @@ actions.createTokenD = async (payload) => {
 
     if (api.assert(tokenParent.issuer === api.sender, 'You must be the token issuer in order to issue D token')
      && api.assert(api.isValidAccountName(finalRouting), 'burn routing must be string')
-     && api.assert(minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(compairMinimum), 'min convert amount must be string(number) greater than 1')
+     && api.assert(minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(contractConstantMinimum), 'min convert amount must be string(number) greater than 1')
     ) {
       if (api.assert(feePercentage && typeof feePercentage === 'string' && !api.BigNumber(feePercentage).isNaN() && api.BigNumber(feePercentage).gte(0) && api.BigNumber(feePercentage).lte(1) && api.BigNumber(((feePercentage * 1000) % 1 === 0)), 'fee percentage must be between 0 and 1 / 0% and 100%')
       ) {
@@ -425,7 +425,7 @@ actions.convert = async (payload) => {
           }
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.compairMinimum), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
+          if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.contractConstantMinimum), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
