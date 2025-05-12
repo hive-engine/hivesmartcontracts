@@ -437,7 +437,5 @@ actions.convert = async (payload) => {
         }
       }
     }
-    return false;
   }
-  return false;
 };
