@@ -11,16 +11,17 @@ const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
 
-const verifyTokenBalance = async (account, beedParams, amount, symbolFind, toggle) => {
+const verifyTokenCreation = async (symbolFind) => {
+  const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
+
+  if (!createD) {
+    return false;
+  }
+};
+
+const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
   const { burnUsageFee, burnToken } = beedParams;
 
-  if (toggle === 'toggleOn') { // ensure XXX.D token was created
-    const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
-
-    if (!createD) {
-      return false;
-    }
-  }
   const userBeed = await api.db.findOneInTable('tokens', 'balances', { account, symbol: burnToken });
   const parentTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: symbolFind });
 
@@ -294,7 +295,11 @@ actions.createTokenD = async (payload) => { // allow a token_owner to create the
           // create the new XXX.D token
           await api.executeSmartContract('tokens', 'create', newToken);
 
-          verifyTokenBalance(api.sender, params, 0, dSymbol, 'toggleOn');
+          const tokenCreated = verifyTokenCreation(dSymbol);
+
+          if (!api.assert(tokenCreated, 'Token creation failed')) {
+            return false;
+          }
 
           burnPairParams.issuer = api.sender;
           burnPairParams.symbol = dSymbol;
@@ -384,7 +389,7 @@ actions.convert = async (payload) => { // allows any user who has parent token t
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
     && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
-      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol, 'toggleOff');
+      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol);
       const hasEnoughStablePool = await findMarketPools(symbol, 'stable');
       const hasEnoughMarketPool = await findMarketPools(symbol, 'market');
 
