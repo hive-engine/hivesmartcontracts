@@ -234,7 +234,7 @@ actions.createTokenD = async (payload) => {
     contractConstantMinimum,
 
   } = params;
-  const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: 'BEED' });
+  const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: params.burnToken });
 
   if (!api.assert(issueDTokenFee >= 0, `fee for XXX.D creation must be greater than zero ${issueDTokenFee}`)) {
     return false;
@@ -242,7 +242,7 @@ actions.createTokenD = async (payload) => {
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
-    && api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
+   && api.assert(authorizedCreation && beedTokenBalance.balance >= issueDTokenFee, 'you must have enough BEED tokens cover the creation fees')
    && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
   ) {
     const tokenParent = await api.db.findOneInTable('tokens', 'tokens', { symbol });
@@ -294,7 +294,7 @@ actions.createTokenD = async (payload) => {
 
           if (api.BigNumber(issueDTokenFee).gt(0)) {
             await api.executeSmartContract('tokens', 'transfer', {
-              to: 'null', symbol: 'BEED', quantity: issueDTokenFee, isSignedWithActiveKey,
+              to: 'null', symbol: params.burnToken, quantity: issueDTokenFee, isSignedWithActiveKey,
             });
           }
           api.emit('issued new token dollar token', {
@@ -341,7 +341,7 @@ actions.updateBurnPair = async (payload) => {
 
             if (api.BigNumber(updateParamsFee).gt(0)) {
               await api.executeSmartContract('tokens', 'transfer', {
-                to: 'null', symbol: 'BEED', quantity: updateParamsFee, isSignedWithActiveKey,
+                to: 'null', symbol: params.burnToken, quantity: updateParamsFee, isSignedWithActiveKey,
               });
             }
           }
