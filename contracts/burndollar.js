@@ -176,7 +176,6 @@ actions.createSSC = async () => {
     params.burnUsageFee = '1'; // BEED quantity
     params.minAmountConvertible = '1'; // XXX.d token minimum convert quantity issuer can update this;
     params.dTokenToIssuer = '1000'; // XXX.d token issued
-    params.contractConstantMinimum = '1'; // this parameter is used to ensure that when any parameter is updated the value is >= 1, issuer cannot update this field
     params.burnToken = 'BEED';
 
     await api.db.insert('params', params);
@@ -197,24 +196,26 @@ actions.updateParams = async (payload) => {
 
   const params = await api.db.findOne('params', {});
 
-  if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(minAmountConvertible)) {
+  if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(1)) {
     params.issueDTokenFee = issueDTokenFee;
   }
-  if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(minAmountConvertible)) {
+  if (updateParamsFee && typeof updateParamsFee === 'string' && !api.BigNumber(updateParamsFee).isNaN() && api.BigNumber(updateParamsFee).gte(1)) {
     params.updateParamsFee = updateParamsFee;
   }
-  if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(minAmountConvertible)) {
+  if (burnUsageFee && typeof burnUsageFee === 'string' && !api.BigNumber(burnUsageFee).isNaN() && api.BigNumber(burnUsageFee).gte(1)) {
     params.burnUsageFee = burnUsageFee;
   }
-  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !api.BigNumber(minAmountConvertible).isNaN() && api.BigNumber(minAmountConvertible).gte(1)) {
+  if (minAmountConvertible && typeof minAmountConvertible === 'string' && !minAmountConvertible.isNaN() && minAmountConvertible.gte(1)) {
     params.minAmountConvertible = minAmountConvertible;
   }
-  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(minAmountConvertible)) {
+  if (dTokenToIssuer && typeof dTokenToIssuer === 'string' && !api.BigNumber(dTokenToIssuer).isNaN() && api.BigNumber(dTokenToIssuer).gte(1)) {
     params.dTokenToIssuer = dTokenToIssuer;
   }
-
   if (burnToken && typeof burnToken === 'string') {
+    params.burnToken = burnToken;
   }
+
+  api.assert(1 === 3, JSON.stringify(payload));
   await api.db.update('params', params);
 };
 
@@ -411,7 +412,7 @@ actions.convert = async (payload) => {
           }
           const xxxdToIssue = finalQty.multipliedBy(calcResultParentPool.parentPrice).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.contractConstantMinimum), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
+          if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.minAmountConvertible), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
           const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
