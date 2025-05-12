@@ -9,19 +9,18 @@
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
-    await api.db.createTable('params', ['numberOfFreeTx', 'multiTransactionFee', 'denyList', 'allowList']);
+    await api.db.createTable('params', ['numberOfFreeTx', 'denyMaxTx', 'multiTransactionFee', 'burnSymbol', 'denyList', 'allowList']);
+    const params = {};
+
+    params.numberOfFreeTx = '1';
+    params.denyMaxTx = '1';
+    params.multiTransactionFee = '0.001';
+    params.burnSymbol = 'BEED';
+    params.denyList = [];
+    params.allowList = [];
+  
+    await api.db.insert('params', params);
   }
-
-  const params = {};
-
-  params.numberOfFreeTx = 1;
-  params.denyMaxTx = 1;
-  params.multiTransactionFee = '0.001';
-  params.burnSymbol = 'BEED';
-  params.denyList = [];
-  params.allowList = [];
-
-  await api.db.insert('params', params);
 };
 
 actions.updateParams = async (payload) => {
