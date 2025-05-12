@@ -333,7 +333,7 @@ actions.updateBurnPair = async (payload) => {
           const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: params.burnToken });
           const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(updateParamsFee);
 
-          if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the creation fees')) {
+          if (api.assert(authorizedCreation, 'you must have enough BEED tokens to cover the update properties fee')) {
             token.burnRouting = finalRouting;
             token.feePercentage = feePercentage;
             await api.db.update('burnpair', token);
