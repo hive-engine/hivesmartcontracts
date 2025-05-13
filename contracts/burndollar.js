@@ -135,12 +135,6 @@ const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) =
     return true;
   }
 
-
-  result.events.find(el => (el.contract === 'tokens' || l.contract === 'burndollar') && el.event === eventStr
-    && el.data.from === from && el.data.to === to && el.data.quantity === quantity && el.data.symbol === symbol);
-
-  api.assert(1 === 2, `...events ${JSON.stringify(result.events)}`);
-
   return false;
 };
 
@@ -149,8 +143,7 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
-    if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
-      api.assert(1 === 2, `res .... ${JSON.stringify(res)} amount: ${amount} fee:${fee} to:${toAccount} symbol:${burnSymbol}`);
+    if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, fee || amount, 'transfer')) {
       return false;
     }
   }
