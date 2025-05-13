@@ -148,11 +148,11 @@ actions.updateModerator = async (payload) => {
 
 actions.burnFee = async (payload) => {
   const sender = api.sender;
-  const burnParams = await api.db.findOne('params', {});
-  const accountControls = await api.db.findOne('accountControls', { account: sender });
-
   if (sender === 'null' || sender == null)
     return;
+
+  const burnParams = await api.db.findOne('params', {});
+  const accountControls = await api.db.findOne('accountControls', { account: sender });
 
   if (accountControls && accountControls.isDenied){
     // check first if account is denied before
