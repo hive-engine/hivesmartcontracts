@@ -446,7 +446,6 @@ class SmartContracts {
         BigNumber.set({ RANGE: 500 });
       }
 
-
       // initialize the state that will be available in the VM
       const vmState = {
         api: {
@@ -458,7 +457,6 @@ class SmartContracts {
           transactionId,
           blockNumber,
           action,
-          userActionCount,
           payload: JSON.parse(JSON.stringify(payloadObj)),
           BigNumber: ivmBigNumber,
           logs: new ivm.Reference(() => new ivm.ExternalCopy(JSON.parse(JSON.stringify(results.logs)))),
@@ -754,7 +752,6 @@ class SmartContracts {
           refHiveBlockNumber: getApiProp('refHiveBlockNumber'),
           hiveBlockTimestamp: getApiProp('hiveBlockTimestamp'),
           contractVersion: getApiProp('contractVersion'),
-          userActionCount: getApiProp('userActionCount'),
           db: {
             createTable: applyWrapper(getDbProp('createTable')),
             addIndexes: applyWrapper(getDbProp('addIndexes')),
