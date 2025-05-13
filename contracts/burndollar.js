@@ -130,10 +130,17 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
 
 const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) => {
   if (result.errors === undefined
-  && result.events && result.events.find(el => el.contract === 'tokens' && el.event === eventStr
+  && result.events && result.events.find(el => (el.contract === 'tokens' || el.contract === 'burndollar') && el.event === eventStr
     && el.data.from === from && el.data.to === to && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
     return true;
   }
+
+
+  result.events.find(el => (el.contract === 'tokens' || l.contract === 'burndollar') && el.event === eventStr
+    && el.data.from === from && el.data.to === to && el.data.quantity === quantity && el.data.symbol === symbol);
+
+  api.assert(1 === 2, `...events ${JSON.stringify(result.events)}`);
+
   return false;
 };
 
@@ -143,6 +150,7 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
     if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, amount, 'transfer')) {
+      api.assert(1 === 2, `res .... ${JSON.stringify(res)} amount: ${amount} fee:${fee} to:${toAccount} symbol:${burnSymbol}`);
       return false;
     }
   }
