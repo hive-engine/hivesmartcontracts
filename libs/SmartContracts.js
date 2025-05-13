@@ -375,6 +375,7 @@ class SmartContracts {
       if (RESERVED_ACTIONS.includes(action)) return { logs: { errors: ['you cannot trigger this action'] } };
 
       const payloadObj = payload ? JSON.parse(payload) : {};
+      payloadObj.userActionCount = userActionCount;
 
       const contractInDb = await database.findContract({ name: contract });
       if (contractInDb === null) {

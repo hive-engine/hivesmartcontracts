@@ -115,7 +115,7 @@ actions.burnFee = async (payload) => {
   const sender = api.sender;
   const burnParams = await api.db.findOne('params', {});
   const accountControls = await api.db.findOne('accountControls', { account: sender });
-
+  
   if (accountControls && accountControls.isDenied){
     // check first if account is denied before
     const nowTimestamp = new Date(`${api.hiveBlockTimestamp}.000Z`).getTime();
@@ -136,7 +136,7 @@ actions.burnFee = async (payload) => {
     }
   }
 
-  if (api.userActionCount <= burnParams.numberOfFreeTx) {
+  if (payload.userActionCount <= burnParams.numberOfFreeTx) {
     return;
   }
 
