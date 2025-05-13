@@ -9,11 +9,11 @@
 actions.createSSC = async () => {
   const tableExists = await api.db.tableExists('params');
   if (tableExists === false) {
-    await api.db.createTable('params', ['numberOfFreeTx', 'denyMaxTx', 'multiTransactionFee', 'burnSymbol', 'denyList', 'allowList']);
+    await api.db.createTable('params');
     const params = {};
 
-    params.numberOfFreeTx = '1';
-    params.denyMaxTx = '1';
+    params.numberOfFreeTx = 1;
+    params.denyMaxTx = 1;
     params.multiTransactionFee = '0.001';
     params.burnSymbol = 'BEED';
     params.denyList = [];
@@ -35,20 +35,25 @@ actions.updateParams = async (payload) => {
 
   const params = await api.db.findOne('params', {});
 
-  if (numberOfFreeTx && typeof numberOfFreeTx === 'string' && !api.BigNumber(numberOfFreeTx).isNaN() && api.BigNumber(numberOfFreeTx).gte(1)) {
+  if (numberOfFreeTx && Number.isInteger(numberOfFreeTx) && numberOfFreeTx >= 1) {
     params.numberOfFreeTx = numberOfFreeTx;
   }
 
-  if (multiTransactionFee && typeof multiTransactionFee === 'string' && !api.BigNumber(multiTransactionFee).isNaN() && api.BigNumber(multiTransactionFee).gte(0)) {
+  const feeBN = api.BigNumber(multiTransactionFee);
+  if (multiTransactionFee && typeof multiTransactionFee === 'string' && !feeBN.isNaN() && feeBN.gte(0) && !feeBN.isFinite()) {
     params.multiTransactionFee = multiTransactionFee;
   }
 
-  if (denyMaxTx && typeof denyMaxTx === 'string' && !api.BigNumber(denyMaxTx).isNaN() && api.BigNumber(denyMaxTx).gte(0)) {
+  if (denyMaxTx && Number.isInteger(denyMaxTx) && denyMaxTx >= 0) {
     params.denyMaxTx = denyMaxTx;
   }
 
   if (burnSymbol && typeof burnSymbol === 'string') {
-    params.burnSymbol = burnSymbol;
+    // check if the token exists
+    const token = await api.db.findOne('tokens', { symbol });
+    if (token) {
+      params.burnSymbol = burnSymbol;
+    }
   }
 
   await api.db.update('params', params);
@@ -111,13 +116,11 @@ actions.removeAccount = async (payload) => {
 };
 
 
-actions.burnFee = async () => {
+actions.burnFee = async (payload) => {
   const params = await api.db.findOne('params', {});
   const sender = api.sender;
-  let denyEntryIndex = -1;
-  let senderOnDenyList = params.denyList.find((entry, index) => {
+  let senderOnDenyList = params.denyList.find((entry, _) => {
     if (entry.name === sender) {
-      denyEntryIndex = index;
       return true;
     }
     return false;
