@@ -305,7 +305,7 @@ class Block {
         }
 
         // Merge burnResults with results.
-        if (this.refHiveBlockNumber >= 95935754 && userActionCount) 
+        if (this.refHiveBlockNumber >= 95935754 && userActionCount && sender != null && sender !== 'null') 
         {
           results = results ?? {};
           results.logs = {
