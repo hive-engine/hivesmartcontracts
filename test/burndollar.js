@@ -549,10 +549,9 @@ describe('burndollar', function () {
      const transactionsBlock1 = block1.transactions;
 
 
-      console.log(" ")
+     console.log(" ")
      console.log( '\u001b[' + 93 + 'm' + 'Test: Fails to update the params for the D token' + '\u001b[0m')
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[27].logs).errors[0])
-
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[29].logs).errors[0])
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[30].logs).errors[0])
      console.log("  ⚪ ",JSON.parse(transactionsBlock1[31].logs).errors[0])
@@ -564,8 +563,7 @@ describe('burndollar', function () {
      assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], 'fee percentage must be between 0 and 1 / 0% and 100%');
      assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], 'fee percentage must be between 0 and 1 / 0% and 100%');
      
-      resolve();
-    
+      resolve(); 
   })
       .then(() => {
         fixture.tearDown();
@@ -764,8 +762,7 @@ it('it converts XXX to XXX.D', (done) => {
     
     await fixture.sendBlock(block);
 
-    const res = await fixture.database.getBlockInfo(1);
-
+   const res = await fixture.database.getBlockInfo(1);
    const block1 = res;
    const transactionsBlock1 = block1.transactions;
 
@@ -818,12 +815,12 @@ it('it converts XXX to XXX.D', (done) => {
   token = res2
   console.log (token)
 
-  // //drewlongshot got his token converted to token.D
-    assert.equal(token.account, 'drewlongshot');
-    assert.equal(token.symbol, 'URQTWO.D');
-   assert.equal(token.balance, '3800.000');
 
-   res2 = await fixture.database.findOne({
+  assert.equal(token.account, 'drewlongshot');
+  assert.equal(token.symbol, 'URQTWO.D');
+  assert.equal(token.balance, '3800.000');
+
+  res2 = await fixture.database.findOne({
     contract: 'tokens',
     table: 'balances',
     query: {
