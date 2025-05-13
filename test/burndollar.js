@@ -815,7 +815,6 @@ it('it converts XXX to XXX.D', (done) => {
   token = res2
   console.log (token)
 
-
   assert.equal(token.account, 'drewlongshot');
   assert.equal(token.symbol, 'URQTWO.D');
   assert.equal(token.balance, '3800.000');
@@ -832,10 +831,9 @@ it('it converts XXX to XXX.D', (done) => {
   token = res2
   console.log (token)
 
-   //1001 BEED burned 1000 for creation of XXX.D one for conversion of XXX to XXX.D
-   assert.equal(token.account, 'null');
-   assert.equal(token.symbol, 'BEED');
-   assert.equal(token.balance, '1001.0000');
+ assert.equal(token.account, 'null');
+ assert.equal(token.symbol, 'BEED');
+ assert.equal(token.balance, '1001.0000');
 
     resolve();
 })
