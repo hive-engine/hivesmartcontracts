@@ -239,7 +239,7 @@ describe('resourcemanager', function () {
       // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'addAccount', '{"denyList": ["drew", "satoshi"]}' ));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       
@@ -282,7 +282,7 @@ describe('resourcemanager', function () {
       // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'addAccount', '{"denyList": ["drew", "satoshi"]}' ));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       

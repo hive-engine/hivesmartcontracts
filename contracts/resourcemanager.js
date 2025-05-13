@@ -7,8 +7,8 @@
 
 
 actions.createSSC = async () => {
-  const tableExists = await api.db.tableExists('params');
-  if (tableExists === false) {
+  const paramsExists = await api.db.tableExists('params');
+  if (paramsExists === false) {
     await api.db.createTable('params');
     const params = {};
 
@@ -16,10 +16,13 @@ actions.createSSC = async () => {
     params.denyMaxTx = 1;
     params.multiTransactionFee = '0.001';
     params.burnSymbol = 'BEED';
-    params.denyList = [];
-    params.allowList = [];
   
     await api.db.insert('params', params);
+  }
+
+  const accountControlsExists = await api.db.tableExists('accountControls');
+  if (accountControlsExists === false) {
+    await api.db.createTable('accountControls', ['account']);
   }
 };
 
@@ -30,7 +33,6 @@ actions.updateParams = async (payload) => {
     numberOfFreeTx,
     multiTransactionFee,
     burnSymbol,
-
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -59,37 +61,25 @@ actions.updateParams = async (payload) => {
   await api.db.update('params', params);
 };
 
-const transferIsSuccessful = (result, action, from, to, symbol, quantity) => result.errors === undefined
-    && result.events && result.events.find(el => el.contract === 'tokens'
-    && el.event === action
-    && el.data.from === from
-    && el.data.to === to
-    && api.BigNumber(el.data.quantity).eq(quantity)
-    && el.data.symbol === symbol) !== undefined;
-
-
-actions.addAccount = async (payload) => {
+actions.updateAccount = async (payload) => {
   if (api.sender !== api.owner) return;
 
-  const { allowList, denyList } = payload;
-  const blockDate = new Date(`${api.hiveBlockTimestamp}.000Z`);
-  const timestamp = blockDate.getTime();
-  const params = await api.db.findOne('params', {});
+  const table = 'accountControls';
+  const { account, isDenied, isAllowed } = payload;
+  const timestamp = new Date(`${api.hiveBlockTimestamp}.000Z`).getTime();
+  const accountControl = await api.db.findOne(table, { account });
+  const create = !accountControl;
 
-  let finalDeny = params.denyList ? [...params.denyList] : [];
+  const updateAccountControl = setAccountControlProperties(accountControl, account, isDenied, isAllowed, timestamp);
 
-  if (Array.isArray(denyList) && denyList.length > 0) {
-    for (const name of denyList) {
-      const alreadyExists = finalDeny.some(entry => entry.name === name);
-      if (!alreadyExists) {
-        
-        finalDeny.push({ name, actionCount: 0, lastAction: timestamp });
-      }
-    }
-  }
+  if (create)
+    await api.db.insert(table, updateAccountControl);
+  else
+    await api.db.update(table, updateAccountControl);
 
-  params.denyList = finalDeny;
-  await api.db.update('params', params);
+    api.emit('updateAccount', {
+      from: api.sender, updatedAccount: account, isDenied, isAllowed
+    });
 };
 
 actions.removeAccount = async (payload) => {
@@ -115,55 +105,74 @@ actions.removeAccount = async (payload) => {
   await api.db.update('params', params);
 };
 
-
 actions.burnFee = async (payload) => {
-  const params = await api.db.findOne('params', {});
   const sender = api.sender;
-  let senderOnDenyList = params.denyList.find((entry, _) => {
-    if (entry.name === sender) {
-      return true;
-    }
-    return false;
-  });
+  const burnParams = await api.db.findOne('params', {});
+  const accountControls = await api.db.findOne('accountControls', { account: sender });
 
-  // check if user is on deny list
-  if (senderOnDenyList) {
+  if (accountControls && accountControls.isDenied){
+    // check first if account is denied before
     const nowTimestamp = new Date(`${api.hiveBlockTimestamp}.000Z`).getTime();
-    const lastActionTimestamp = senderOnDenyList.lastAction;
+    const lastActionTimestamp = accountControls.lastAction;
     const diffHours = (nowTimestamp - lastActionTimestamp) / (1000 * 60 * 60);
   
-    senderOnDenyList.actionCount = (senderOnDenyList.actionCount || 0) + 1;
-    senderOnDenyList.lastAction = nowTimestamp;
+    accountControls.actionCount = (accountControls.actionCount || 0) + 1;
+    accountControls.lastAction = nowTimestamp;
 
     if (diffHours >= 24)
-      senderOnDenyList.actionCount = 1;
+      accountControls.actionCount = 1;
 
-    if (api.assert(diffHours >= 24 || senderOnDenyList.actionCount <= params.denyMaxTx, 'max transaction limit per day reached.')) {
-      params.denyList[denyEntryIndex] = senderOnDenyList;
-      await api.db.update('params', params);
+    if (api.assert(diffHours >= 24 || accountControls.actionCount <= burnParams.denyMaxTx, 'max transaction limit per day reached.')) {
+      await api.db.update('accountControls', accountControls);
     }
     else {
       return;
     }
   }
 
-  if (api.userActionCount <= params.numberOfFreeTx) {
+  if (api.userActionCount <= burnParams.numberOfFreeTx) {
     return;
   }
 
   // no burn needed for any acc on allowList
-  if (params.allowList.includes(api.sender)) {
+  if (accountControls && accountControls.isAllowed) {
     return;
   }
   
   // if code is here burn BEED for multi transaction use
   api.emit('burnFee', {
-    from: api.sender, to: 'null', symbol: params.burnSymbol, fee: params.multiTransactionFee,
+    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.multiTransactionFee,
   });
 
   const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
-    to: 'null', symbol: params.burnSymbol, quantity: params.multiTransactionFee, isSignedWithActiveKey: true,
+    to: 'null', symbol: burnParams.burnSymbol, quantity: burnParams.multiTransactionFee, isSignedWithActiveKey: true,
   });
 
-  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', params.burnSymbol, params.multiTransactionFee), 'not enough tokens for multiTransaction fee');
+  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.multiTransactionFee), 'not enough tokens for multiTransaction fee');
 };
+
+// Helper functions
+const transferIsSuccessful = (result, action, from, to, symbol, quantity) => result.errors === undefined
+    && result.events && result.events.find(el => el.contract === 'tokens'
+    && el.event === action
+    && el.data.from === from
+    && el.data.to === to
+    && api.BigNumber(el.data.quantity).eq(quantity)
+    && el.data.symbol === symbol) !== undefined;
+
+function setAccountControlProperties(accountControl, account, isDenied, isAllowed, timestamp)
+{
+  if (!accountControl)
+    accountControl = {};
+
+  if (accountControl.account == null || accountControl.account === 'undefined')
+    accountControl.account = account;
+  if (isDenied != null && isDenied !== 'undefined')
+    accountControl.isDenied = isDenied;
+  if (isAllowed != null && isAllowed !== 'undefined')
+    accountControl.isAllowed = isAllowed;
+
+  accountControl.lastAction = timestamp;
+
+  return accountControl;
+}
