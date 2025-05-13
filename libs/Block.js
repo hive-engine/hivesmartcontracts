@@ -289,12 +289,12 @@ class Block {
       } else {
         
         // always execute burnFee to keep logic more dynamic in future without updating core.
-        if (this.refHiveBlockNumber >= 95935754 && userActionCount) {
-            const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee'}
-            burnResults = await SmartContracts.executeSmartContract(// eslint-disable-line
-              database, resourceManagerTx, this.blockNumber, this.timestamp,
-              this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout, userActionCount
-            );
+        if (this.refHiveBlockNumber >= 95935754 && userActionCount && sender != null && sender !== 'null') {
+          const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee'}
+          burnResults = await SmartContracts.executeSmartContract(// eslint-disable-line
+            database, resourceManagerTx, this.blockNumber, this.timestamp,
+            this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout, userActionCount
+          );
         }
 
         if ((burnResults?.logs?.errors?.length ?? 0) === 0) {
