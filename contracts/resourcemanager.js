@@ -5,7 +5,6 @@
 /* eslint-disable no-continue */
 /* global actions, api */
 
-
 actions.createSSC = async () => {
   const paramsExists = await api.db.tableExists('params');
   if (paramsExists === false) {
@@ -23,6 +22,10 @@ actions.createSSC = async () => {
   const accountControlsExists = await api.db.tableExists('accountControls');
   if (accountControlsExists === false) {
     await api.db.createTable('accountControls', ['account']);
+  }
+  const moderatorsExists = await api.db.tableExists('moderators');
+  if (moderatorsExists === false) {
+    await api.db.createTable('moderators', ['account']);
   }
 };
 
@@ -62,7 +65,12 @@ actions.updateParams = async (payload) => {
 };
 
 actions.updateAccount = async (payload) => {
-  if (api.sender !== api.owner) return;
+  const sender = api.sender;
+
+  const moderator = await api.db.findOne('moderators', {account: sender});
+
+  if (sender !== api.owner && !moderator) 
+    return;
 
   const table = 'accountControls';
   const { account, isDenied, isAllowed } = payload;
@@ -79,6 +87,27 @@ actions.updateAccount = async (payload) => {
 
     api.emit('updateAccount', {
       from: api.sender, updatedAccount: account, isDenied, isAllowed
+    });
+};
+
+actions.updateModerator = async (payload) => {
+  const sender = api.sender;
+  if (sender !== api.owner) 
+    return;
+
+  const table = 'moderators';
+  const { account, action } = payload;
+
+  const moderator = await api.db.findOne(table, {account});
+  
+  if (action === 'add' && !moderator)
+    await api.db.insert(table, {account});
+  
+  if (action === 'remove' && moderator)
+    await api.db.remove(table, moderator);
+
+  api.emit('updateModerator', {
+      from: api.sender, account, action
     });
 };
 

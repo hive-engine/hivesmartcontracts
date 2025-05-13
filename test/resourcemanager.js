@@ -403,4 +403,119 @@ describe('resourcemanager', function () {
         done();
       });
   });
+
+  it('add & remove moderator', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      // one transaction should be free
+      let refBlockNumber = 95935754;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
+      
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.getBlockInfo(2);
+      let log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!log0.errors || log0.errors.length === 0);
+
+      res = await fixture.database.findOne({
+        contract: 'resourcemanager',
+        table: 'moderators',
+        query: {
+          account: 'satoshi'
+        }
+      });
+
+      assert.ok(res && res.account === 'satoshi');
+
+      refBlockNumber = 95935755;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "remove"}' ));
+      
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-13T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      res = await fixture.database.getBlockInfo(3);
+
+      log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!log0.errors || log0.errors.length === 0);
+
+      res = await fixture.database.findOne({
+        contract: 'resourcemanager',
+        table: 'accountControls',
+        query: {
+          account: 'drew'
+        }
+      });
+      assert.ok(!res);
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('moderator adds acc to denylist', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      // one transaction should be free
+      let refBlockNumber = 95935754;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.getBlockInfo(2);
+      let log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!log0.errors || log0.errors.length === 0);
+
+      res = await fixture.database.findOne({
+        contract: 'resourcemanager',
+        table: 'accountControls',
+        query: {
+          account: 'drew'
+        }
+      });
+
+      assert.ok(res && res.account === 'drew' && res.isDenied);
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
 });
