@@ -85,7 +85,7 @@ actions.updateAccount = async (payload) => {
   const { account, isDenied, isAllowed } = payload;
   const timestamp = new Date(`${api.hiveBlockTimestamp}.000Z`).getTime();
 
-  const accountControl = await api.db.findOne(table, { account });
+  let accountControl = await api.db.findOne(table, { account });
   const create = !accountControl;
 
   if (!accountControl)
@@ -109,9 +109,9 @@ actions.updateAccount = async (payload) => {
   accountControl.lastAction = timestamp;
 
   if (create)
-    await api.db.insert(table, updateAccountControl);
+    await api.db.insert(table, accountControl);
   else
-    await api.db.update(table, updateAccountControl);
+    await api.db.update(table, accountControl);
 
   api.emit('updateAccount', {
       from: api.sender, updatedAccount: account, isDenied, isAllowed
