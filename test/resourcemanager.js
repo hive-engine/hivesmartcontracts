@@ -133,11 +133,14 @@ describe('resourcemanager', function () {
       res = await fixture.database.getBlockInfo(3);
 
       txLogs = JSON.parse(res.transactions[0].logs);
+      assert.ok(txLogs.events && txLogs.events.length === 1 && txLogs.events[0].contract === 'tokens'
+        && txLogs.events[0].event === 'transfer' && txLogs.events[0].data.to === 'drewlongshot', 'Transfer transaction failed or not logged');
+      
       assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
       await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.00000000' });
       await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '1.00000000' });
 
-     resolve();
+      resolve();
     })
       .then(() => {
         fixture.tearDown();
@@ -174,10 +177,13 @@ describe('resourcemanager', function () {
       assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
       assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 3, 'Second transaction should succeed but incur burn');
 
+      assert.ok(logs1.events && logs1.events.length === 3 && logs1.events[0].contract === 'resourcemanager' 
+        && logs1.events[0].event === 'burnFee' && logs1.events[0].data.to === 'null' && logs1.events[0].data.fee === '0.001', 'Burn not protocolled');
+
       await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.99700000' });
       await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.00200000' });
 
-     resolve();
+      resolve();
     })
       .then(() => {
         fixture.tearDown();
@@ -253,6 +259,9 @@ describe('resourcemanager', function () {
       // first tx (addAccount) has no errors
       const log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
+      assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
+        && log0.events[0].event === 'updateAccount' && log0.events[0].data.isDenied === true 
+        && log0.events[0].data.updatedAccount === 'drew' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Faile to deny account');
 
       const logs1 = JSON.parse(res.transactions[1].logs);
       assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
@@ -260,7 +269,7 @@ describe('resourcemanager', function () {
       const logs2 = JSON.parse(res.transactions[2].logs);
       assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
 
-     resolve();
+      resolve();
     })
       .then(() => {
         fixture.tearDown();
@@ -491,7 +500,16 @@ describe('resourcemanager', function () {
       let res = await fixture.database.getBlockInfo(2);
       let log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
+      assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
+        && log0.events[0].event === 'updateModerator' && log0.events[0].data.account === 'satoshi' 
+        && log0.events[0].data.action === 'add' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Adding moderator no emit or wrong');
 
+      let log1 = JSON.parse(res.transactions[1].logs);
+      assert.ok(!log1.errors || log1.errors.length === 0);
+      assert.ok(log1.events && log1.events.length === 1 && log1.events[0].contract === 'resourcemanager'
+        && log1.events[0].event === 'updateAccount' && log1.events[0].data.isDenied === true 
+        && log1.events[0].data.updatedAccount === 'drew' && log1.events[0].data.from === 'satoshi', 'Faile to deny account as moderator');
+      
       res = await fixture.database.findOne({
         contract: 'resourcemanager',
         table: 'accountControls',
@@ -501,7 +519,7 @@ describe('resourcemanager', function () {
       });
 
       assert.ok(res && res.account === 'drew' && res.isDenied);
-
+      
       resolve();
     })
       .then(() => {
