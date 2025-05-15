@@ -144,15 +144,15 @@ class Block {
     let relIndex = 0;
     const allowCommentContract = this.refHiveBlockNumber > 54560500;
 
-    const userActionCount = {};
+    const userActionCountMap = {};
 
     for (let i = 0; i < nbTransactions; i += 1) {
       const transaction = this.transactions[i];
       log.info('Processing tx ', transaction);
 
-      userActionCount[transaction.sender] = (userActionCount[transaction.sender] ?? 0) + 1;
+      userActionCountMap[transaction.sender] = (userActionCountMap[transaction.sender] ?? 0) + 1;
 
-      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCount[transaction.sender]); // eslint-disable-line
+      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCountMap[transaction.sender]); // eslint-disable-line
 
       currentDatabaseHash = transaction.databaseHash;
 

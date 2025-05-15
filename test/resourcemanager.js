@@ -98,7 +98,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.5", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -153,7 +152,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -194,7 +192,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       for(let i = 0; i < 50; i++) {
@@ -236,7 +233,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
@@ -272,14 +268,13 @@ describe('resourcemanager', function () {
       });
   });
   
-  it('denyList 24h check', (done) => {
+  it('check reset counter after 24h of denied user', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
@@ -342,7 +337,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
@@ -411,7 +405,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
@@ -481,7 +474,6 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      // one transaction should be free
       let refBlockNumber = 95935754;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));

@@ -21,11 +21,11 @@ actions.createSSC = async () => {
 
   const accountControlsExists = await api.db.tableExists('accountControls');
   if (accountControlsExists === false) {
-    await api.db.createTable('accountControls', ['account']);
+    await api.db.createTable('accountControls', [], { primaryKey: ['account'] });
   }
   const moderatorsExists = await api.db.tableExists('moderators');
   if (moderatorsExists === false) {
-    await api.db.createTable('moderators', ['account']);
+    await api.db.createTable('moderators', [], { primaryKey: ['account'] });
   }
 };
 
@@ -101,7 +101,7 @@ actions.updateAccount = async (payload) => {
   }
 
   if (isAllowed != null) {
-    if (!api.assert(typeof isAllowed === 'boolean', 'invalid isDenied')) 
+    if (!api.assert(typeof isAllowed === 'boolean', 'invalid isAllowed')) 
       return;
     accountControl.isAllowed = isAllowed;
   }
