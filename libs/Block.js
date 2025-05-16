@@ -107,7 +107,7 @@ class Block {
   }
 
   applyPerUserTxLimit() {
-    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601 && this.refHiveBlockNumber < 95923781) {
+    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601 && this.refHiveBlockNumber < 96087539) {
       const perUserTxLimit = 20;
       const filteredTransactions = [];
       const transactionsCountBySender = {};
@@ -289,7 +289,7 @@ class Block {
       } else {
         
         // always execute burnFee to keep logic more dynamic in future without updating core.
-        if (this.refHiveBlockNumber >= 95923781 && userActionCount && sender != null && sender !== 'null') {
+        if (this.refHiveBlockNumber >= 96087539 && userActionCount && sender != null && sender !== 'null') {
           const resourceManagerTx = {...transaction, contract: 'resourcemanager', action: 'burnFee', 
             payload: JSON.stringify({ userActionCount, contract: transaction.contract, action: transaction.action }) }
           burnResults = await SmartContracts.executeSmartContract(// eslint-disable-line
@@ -306,7 +306,7 @@ class Block {
         }
 
         // Merge burnResults with results.
-        if (this.refHiveBlockNumber >= 95923781 && userActionCount && sender != null && sender !== 'null') 
+        if (this.refHiveBlockNumber >= 96087539 && userActionCount && sender != null && sender !== 'null') 
         {
           results = results ?? {};
           results.logs = {
