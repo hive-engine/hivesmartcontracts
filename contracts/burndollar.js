@@ -193,7 +193,6 @@ actions.updateParams = async (payload) => {
   } = payload;
 
   const params = await api.db.findOne('params', {});
-
   if (issueDTokenFee && typeof issueDTokenFee === 'string' && !api.BigNumber(issueDTokenFee).isNaN() && api.BigNumber(issueDTokenFee).gte(1)) {
     params.issueDTokenFee = issueDTokenFee;
   }
