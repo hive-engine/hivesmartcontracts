@@ -134,7 +134,6 @@ const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) =
     && el.data.from === from && el.data.to === to && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
     return true;
   }
-
   return false;
 };
 
@@ -151,10 +150,10 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
   const res2 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
   });
-
   const res3 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: beedParams.burnToken, quantity: beedParams.burnUsageFee, isSignedWithActiveKey,
   });
+
   if (!isTokenTransferVerified(res2, api.sender, 'null', burnSymbol, amount, 'transfer')) {
     return false;
   }
@@ -233,7 +232,6 @@ actions.createTokenD = async (payload) => {
   } = params;
 
   const beedTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account: api.sender, symbol: params.burnToken });
-
   const authorizedCreation = beedTokenBalance && api.BigNumber(beedTokenBalance.balance).gte(issueDTokenFee);
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
