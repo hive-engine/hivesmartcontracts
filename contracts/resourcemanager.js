@@ -182,17 +182,17 @@ actions.burnFee = async (payload) => {
   if (accountControls && accountControls.isAllowed) {
     return;
   }
-  
-  // if code is here burn BEED for multi transaction use
-  api.emit('burnFee', {
-    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.multiTransactionFee,
-  });
 
+  // if code is here burn BEED for multi transaction use
   const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: burnParams.burnSymbol, quantity: burnParams.multiTransactionFee, isSignedWithActiveKey: true,
   });
 
   api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.multiTransactionFee), 'not enough tokens for multiTransaction fee');
+
+  api.emit('burnFee', {
+    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.multiTransactionFee,
+  });
 };
 
 // Helper functions
