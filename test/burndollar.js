@@ -95,7 +95,6 @@ describe('burndollar', function () {
       await fixture.sendBlock(block);
 
       const res = await fixture.database.getBlockInfo(1);
-
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
 
@@ -144,7 +143,6 @@ describe('burndollar', function () {
       await fixture.sendBlock(block);
 
       const res = await fixture.database.getBlockInfo(1);
-
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
 
@@ -156,8 +154,8 @@ describe('burndollar', function () {
 
       console.log(" ")
       console.log( '\u001b[' + 93 + 'm' + 'Test: fails to update parameters on the burndollar contract' + '\u001b[0m')
-
       console.log(params)
+
       assert.equal(params.issueDTokenFee, '1000');
       assert.equal(params.updateParamsFee, '100');
       assert.equal(params.burnUsageFee, '1');
@@ -233,7 +231,6 @@ describe('burndollar', function () {
       await fixture.sendBlock(block);
 
       const res = await fixture.database.getBlockInfo(1);
-
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
 
@@ -296,7 +293,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "tokenSymbol": "SWAP.HBD", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
       // now, do a convert from bee to beed
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
-       //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
+      //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       // trans 26 BEE should still be 2100 burned and BEED should be at 1000
@@ -311,8 +308,7 @@ describe('burndollar', function () {
       };
       await fixture.sendBlock(block);
 
-       const res = await fixture.database.getBlockInfo(1);
-
+     const res = await fixture.database.getBlockInfo(1);
      const block1 = res;
      const transactionsBlock1 = block1.transactions;
 
@@ -387,7 +383,6 @@ describe('burndollar', function () {
     assert.equal(token.feePercentage,'.5')
 
       resolve();
-    
   })
       .then(() => {
         fixture.tearDown();
@@ -426,12 +421,12 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "tokenSymbol": "SWAP.HBD", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
       // now, do a convert from bee to beed
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
-       //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
+      //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       // BEE should still be 2100 burned and BEED should be at 1000
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "feePercentage": ".5", "precision": 2, "isSignedWithActiveKey": true }'));
-     //trans27 update params
+      //trans27 update params
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'updateBurnPair', '{"symbol": "URQTWO.D", "feePercentage": ".7", "burnRouting": "whale", "isSignedWithActiveKey": true }'));
 
 
@@ -445,8 +440,7 @@ describe('burndollar', function () {
       };
       await fixture.sendBlock(block);
 
-       const res = await fixture.database.getBlockInfo(1);
-
+     const res = await fixture.database.getBlockInfo(1);
      const block1 = res;
      const transactionsBlock1 = block1.transactions;
 
@@ -465,7 +459,6 @@ describe('burndollar', function () {
     assert.equal(token.burnRouting, 'whale')
     assert.equal(token.feePercentage, '.7')
 
-
     res2 = await fixture.database.findOne({
       contract: 'tokens',
       table: 'balances',
@@ -476,9 +469,7 @@ describe('burndollar', function () {
     console.log(token)
     assert.equal(token.balance, '880.0000')
 
-
       resolve();
-    
   })
       .then(() => {
         fixture.tearDown();
@@ -517,7 +508,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "tokenSymbol": "SWAP.HBD", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
       // now, do a convert from bee to beed
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
-       //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
+      //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       // BEE should still be 2100 burned and BEED should be at 1000
@@ -547,7 +538,6 @@ describe('burndollar', function () {
 
      const block1 = res;
      const transactionsBlock1 = block1.transactions;
-
 
      console.log(" ")
      console.log( '\u001b[' + 93 + 'm' + 'Test: Fails to update the params for the D token' + '\u001b[0m')
@@ -659,8 +649,7 @@ describe('burndollar', function () {
       };
       await fixture.sendBlock(block);
 
-       const res = await fixture.database.getBlockInfo(1);
-
+     const res = await fixture.database.getBlockInfo(1);
      const block1 = res;
      const transactionsBlock1 = block1.transactions;
 
@@ -696,7 +685,6 @@ describe('burndollar', function () {
     assert.equal(JSON.parse(transactionsBlock1[56].logs).errors[0], 'You must be the token issuer in order to issue D token')
 
     resolve();
-    
   })
       .then(() => {
         fixture.tearDown();
@@ -737,7 +725,7 @@ it('it converts XXX to XXX.D', (done) => {
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "tokenSymbol": "SWAP.HBD", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
     // now, do a convert from bee to beed
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
-     //trans26-27 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
+    //trans26-27 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token",  "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "20000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
     // BEE should still be 2100 burned and BEED should be at 1000
@@ -765,7 +753,6 @@ it('it converts XXX to XXX.D', (done) => {
    const res = await fixture.database.getBlockInfo(1);
    const block1 = res;
    const transactionsBlock1 = block1.transactions;
-
 
    let res2 = await fixture.database.findOne({
       contract: 'tokens',
