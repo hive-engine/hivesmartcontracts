@@ -66,8 +66,8 @@ describe('resourcemanager', function () {
   });
 
   async function initializeResourceManager() {
-     // Initialize new resourcemanager contract before starting block 95935754 
-     let refBlockNumber = 95935753;
+     // Initialize new resourcemanager contract before starting block 96087539 
+     let refBlockNumber = 96087538;
      let transactions = [];
      // deploy contracts
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
@@ -98,7 +98,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.5", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       
@@ -155,7 +155,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -198,7 +198,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       for(let i = 0; i < 50; i++) {
         transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -239,7 +239,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -284,7 +284,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -346,7 +346,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       
@@ -414,7 +414,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
       
@@ -483,7 +483,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 95935754;
+      let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
