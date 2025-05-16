@@ -177,8 +177,8 @@ describe('resourcemanager', function () {
       assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
       assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 3, 'Second transaction should succeed but incur burn');
 
-      assert.ok(logs1.events && logs1.events.length === 3 && logs1.events[0].contract === 'resourcemanager' 
-        && logs1.events[0].event === 'burnFee' && logs1.events[0].data.to === 'null' && logs1.events[0].data.fee === '0.001', 'Burn not protocolled');
+      assert.ok(logs1.events && logs1.events.length === 3 && logs1.events[1].contract === 'resourcemanager' 
+        && logs1.events[1].event === 'burnFee' && logs1.events[1].data.to === 'null' && logs1.events[1].data.fee === '0.001', 'Burn not protocolled');
 
       await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.99700000' });
       await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.00200000' });
@@ -309,7 +309,7 @@ describe('resourcemanager', function () {
       let logs2 = JSON.parse(res.transactions[2].logs);
       assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
 
-      refBlockNumber = 95935755;
+      refBlockNumber++;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
@@ -372,7 +372,7 @@ describe('resourcemanager', function () {
       });
       assert.ok(res && res.isDenied == true);
 
-      refBlockNumber = 95935755;
+      refBlockNumber++;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": false}' ));
       
@@ -441,7 +441,7 @@ describe('resourcemanager', function () {
 
       assert.ok(res && res.account === 'satoshi');
 
-      refBlockNumber = 95935755;
+      refBlockNumber++;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "remove"}' ));
       
