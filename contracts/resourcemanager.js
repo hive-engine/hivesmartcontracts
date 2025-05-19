@@ -150,6 +150,9 @@ actions.burnFee = async (payload) => {
   const sender = api.sender;
   if (sender === 'null' || sender == null)
     return;
+  if (payload.contract === 'tokens') {
+    return;
+  }
 
   const burnParams = await api.db.findOne('params', {});
   const accountControls = await api.db.findOne('accountControls', { account: sender });
