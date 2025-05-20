@@ -5865,6 +5865,7 @@ describe('nft', function() {
       const logs = JSON.parse(res.transactions[0].logs);
       const events = logs.events;
 
+      console.log(events);
       assert.equal(events[0].contract, 'nft');
       assert.equal(events[0].event, 'transferOwnership');
       assert.equal(events[0].data.symbol, 'TSTNFT');
