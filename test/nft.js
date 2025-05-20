@@ -5860,6 +5860,17 @@ describe('nft', function() {
       assert.equal(token.issuer, 'satoshi');
       assert.equal(token.symbol, 'TSTNFT');
 
+      res = await fixture.database.getBlockInfo(2);
+
+      const logs = JSON.parse(res.transactions[0].logs);
+      const events = logs.events;
+
+      assert.equal(events[0].contract, 'nft');
+      assert.equal(events[0].event, 'transferOwnership');
+      assert.equal(events[0].data.symbol, 'TSTNFT');
+      assert.equal(events[0].data.from, 'cryptomancer');
+      assert.equal(events[0].data.to, 'satoshi');
+
       resolve();
     })
       .then(() => {
