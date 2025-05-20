@@ -671,6 +671,17 @@ describe('Tokens smart contract', function () {
       assert.equal(token.issuer, 'satoshi');
       assert.equal(token.symbol, 'TKN.TEST');
 
+      res = await fixture.database.getBlockInfo(2);
+
+      const logs = JSON.parse(res.transactions[0].logs);
+      const events = logs.events;
+
+      assert.equal(events[0].contract, 'tokens');
+      assert.equal(events[0].event, 'transferOwnership');
+      assert.equal(events[0].data.symbol, 'TKN.TEST');
+      assert.equal(events[0].data.from, 'hive-engine');
+      assert.equal(events[0].data.to, 'satoshi');
+
       resolve();
     })
       .then(() => {

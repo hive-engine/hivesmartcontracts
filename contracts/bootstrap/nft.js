@@ -630,9 +630,6 @@ actions.transferOwnership = async (payload) => {
         if (api.assert(isValidHiveAccountLength(finalTo), 'invalid to')) {
           nft.issuer = finalTo;
           await api.db.update('nfts', nft);
-          api.emit('transferOwnership', {
-              from: api.sender, to: finalTo, symbol
-          });
         }
       }
     }
