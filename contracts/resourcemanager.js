@@ -147,9 +147,6 @@ const transferIsSuccessful = (result, action, from, to, symbol, quantity) => res
 actions.burnFee = async (payload) => {
   const { sender } = api;
   if (sender === 'null' || sender == null) return;
-  if (payload.contract === 'tokens') {
-    return;
-  }
 
   const burnParams = await api.db.findOne('params', {});
   const accountControls = await api.db.findOne('accountControls', { account: sender });
@@ -178,6 +175,14 @@ actions.burnFee = async (payload) => {
 
   // no burn needed for any acc on allowList
   if (accountControls && accountControls.isAllowed) {
+    return;
+  }
+
+  // for non market/marketpools, omit burn, but enforce 20 action limit
+  if (payload.contract !== 'market') {
+    if (payload.contract !== 'marketpools') {
+      api.assert(payload.userActionCount <= 20, 'max transaction limit per block reached.');
+    }
     return;
   }
 
