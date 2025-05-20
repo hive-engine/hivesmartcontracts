@@ -64,7 +64,7 @@ actions.updateParams = async (payload) => {
   if (burnSymbol) {
     if (!api.assert(typeof burnSymbol === 'string', 'invalid burnSymbol')) { return; }
     // check if the token exists
-    const token = await api.db.findOne('tokens', { symbol: burnSymbol });
+    const token = await api.db.findOneInTable('tokens', 'tokens', { symbol: burnSymbol });
     if (!api.assert(token, 'burnSymbol not available')) { return; }
     params.burnSymbol = burnSymbol;
   }

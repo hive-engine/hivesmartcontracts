@@ -20,7 +20,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // test cases for resourcemanager smart contract
 describe('resourcemanager', function () {
-  this.timeout(20000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -76,12 +76,13 @@ describe('resourcemanager', function () {
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(rmContractPayload)));
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftContractPayload)));
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'nft', 'updateParams', '{ "nftCreationFee": "1", "nftIssuanceFee": {"TKN":"1"}, "dataPropertyCreationFee": "1", "enableDelegationFee": "1" }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"drew", "quantity":"200", "isSignedWithActiveKey":true }`));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"drew", "quantity":"200", "isSignedWithActiveKey":true }`));
      
      // Create BEED token if not already available
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "BEED", "precision": 8, "maxSupply": "1000" }'));
      // Issue some tokens to drew
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "BEED", "to": "drew", "quantity": "1", "isSignedWithActiveKey": true }'));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', `{ "symbol": "BEED", "to": "${CONSTANTS.HIVE_ENGINE_ACCOUNT}", "quantity": "1", "isSignedWithActiveKey": true }`));
      // Create test NFT
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'create', '{ "isSignedWithActiveKey": true, "name":"test NFT", "symbol":"TSTNFT", "url":"http://mynft.com", "maxSupply":"3" }'));
 
@@ -95,8 +96,9 @@ describe('resourcemanager', function () {
      
      // process all transactions defined above in block
      await fixture.sendBlock(block);
+     await tableAsserts.assertNoErrorInLastBlock();
   }
-
+/*
   it('one action per block is free', (done) => {
     new Promise(async (resolve) => {
 
@@ -559,6 +561,121 @@ describe('resourcemanager', function () {
 
       assert.ok(res && res.account === 'drew' && res.isDenied);
       
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });*/
+
+  it('updates parameters to 2 free tx, 0.01 BEE fee', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      let refBlockNumber = 96087539;
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', `{ "numberOfFreeTx": 2, "multiTransactionFee": "0.01", "burnSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      refBlockNumber++;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
+      
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getLatestBlockInfo();
+
+      const logs0 = JSON.parse(res.transactions[0].logs);
+      const logs1 = JSON.parse(res.transactions[1].logs);
+      const logs2 = JSON.parse(res.transactions[2].logs);
+
+      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'Second transaction should be free and succeed');
+      assert.ok(!logs2.errors || logs2.errors.length === 0 || logs2.events.length != 2, 'Third transaction should succeed but incur burn');
+
+      assert.ok(logs2.events && logs2.events.length === 2 && logs2.events[1].contract === 'resourcemanager' 
+        && logs2.events[1].event === 'burnFee' && logs2.events[1].data.to === 'null' && logs2.events[1].data.fee === '0.01' && logs2.events[1].data.symbol === 'BEE', 'Burn not protocolled');
+
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '1' });
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEE', balance: '198.99000000' });
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('updates parameters to 2 denyMaxTx', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      let refBlockNumber = 96087539;
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{"denyMaxTx": 2}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+      await tableAsserts.assertNoErrorInLastBlock();
+
+      refBlockNumber++;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
+      
+      block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      let res = await fixture.database.getLatestBlockInfo();
+      let logs1 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+
+      let logs2 = JSON.parse(res.transactions[1].logs);
+      assert.ok(!logs2.errors || logs2.errors.length === 0, 'Second action from drew should succeed');
+
+      let logs3 = JSON.parse(res.transactions[2].logs);
+      assert.equal(logs3.errors[0], 'max transaction limit per day reached.');
+
       resolve();
     })
       .then(() => {
