@@ -12,14 +12,15 @@ const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
 const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const ContractPayload = setupContractPayload('resourcemanager', './contracts/resourcemanager.js');
+const nftContractPayload = setupContractPayload('nft', './contracts/nft.js');
+const rmContractPayload = setupContractPayload('resourcemanager', './contracts/resourcemanager.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
 // test cases for resourcemanager smart contract
 describe('resourcemanager', function () {
-  this.timeout(1000000);
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -71,13 +72,18 @@ describe('resourcemanager', function () {
      let transactions = [];
      // deploy contracts
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
-     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(ContractPayload)));
-     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(ContractPayload)));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(rmContractPayload)));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(rmContractPayload)));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(nftContractPayload)));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'nft', 'updateParams', '{ "nftCreationFee": "1", "nftIssuanceFee": {"TKN":"1"}, "dataPropertyCreationFee": "1", "enableDelegationFee": "1" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol":"${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to":"drew", "quantity":"200", "isSignedWithActiveKey":true }`));
      
      // Create BEED token if not already available
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "BEED", "precision": 8, "maxSupply": "1000" }'));
      // Issue some tokens to drew
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "BEED", "to": "drew", "quantity": "1", "isSignedWithActiveKey": true }'));
+     // Create test NFT
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'create', '{ "isSignedWithActiveKey": true, "name":"test NFT", "symbol":"TSTNFT", "url":"http://mynft.com", "maxSupply":"3" }'));
 
      let block = {
        refHiveBlockNumber: refBlockNumber,
@@ -100,7 +106,7 @@ describe('resourcemanager', function () {
 
       let refBlockNumber = 96087539;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.5", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
       
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -111,16 +117,15 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
 
       let txLogs = JSON.parse(res.transactions[0].logs);
       assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.50000000' });
-      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.5' });
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '1' });
 
       ++refBlockNumber;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.5", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
       
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -130,15 +135,11 @@ describe('resourcemanager', function () {
         transactions,
       };
       await fixture.sendBlock(block);
-      res = await fixture.database.getBlockInfo(3);
+      res = await fixture.database.getLatestBlockInfo();
 
       txLogs = JSON.parse(res.transactions[0].logs);
-      assert.ok(txLogs.events && txLogs.events.length === 1 && txLogs.events[0].contract === 'tokens'
-        && txLogs.events[0].event === 'transfer' && txLogs.events[0].data.to === 'drewlongshot', 'Transfer transaction failed or not logged');
-      
       assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.00000000' });
-      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '1.00000000' });
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '1' });
 
       resolve();
     })
@@ -157,8 +158,8 @@ describe('resourcemanager', function () {
 
       let refBlockNumber = 96087539;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
       
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -169,19 +170,58 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(2);
+      const res = await fixture.database.getLatestBlockInfo();
 
       const logs0 = JSON.parse(res.transactions[0].logs);
       const logs1 = JSON.parse(res.transactions[1].logs);
 
       assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
-      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 3, 'Second transaction should succeed but incur burn');
+      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 2, 'Second transaction should succeed but incur burn');
 
-      assert.ok(logs1.events && logs1.events.length === 3 && logs1.events[1].contract === 'resourcemanager' 
+      assert.ok(logs1.events && logs1.events.length === 2 && logs1.events[1].contract === 'resourcemanager' 
         && logs1.events[1].event === 'burnFee' && logs1.events[1].data.to === 'null' && logs1.events[1].data.fee === '0.001', 'Burn not protocolled');
 
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.99700000' });
-      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.00200000' });
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.99900000' });
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('multiple token transfers pay no fees', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      let refBlockNumber = 96087539;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
+      
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getLatestBlockInfo();
+
+      const logs0 = JSON.parse(res.transactions[0].logs);
+      const logs1 = JSON.parse(res.transactions[1].logs);
+
+      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'Second transaction should be free and succeed');
+
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.00000000' });
+      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '1.00000000' });
 
       resolve();
     })
@@ -200,8 +240,8 @@ describe('resourcemanager', function () {
 
       let refBlockNumber = 96087539;
       transactions = [];
-      for(let i = 0; i < 50; i++) {
-        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      for( let i = 0; i < 50; i++ ) {
+        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', `{ "symbol": "TSTNFT", "name": "a${i}", "type": "number", "isSignedWithActiveKey": true }`));
       }
       
       let block = {
@@ -213,16 +253,15 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(2);
+      const res = await fixture.database.getLatestBlockInfo();
 
       const logs0 = JSON.parse(res.transactions[0].logs);
       const logs1 = JSON.parse(res.transactions[1].logs);
 
       assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
-      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 3, 'Second transaction should succeed but incur burn');
+      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length != 2, 'Second transaction should succeed but incur burn');
 
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.90100000' });
-      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '0.05000000' });
+      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.95100000' });
 
      resolve();
     })
@@ -242,8 +281,8 @@ describe('resourcemanager', function () {
       let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
       
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -254,14 +293,14 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(2);
+      const res = await fixture.database.getLatestBlockInfo();
 
       // first tx (addAccount) has no errors
       const log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
       assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
         && log0.events[0].event === 'updateAccount' && log0.events[0].data.isDenied === true 
-        && log0.events[0].data.updatedAccount === 'drew' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Faile to deny account');
+        && log0.events[0].data.updatedAccount === 'drew' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Failed to deny account');
 
       const logs1 = JSON.parse(res.transactions[1].logs);
       assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
@@ -287,8 +326,8 @@ describe('resourcemanager', function () {
       let refBlockNumber = 96087539;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
       
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -299,7 +338,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
       const log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
 
@@ -311,8 +350,8 @@ describe('resourcemanager', function () {
 
       refBlockNumber++;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "quantity": "0.001", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
       
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -323,7 +362,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(3);
+      res = await fixture.database.getLatestBlockInfo();
 
       logs1 = JSON.parse(res.transactions[0].logs);
       assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
@@ -359,7 +398,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
       let log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
 
@@ -385,7 +424,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(3);
+      res = await fixture.database.getLatestBlockInfo();
 
       log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
@@ -427,7 +466,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
       let log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
 
@@ -454,7 +493,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(3);
+      res = await fixture.database.getLatestBlockInfo();
 
       log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
@@ -497,7 +536,7 @@ describe('resourcemanager', function () {
       };
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
       let log0 = JSON.parse(res.transactions[0].logs);
       assert.ok(!log0.errors || log0.errors.length === 0);
       assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
