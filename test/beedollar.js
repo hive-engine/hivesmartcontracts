@@ -21,7 +21,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // test cases for beedollar smart contract
 describe('beedollar', function () {
-  this.timeout(200000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -89,7 +89,7 @@ describe('beedollar', function () {
 
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(1);
+      const res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;

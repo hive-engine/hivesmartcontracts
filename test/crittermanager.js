@@ -22,7 +22,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // crittermanager
 describe('crittermanager', function() {
-  this.timeout(200000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -251,7 +251,7 @@ describe('crittermanager', function() {
       
       assert.equal(token, null);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       
 
@@ -273,7 +273,7 @@ describe('crittermanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
       
 
@@ -417,7 +417,7 @@ describe('crittermanager', function() {
       assert.equal(token.supply, 0);
       assert.equal(token.circulatingSupply, 0);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       
       
@@ -537,7 +537,7 @@ describe('crittermanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       
       

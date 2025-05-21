@@ -316,7 +316,7 @@ async function runBeneficiaryTest(options) {
 }
 
 describe('comments', function () {
-  this.timeout(60000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

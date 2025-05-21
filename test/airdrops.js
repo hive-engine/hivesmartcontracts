@@ -38,7 +38,7 @@ async function assertPendingAirdrop(airdropId, reverse = false) {
 
 // smart contract
 describe('Airdrops Smart Contract', function () {
-  this.timeout(20000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

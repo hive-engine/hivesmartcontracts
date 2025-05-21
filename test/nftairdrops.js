@@ -47,9 +47,9 @@ const tableAsserts = new TableAsserts(fixture);
 // smart contract
 describe('NFT Airdrops Smart Contract', function () {
   if (PERFORMANCE_CHECKS_ENABLED) {
-    this.timeout(1800000);
+    this.timeout(100000);
   } else {
-    this.timeout(20000);
+    this.timeout(10000);
   }
 
   before((done) => {
@@ -471,7 +471,7 @@ describe('NFT Airdrops Smart Contract', function () {
       });
       assert.strictEqual(pendingAirdrop.isValid, true);
       assert.strictEqual(pendingAirdrop.softFail, true);
-      assert.strictEqual(pendingAirdrop.blockNumber, 3);
+      assert.strictEqual(pendingAirdrop.blockNumber, 3 + fixture.startBlockOffset);
       assert.strictEqual(pendingAirdrop.airdropId, transactionId);
       assert.strictEqual(pendingAirdrop.symbol, 'TSTNFT');
       assert.strictEqual(pendingAirdrop.from, 'bennierex');
@@ -599,7 +599,7 @@ describe('NFT Airdrops Smart Contract', function () {
       // Airdrop directly initiated by user.
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bennierex', 'nftairdrops', 'newAirdrop', `{ "isSignedWithActiveKey": true, "symbol": "TSTNFT", "list": ${JSON.stringify(airdrops['TSTNFT'])} }`));
       // Airdrop initiated by user via other contract.
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bait002', 'testcontract', 'doAirdrop', `{ "isSignedWithActiveKey": true, "fromType": "user", "startBlockNumber": 4, "symbol": "TSTNFTC", "list": ${JSON.stringify(airdrops['TSTNFTC'])} }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'bait002', 'testcontract', 'doAirdrop', `{ "isSignedWithActiveKey": true, "fromType": "user", "startBlockNumber": ${4 + fixture.startBlockOffset}, "symbol": "TSTNFTC", "list": ${JSON.stringify(airdrops['TSTNFTC'])} }`));
 
       block = {
         refHiveBlockNumber: refBlockNumber,

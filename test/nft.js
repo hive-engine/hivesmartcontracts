@@ -65,7 +65,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // nft
 describe('nft', function() {
-  this.timeout(20000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -312,7 +312,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(1);
+      const res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -435,7 +435,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -494,7 +494,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -569,7 +569,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -721,7 +721,7 @@ describe('nft', function() {
       
       assert.equal(undelegations.length, 0);
 
-      res = await fixture.database.getBlockInfo(3);
+      res = await fixture.database.getLatestBlockInfo();
 
       let vtxs = res.virtualTransactions;
       const logs = JSON.parse(vtxs[0].logs);
@@ -872,7 +872,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -966,7 +966,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -1056,7 +1056,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -1195,7 +1195,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -1336,7 +1336,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -1599,7 +1599,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -1797,7 +1797,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -1993,7 +1993,7 @@ describe('nft', function() {
       let t1 = performance.now();
       
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
       
 
@@ -2040,7 +2040,7 @@ describe('nft', function() {
       t1 = performance.now();
       
 
-      const block3 = await fixture.database.getBlockInfo(3);
+      const block3 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock3 = block3.transactions;
       
 
@@ -2125,7 +2125,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
 
 
@@ -2492,7 +2492,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -2599,7 +2599,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -2708,7 +2708,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -2905,7 +2905,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3137,7 +3137,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3318,7 +3318,7 @@ describe('nft', function() {
       assert.equal(JSON.stringify(instances[7].lockedTokens), '{}');
       assert.equal(JSON.stringify(instances[7].lockedNfts[0]), '{"symbol":"TSTNFT","ids":["3"]}');
 
-      res = await fixture.database.getBlockInfo(1);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3453,7 +3453,7 @@ describe('nft', function() {
       assert.equal(JSON.stringify(instances[8].lockedTokens), '{}');
       assert.equal(JSON.stringify(instances[8].lockedNfts[0]), '{"symbol":"TSTNFT","ids":["8"]}');
 
-      res = await fixture.database.getBlockInfo(1);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3545,7 +3545,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3678,7 +3678,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3728,7 +3728,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -3872,7 +3872,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -3983,7 +3983,7 @@ describe('nft', function() {
       assert.equal(JSON.stringify(instances[2].properties), '{"level":3,"color":"black","id":"NFT-XYZ-123"}');
       assert.equal(instances.length, 3);
 
-      res = await fixture.database.getBlockInfo(1);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -4043,7 +4043,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -4149,7 +4149,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -4256,7 +4256,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -4516,7 +4516,7 @@ describe('nft', function() {
       assert.equal(JSON.stringify(properties.isFood.authorizedEditingAccounts), '["bobbie"]');
       assert.equal(JSON.stringify(properties.isFood.authorizedEditingContracts), '["mycontract1","mycontract2","mycontract3","mycontract4"]');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -4680,7 +4680,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock = block1.transactions;
@@ -4742,7 +4742,7 @@ describe('nft', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(1);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock = block1.transactions;
@@ -5033,7 +5033,7 @@ describe('nft', function() {
 
       assert.equal(JSON.stringify(tokens[0].authorizedIssuingAccounts), '["cryptomancer","harpagon","satoshi","aggroed","marc"]');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5120,7 +5120,7 @@ describe('nft', function() {
 
       assert.equal(JSON.stringify(tokens[0].authorizedIssuingContracts), '["tokens","market","contract1","contract2","dice"]');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5257,7 +5257,7 @@ describe('nft', function() {
       assert.equal(token.orgName, '');
       assert.equal(token.productName, 'Pet Rocks');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5392,7 +5392,7 @@ describe('nft', function() {
       assert.equal(token.name, 'test NFT');
       assert.equal(token.orgName, 'Evil Inc');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5524,7 +5524,7 @@ describe('nft', function() {
 
       assert.equal(token.name, 'test NFT');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5653,7 +5653,7 @@ describe('nft', function() {
 
       assert.equal(JSON.parse(token.metadata).url, 'http://mynft.com');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5780,7 +5780,7 @@ describe('nft', function() {
       const metadata = JSON.parse(token.metadata);
       assert.equal(metadata.url, 'http://mynft.com');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -5933,7 +5933,7 @@ describe('nft', function() {
       assert.equal(token.issuer, 'cryptomancer');
       assert.equal(token.symbol, 'TSTNFT');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;

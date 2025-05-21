@@ -19,6 +19,7 @@ const bcContractPayload = setupContractPayload('botcontroller', './contracts/bot
 const mmContractPayload = setupContractPayload('marketmaker', './contracts/marketmaker.js');
 
 const fixture = new Fixture();
+const tickBlockOffset = 1; // resource manager in fixture setup
 const tableAsserts = new TableAsserts(fixture);
 
 const getUsers = async (db) => {
@@ -89,7 +90,7 @@ const assertMarketFields = (market, fields) => {
 
 // botcontroller
 describe('botcontroller', function() {
-  this.timeout(200000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -264,50 +265,50 @@ describe('botcontroller', function() {
         // verify account state updates OK after each tick
         let users = await getUsers(fixture.database);
         let markets = await getMarkets(fixture.database);
-        let blockInfo = await fixture.database.getBlockInfo(numBlocks + 1);
+        let blockInfo = await fixture.database.getLatestBlockInfo();
         let transactionData = blockInfo.transactions;
         switch(numBlocks) {
           case 1:
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 1, timeLimit: 10 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 1, timeLimit: 10 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 1, timeLimit: 10 * 3 * 1000});
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 1, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 1, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 1, timeLimit: 10 * 3 * 1000});
             break;
           case 5:
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 6, timeLimit: 5 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 1, timeLimit: 10 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 1, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 6, timeLimit: 5 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 1, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 1, timeLimit: 10 * 3 * 1000 });
             break;
           case 6:
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 6, timeLimit: 5 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 7, timeLimit: 4 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 1, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 6, timeLimit: 5 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 7, timeLimit: 4 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 1, timeLimit: 10 * 3 * 1000 });
             break;
           case 7:
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 6, timeLimit: 5 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 7, timeLimit: 4 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: 8, timeLimit: 3 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 6, timeLimit: 5 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 7, timeLimit: 4 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true, lastTickBlock: tickBlockOffset + 8, timeLimit: 3 * 3 * 1000 });
             break;
           case 8: // cryptomancer executes a turnOff action here
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: 9, timeLimit: 2 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 7, timeLimit: 4 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 8, timeLimit: 3 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: tickBlockOffset + 9, timeLimit: 2 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 7, timeLimit: 4 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 8, timeLimit: 3 * 3 * 1000 });
             break;
           case 11: // aggroed ticks and goes into cooldown
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: 9,  timeLimit: 2 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 12, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 8,  timeLimit: 3 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: tickBlockOffset + 9,  timeLimit: 2 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 12, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 8,  timeLimit: 3 * 3 * 1000 });
             break;
           case 12: // beggars ticks and goes into cooldown
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: 9,  timeLimit: 2 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 12, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 13, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: tickBlockOffset + 9,  timeLimit: 2 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 12, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 13, timeLimit: 0 * 3 * 1000 });
             break;
           case 15: // aggroed tries to re-enable, but can't because he's on cooldown
             console.log('ticking: ' + numBlocks);
@@ -316,35 +317,35 @@ describe('botcontroller', function() {
             break;
           case 25: // verify state isn't changing while accounts are turned off
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: 9,  timeLimit: 2 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 12, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 13, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: false, lastTickBlock: tickBlockOffset + 9,  timeLimit: 2 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 12, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 13, timeLimit: 0 * 3 * 1000 });
             break;
           case 30: // cryptomancer executes a turnOn action here
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 31, timeLimit: 2 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 12, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 13, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 31, timeLimit: 2 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 12, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 13, timeLimit: 0 * 3 * 1000 });
             break;
           case 35: // cryptomancer ticks and goes into cooldown, aggroed does a turnOn, beggars does an upgrade
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 36, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 36, timeLimit: 10 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: 36, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 36, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 36, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 36, timeLimit: 10 * 3 * 1000 });
             break;
           case 36: // beggars adds 2 markets
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 36, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 36, timeLimit: 10 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: 36, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 2 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 36, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 36, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 36, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 2 });
             assertMarketFields(markets[0], { account: 'beggars', symbol: 'TKN',     isEnabled: true, strategy: 2 });
             assertMarketFields(markets[1], { account: 'beggars', symbol: 'TESTNFT', isEnabled: true, strategy: 1 });
             break;
           case 38: // beggars is premium so should tick faster than the other two, and markets should stay enabled
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 36, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 36, timeLimit: 10 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: 39, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 2 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 36, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 36, timeLimit: 10 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 39, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 2 });
             assertMarketFields(markets[0], { account: 'beggars', symbol: 'TKN',     isEnabled: true, strategy: 2 });
             assertMarketFields(markets[1], { account: 'beggars', symbol: 'TESTNFT', isEnabled: true, strategy: 1 });
             // check market orders - beggars should have orders added by the bot
@@ -375,17 +376,17 @@ describe('botcontroller', function() {
             break;
           case 40: // aggroed ticks, nothing else changes
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 36, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 41, timeLimit: 5 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: 39, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 2 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 36, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 41, timeLimit: 5 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 39, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 2 });
             assertMarketFields(markets[0], { account: 'beggars', symbol: 'TKN',     isEnabled: true, strategy: 2 });
             assertMarketFields(markets[1], { account: 'beggars', symbol: 'TESTNFT', isEnabled: true, strategy: 1 });
             break;
           case 41: // beggars ticks, loses premium and markets are disabled (still has premium, but loses markets)
             console.log('ticking: ' + numBlocks);
-            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: 36, timeLimit: 0 * 3 * 1000 });
-            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: 41, timeLimit: 5 * 3 * 1000 });
-            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: 42, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 0 });
+            assertFields(users[0], { account: 'cryptomancer', isPremium: false, isOnCooldown: true,  isEnabled: false, lastTickBlock: tickBlockOffset + 36, timeLimit: 0 * 3 * 1000 });
+            assertFields(users[1], { account: 'aggroed',      isPremium: false, isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 41, timeLimit: 5 * 3 * 1000 });
+            assertFields(users[2], { account: 'beggars',      isPremium: true,  isOnCooldown: false, isEnabled: true,  lastTickBlock: tickBlockOffset + 42, timeLimit: 10 * 3 * 1000, markets: 2, enabledMarkets: 0 });
             assertMarketFields(markets[0], { account: 'beggars', symbol: 'TKN',     isEnabled: false, strategy: 2 });
             assertMarketFields(markets[1], { account: 'beggars', symbol: 'TESTNFT', isEnabled: false, strategy: 1 });
             break;
@@ -430,7 +431,7 @@ describe('botcontroller', function() {
 
       await fixture.sendBlock(block);
 
-      const res = await fixture.database.getBlockInfo(1);
+      const res = await fixture.database.getLatestBlockInfo();
 
       const block1 = res;
       const transactionsBlock1 = block1.transactions;
@@ -561,9 +562,9 @@ describe('botcontroller', function() {
       assert.equal(user.markets, 0 );
       assert.equal(user.timeLimit, 100 * 3 * 1000);
       assert.equal(user.lastTickTimestamp, 1527811200000);
-      assert.equal(user.lastTickBlock, 1);
+      assert.equal(user.lastTickBlock, tickBlockOffset + 1);
       assert.equal(user.creationTimestamp, 1527811200000);
-      assert.equal(user.creationBlock, 1);
+      assert.equal(user.creationBlock, tickBlockOffset + 1);
 
       // verify registration fee has been burned
       const balances = await fixture.database.find({
@@ -647,7 +648,7 @@ describe('botcontroller', function() {
 
       await fixture.sendBlock(block);
 
-      const block3 = await fixture.database.getBlockInfo(3);
+      const block3 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock3 = block3.transactions;
 
       console.log(transactionsBlock3[1].logs);
@@ -732,7 +733,7 @@ describe('botcontroller', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
 
       console.log(transactionsBlock1[8].logs);
@@ -788,7 +789,7 @@ describe('botcontroller', function() {
 
       await fixture.sendBlock(block);
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
 
       console.log(transactionsBlock2[0].logs);
@@ -836,9 +837,9 @@ describe('botcontroller', function() {
       assert.equal(user.enabledMarkets, 1 );
       assert.equal(user.timeLimit, 100 * 3 * 1000);
       assert.equal(user.lastTickTimestamp, 1527811200000);
-      assert.equal(user.lastTickBlock, 1);
+      assert.equal(user.lastTickBlock, tickBlockOffset + 1);
       assert.equal(user.creationTimestamp, 1527811200000);
-      assert.equal(user.creationBlock, 1);
+      assert.equal(user.creationBlock, tickBlockOffset + 1);
 
       // check if the market was added OK and not affected by above failures
       let market = await fixture.database.findOne({
@@ -867,7 +868,7 @@ describe('botcontroller', function() {
       assert.equal(market.placeAtSellWall, '10000');
       assert.equal(market.isEnabled, true);
       assert.equal(market.creationTimestamp, 1527811200000);
-      assert.equal(market.creationBlock, 1);
+      assert.equal(market.creationBlock, tickBlockOffset + 1);
 
       // disable the market
       refBlockNumber = fixture.getNextRefBlockNumber();

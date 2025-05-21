@@ -37,7 +37,7 @@ async function getTickingActionsAtRefblock(refBlockNumber) {
 }
 
 describe('ticks', function () {
-  this.timeout(60000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

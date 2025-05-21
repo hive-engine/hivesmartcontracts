@@ -187,7 +187,7 @@ async function finishPowerUpdate(poolId) {
 }
 
 describe('mining', function () {
-  this.timeout(30000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

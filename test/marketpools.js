@@ -107,7 +107,7 @@ async function getLastPoolId() {
 
 // distribution test suite
 describe('marketpools tests', function () {
-  this.timeout(30000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

@@ -37,7 +37,7 @@ function assertInstance(instObj, account, ownedBy, edition, foil, type) {
 
 // packmanager
 describe('packmanager', function() {
-  this.timeout(200000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -104,7 +104,7 @@ describe('packmanager', function() {
       await fixture.sendBlock(block);
 
       // uncomment to check errors with contract deployment
-      //const block1 = await fixture.database.getBlockInfo(1);
+      //const block1 = await fixture.database.getLatestBlockInfo();
       //const transactionsBlock1 = block1.transactions;
       //console.log(JSON.parse(transactionsBlock1[0].logs).errors[0]);
 
@@ -220,7 +220,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       console.log(JSON.parse(transactionsBlock1[17].logs).errors[0]);
       console.log(JSON.parse(transactionsBlock1[18].logs).errors[0]);
@@ -268,7 +268,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
       console.log(JSON.parse(transactionsBlock2[3].logs).errors[0]);
       assert.equal(JSON.parse(transactionsBlock2[3].logs).errors[0], 'contract cannot afford issuance');
@@ -348,7 +348,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block3 = await fixture.database.getBlockInfo(3);
+      const block3 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock3 = block3.transactions;
 
       console.log(transactionsBlock3[0].logs);
@@ -428,21 +428,21 @@ describe('packmanager', function() {
       });
       console.log(nftInstances);
       assert.equal(nftInstances.length, 15);
-      assertInstance(nftInstances[0], 'aggroed', 'u', 0, 1, 4);
-      assertInstance(nftInstances[1], 'aggroed', 'u', 0, 0, 4);
-      assertInstance(nftInstances[2], 'aggroed', 'u', 0, 0, 4);
-      assertInstance(nftInstances[3], 'aggroed', 'u', 0, 1, 4);
-      assertInstance(nftInstances[4], 'aggroed', 'u', 0, 0, 0);
-      assertInstance(nftInstances[5], 'aggroed', 'u', 0, 0, 2);
-      assertInstance(nftInstances[6], 'aggroed', 'u', 0, 0, 4);
-      assertInstance(nftInstances[7], 'aggroed', 'u', 0, 0, 1);
-      assertInstance(nftInstances[8], 'aggroed', 'u', 0, 1, 2);
-      assertInstance(nftInstances[9], 'aggroed', 'u', 0, 0, 2);
-      assertInstance(nftInstances[10], 'aggroed', 'u', 0, 0, 1);
-      assertInstance(nftInstances[11], 'aggroed', 'u', 0, 0, 0);
-      assertInstance(nftInstances[12], 'aggroed', 'u', 0, 0, 1);
-      assertInstance(nftInstances[13], 'aggroed', 'u', 0, 0, 0);
-      assertInstance(nftInstances[14], 'aggroed', 'u', 0, 0, 0);
+      assertInstance(nftInstances[0], 'aggroed', 'u', 0, 0, 1);
+      assertInstance(nftInstances[1], 'aggroed', 'u', 0, 1, 0);
+      assertInstance(nftInstances[2], 'aggroed', 'u', 0, 1, 0);
+      assertInstance(nftInstances[3], 'aggroed', 'u', 0, 1, 1);
+      assertInstance(nftInstances[4], 'aggroed', 'u', 0, 0, 2);
+      assertInstance(nftInstances[5], 'aggroed', 'u', 0, 0, 0);
+      assertInstance(nftInstances[6], 'aggroed', 'u', 0, 1, 1);
+      assertInstance(nftInstances[7], 'aggroed', 'u', 0, 1, 1);
+      assertInstance(nftInstances[8], 'aggroed', 'u', 0, 1, 1);
+      assertInstance(nftInstances[9], 'aggroed', 'u', 0, 1, 3);
+      assertInstance(nftInstances[10], 'aggroed', 'u', 0, 0, 2);
+      assertInstance(nftInstances[11], 'aggroed', 'u', 0, 1, 0);
+      assertInstance(nftInstances[12], 'aggroed', 'u', 0, 1, 1);
+      assertInstance(nftInstances[13], 'aggroed', 'u', 0, 0, 3);
+      assertInstance(nftInstances[14], 'aggroed', 'u', 0, 1, 1);
 
       resolve();
     })
@@ -497,7 +497,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       console.log(transactionsBlock1[12].logs);
       console.log(transactionsBlock1[13].logs);
@@ -646,7 +646,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       console.log(transactionsBlock1[11].logs);
       console.log(transactionsBlock1[12].logs);
@@ -796,7 +796,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
 
       console.log(JSON.parse(transactionsBlock2[0].logs).errors[0]);
@@ -872,7 +872,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block3 = await fixture.database.getBlockInfo(3);
+      const block3 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock3 = block3.transactions;
       console.log(transactionsBlock3[0].logs);
       console.log(transactionsBlock3[1].logs);
@@ -996,7 +996,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       console.log(transactionsBlock1[5].logs);
 
@@ -1109,7 +1109,7 @@ describe('packmanager', function() {
 
       assert.equal(token, null);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
 
       console.log(JSON.parse(transactionsBlock1[5].logs).errors[0]);
@@ -1134,7 +1134,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block2 = await fixture.database.getBlockInfo(2);
+      const block2 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock2 = block2.transactions;
 
       console.log(JSON.parse(transactionsBlock2[1].logs).errors[0]);
@@ -1175,7 +1175,7 @@ describe('packmanager', function() {
 
       await fixture.sendBlock(block);
 
-      const block3 = await fixture.database.getBlockInfo(3);
+      const block3 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock3 = block3.transactions;
       
       console.log(JSON.parse(transactionsBlock3[2].logs).errors[0]);

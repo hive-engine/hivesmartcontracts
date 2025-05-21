@@ -28,6 +28,7 @@ class Fixture {
     this.database = null;
     this.txId = 1;
     this.refBlockNumber = 100000000;
+    this.startBlockOffset = 0;
   }
 
   sendBlock(block) {
@@ -126,10 +127,11 @@ class Fixture {
        refHiveBlockNumber: 10,
        refHiveBlockId: 'ABCD1',
        prevRefHiveBlockId: 'ABCD2',
-       timestamp: '2025-05-12T16:00:00',
+       timestamp: '2018-01-01T00:00:00',
        transactions,
      };
      await this.sendBlock(block);
+     this.startBlockOffset = 1;
   }
 
   tearDown() {
