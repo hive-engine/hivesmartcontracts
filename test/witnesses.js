@@ -56,7 +56,7 @@ const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
 describe('witnesses', function () {
-  this.timeout(60000);
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -1409,25 +1409,24 @@ describe('witnesses', function () {
       });
 
       let schedule = res;
-
       assert.equal(schedule[0].witness, "witness5");
-      assert.equal(schedule[0].blockNumber, 2);
+      assert.equal(schedule[0].blockNumber, 2 + fixture.startBlockOffset);
       assert.equal(schedule[0].round, 1);
 
       assert.equal(schedule[1].witness, "witness6");
-      assert.equal(schedule[1].blockNumber, 3);
+      assert.equal(schedule[1].blockNumber, 3 + fixture.startBlockOffset);
       assert.equal(schedule[1].round, 1);
 
       assert.equal(schedule[2].witness, "witness12");
-      assert.equal(schedule[2].blockNumber, 4);
+      assert.equal(schedule[2].blockNumber, 4 + fixture.startBlockOffset);
       assert.equal(schedule[2].round, 1);
 
       assert.equal(schedule[3].witness, "witness8");
-      assert.equal(schedule[3].blockNumber, 5);
+      assert.equal(schedule[3].blockNumber, 5 + fixture.startBlockOffset);
       assert.equal(schedule[3].round, 1);
 
       assert.equal(schedule[4].witness, "witness7");
-      assert.equal(schedule[4].blockNumber, 6);
+      assert.equal(schedule[4].blockNumber, 6 + fixture.startBlockOffset);
       assert.equal(schedule[4].round, 1);
 
       res = await fixture.database.findOne({
@@ -1440,14 +1439,15 @@ describe('witnesses', function () {
 
       let params = res;
 
+console.log(res);
       assert.equal(params.totalApprovalWeight, '3000.00000');
       assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
-      assert.equal(params.lastVerifiedBlockNumber, 1);
+      assert.equal(params.lastVerifiedBlockNumber, 1 + fixture.startBlockOffset);
       assert.equal(params.currentWitness, 'witness7');
       assert.equal(params.lastWitnesses.includes('witness7'), true);
       assert.equal(params.round, 1);
-      assert.equal(params.lastBlockRound, 6);
+      assert.equal(params.lastBlockRound, 6 + fixture.startBlockOffset);
 
       resolve();
     })
@@ -1974,9 +1974,10 @@ describe('witnesses', function () {
         query: {}
       });
 
+
       assert.equal(newSchedule.length, schedule.length);
       for (let i = 0; i < newSchedule.length; i += 1) {
-        assert.equal(newSchedule[i].blockNumber, schedule.length + 2 + i);
+        assert.equal(newSchedule[i].blockNumber, schedule.length + 2 + i + fixture.startBlockOffset);
         assert.equal(newSchedule[i].round, 2);
       }
       assert(newSchedule[0].witness !== schedule[schedule.length - 1].witness);
@@ -1986,15 +1987,15 @@ describe('witnesses', function () {
         table: 'params',
         query: {}
       });
-
+console.log(params);
       assert.equal(params.totalApprovalWeight, '3000.00000');
       assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
-      assert.equal(params.lastVerifiedBlockNumber, 6);
+      assert.equal(params.lastVerifiedBlockNumber, 6 + fixture.startBlockOffset);
       assert.equal(params.currentWitness, newSchedule[newSchedule.length - 1].witness);
       assert(params.lastWitnesses.includes(newSchedule[newSchedule.length - 1].witness));
       assert.equal(params.round, 2);
-      assert.equal(params.lastBlockRound, 11);
+      assert.equal(params.lastBlockRound, 11 + fixture.startBlockOffset);
 
       resolve();
     })
@@ -2059,15 +2060,14 @@ describe('witnesses', function () {
       });
 
       let params = res;
-
       assert.equal(params.totalApprovalWeight, '3000.00000');
       assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
-      assert.equal(params.lastVerifiedBlockNumber, 1);
+      assert.equal(params.lastVerifiedBlockNumber, 1 + fixture.startBlockOffset);
       assert.equal(params.currentWitness, 'witness6');
       assert.equal(params.lastWitnesses.includes('witness6'), true);
       assert.equal(params.round, 1);
-      assert.equal(params.lastBlockRound, 6);
+      assert.equal(params.lastBlockRound, 6 + fixture.startBlockOffset);
 
       // generate 20 blocks
       for (let index = 30; index < 51; index++) {
@@ -2085,7 +2085,7 @@ describe('witnesses', function () {
         await fixture.sendBlock(block);
       }
   
-      const changeBlock = await fixture.database.getBlockInfo(22); // Witness changed on round 22
+      const changeBlock = await fixture.database.getBlockInfo(22 + fixture.startBlockOffset); // Witness changed on round 22
       const vopLogs = JSON.parse(changeBlock.virtualTransactions[0].logs);
       assert.equal(JSON.stringify(vopLogs.events[0]), '{"contract":"witnesses","event":"witnessMissedRound","data":{"witness":"witness6"}}');
 
@@ -2098,16 +2098,14 @@ describe('witnesses', function () {
       });
 
       params = res;
-
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness5","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness5"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"3000.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":2,"round":1,"lastBlockRound":7,"currentWitness":"witness5","blockNumberWitnessChange":43,"lastWitnesses":["witness6","witness5"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":3,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
         table: 'schedules',
         query: {}
       });
-
-      assert.equal(JSON.stringify(schedule), '[{"_id":6,"witness":"witness10","blockNumber":2,"round":1},{"_id":7,"witness":"witness8","blockNumber":3,"round":1},{"_id":8,"witness":"witness7","blockNumber":4,"round":1},{"_id":9,"witness":"witness9","blockNumber":5,"round":1},{"_id":10,"witness":"witness5","blockNumber":6,"round":1}]');
+      assert.equal(JSON.stringify(schedule), '[{"_id":6,"witness":"witness10","blockNumber":3,"round":1},{"_id":7,"witness":"witness8","blockNumber":4,"round":1},{"_id":8,"witness":"witness7","blockNumber":5,"round":1},{"_id":9,"witness":"witness9","blockNumber":6,"round":1},{"_id":10,"witness":"witness5","blockNumber":7,"round":1}]');
 
       resolve();
     })
@@ -2173,15 +2171,15 @@ describe('witnesses', function () {
       });
 
       let params = res;
-
+console.log(params);
       assert.equal(params.totalApprovalWeight, '3000.00000');
       assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
-      assert.equal(params.lastVerifiedBlockNumber, 1);
+      assert.equal(params.lastVerifiedBlockNumber, 1 + fixture.startBlockOffset);
       assert.equal(params.currentWitness, 'witness6');
       assert.equal(params.lastWitnesses.includes('witness6'), true);
       assert.equal(params.round, 1);
-      assert.equal(params.lastBlockRound, 6);
+      assert.equal(params.lastBlockRound, 6 + fixture.startBlockOffset);
       assert.equal(params.maxRoundsMissedInARow, 1);
 
       // generate 20 blocks
@@ -2200,7 +2198,7 @@ describe('witnesses', function () {
         await fixture.sendBlock(block);
       }
   
-      const changeBlock = await fixture.database.getBlockInfo(22); // Witness changed on round 22
+      const changeBlock = await fixture.database.getBlockInfo(22 + fixture.startBlockOffset); // Witness changed on round 22
       const vopLogs = JSON.parse(changeBlock.virtualTransactions[0].logs);
       assert.equal(JSON.stringify(vopLogs.events[0]), '{"contract":"witnesses","event":"witnessMissedRound","data":{"witness":"witness6"}}');
       assert.equal(JSON.stringify(vopLogs.events[1]), '{"contract":"witnesses","event":"witnessDisabledForMissingTooManyRoundsInARow","data":{"witness":"witness6"}}'); // Check for witness disabled log event
@@ -2224,8 +2222,9 @@ describe('witnesses', function () {
       });
 
       params = res;
+console.log(JSON.stringify(params));
+      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"2900.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":2,"round":1,"lastBlockRound":7,"currentWitness":"witness5","blockNumberWitnessChange":43,"lastWitnesses":["witness6","witness5"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
-      assert.equal(JSON.stringify(params), '{"_id":1,"totalApprovalWeight":"3000.00000","totalEnabledApprovalWeight":"2900.00000","numberOfApprovedWitnesses":30,"lastVerifiedBlockNumber":1,"round":1,"lastBlockRound":6,"currentWitness":"witness5","blockNumberWitnessChange":42,"lastWitnesses":["witness6","witness5"],"numberOfApprovalsPerAccount":30,"numberOfTopWitnesses":4,"numberOfWitnessSlots":5,"witnessSignaturesRequired":3,"maxRoundsMissedInARow":1,"maxRoundPropositionWaitingPeriod":20,"witnessApproveExpireBlocks":50}');
 
       let schedule = await fixture.database.find({
         contract: 'witnesses',
@@ -2233,7 +2232,8 @@ describe('witnesses', function () {
         query: {}
       });
 
-      assert.equal(JSON.stringify(schedule), '[{"_id":6,"witness":"witness10","blockNumber":2,"round":1},{"_id":7,"witness":"witness8","blockNumber":3,"round":1},{"_id":8,"witness":"witness7","blockNumber":4,"round":1},{"_id":9,"witness":"witness9","blockNumber":5,"round":1},{"_id":10,"witness":"witness5","blockNumber":6,"round":1}]');
+console.log(JSON.stringify(schedule));
+      assert.equal(JSON.stringify(schedule), '[{"_id":6,"witness":"witness10","blockNumber":3,"round":1},{"_id":7,"witness":"witness8","blockNumber":4,"round":1},{"_id":8,"witness":"witness7","blockNumber":5,"round":1},{"_id":9,"witness":"witness9","blockNumber":6,"round":1},{"_id":10,"witness":"witness5","blockNumber":7,"round":1}]');
 
       resolve();
     })
@@ -2421,15 +2421,15 @@ describe('witnesses', function () {
       });
 
       let params = res;
-
+console.log(params);
       assert.equal(params.totalApprovalWeight, '3000.00000');
       assert.equal(params.totalEnabledApprovalWeight, '3000.00000');
       assert.equal(params.numberOfApprovedWitnesses, 30);
-      assert.equal(params.lastVerifiedBlockNumber, 1);
+      assert.equal(params.lastVerifiedBlockNumber, 1 + fixture.startBlockOffset);
       assert.equal(params.currentWitness, 'witness6');
       assert.equal(params.lastWitnesses.includes('witness6'), true);
       assert.equal(params.round, 1);
-      assert.equal(params.lastBlockRound, 6);
+      assert.equal(params.lastBlockRound, 6 + fixture.startBlockOffset);
 
       // generate 71 blocks
       for (let index = 30; index < 102; index++) {
@@ -2447,7 +2447,7 @@ describe('witnesses', function () {
         await fixture.sendBlock(block);
       }
 
-      const expiringBlock = await fixture.database.getBlockInfo(53); // The block with the expiring actions
+      const expiringBlock = await fixture.database.getBlockInfo(53 + fixture.startBlockOffset); // The block with the expiring actions
       assert.equal(JSON.stringify(JSON.parse(expiringBlock.virtualTransactions[0].logs).events[30].data), '{"account":"hive-engine"}')
 
       let accounts = await fixture.database.find({
@@ -2493,7 +2493,7 @@ describe('witnesses', function () {
   });
 
   it('expires many votes', function (done) {
-    this.timeout(120000); // 2 minutes
+    this.timeout(10000);
     new Promise(async (resolve) => {
       await fixture.setUp();
       if (PERFORMANCE_CHECKS_ENABLED !== true) {
@@ -2575,7 +2575,7 @@ describe('witnesses', function () {
       assert.equal(params.totalApprovalWeight, '299.90000');
       assert.equal(params.totalEnabledApprovalWeight, '299.90000');
       assert.equal(params.numberOfApprovedWitnesses, 2999);
-      assert.equal(params.lastVerifiedBlockNumber, 2);
+      assert.equal(params.lastVerifiedBlockNumber, 2 + fixture.startBlockOffset);
       assert.equal(params.currentWitness, 'witness2');
       assert.equal(params.lastWitnesses.includes('witness2'), true);
       assert.equal(params.round, 1);
@@ -2600,10 +2600,10 @@ describe('witnesses', function () {
       const witnessChangeBlocks = [63,83,103,123,143,163,183,203,223,243,263,283,303,323,343]; //We have an extra action in these blocks for witness change
       // We should see expirations in multiple blocks
       for (let i = 54; i < 353; i++){
-        let expiringBlock = await fixture.database.getBlockInfo(i);
-        assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, witnessChangeBlocks.includes(i) ? 21 : 20);
+        let expiringBlock = await fixture.database.getBlockInfo(i + fixture.startBlockOffset);
+        assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, witnessChangeBlocks.includes(i + fixtureStartBlockOffset) ? 21 : 20);
       }
-      let expiringBlock = await fixture.database.getBlockInfo(353);
+      let expiringBlock = await fixture.database.getBlockInfo(353 + fixture.startBlockOffset);
       assert.equal(JSON.parse(expiringBlock.virtualTransactions[0].logs).events.length, 18);
 
       let accounts = await fixture.database.find({

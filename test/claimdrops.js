@@ -65,7 +65,7 @@ async function assertBalance(account, balance, symbol, type) {
 
 // smart contract
 describe('Claimdrops Smart Contract', function () {
-  this.timeout(20000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

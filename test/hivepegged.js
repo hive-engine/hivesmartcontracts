@@ -137,7 +137,6 @@ describe('Hive Pegged', function () {
       };
 
       await fixture.sendBlock(block);
-
       let res = await fixture.database.find({
           contract: 'tokens',
           table: 'balances',
@@ -150,7 +149,6 @@ describe('Hive Pegged', function () {
         });
 
       let balances = res;
-
       assert.equal(balances[0].balance, 0);
       assert.equal(balances[0].account, 'harpagon');
       assert.equal(balances[0].symbol, CONSTANTS.HIVE_PEGGED_SYMBOL);
@@ -167,41 +165,40 @@ describe('Hive Pegged', function () {
         });
 
       let withdrawals = res;
-
-      assert.equal(withdrawals[0].id, 'TXID00000004-fee');
+      assert.equal(withdrawals[0].id, 'TXID00000006-fee');
       assert.equal(withdrawals[0].type, 'HIVE');
       assert.equal(withdrawals[0].recipient, CONSTANTS.HIVE_ENGINE_ACCOUNT);
-      assert.equal(withdrawals[0].memo, 'fee tx TXID00000004');
+      assert.equal(withdrawals[0].memo, 'fee tx TXID00000006');
       assert.equal(withdrawals[0].quantity, 0.001);
 
-      assert.equal(withdrawals[1].id, 'TXID00000005-fee');
+      assert.equal(withdrawals[1].id, 'TXID00000007-fee');
       assert.equal(withdrawals[1].type, 'HIVE');
       assert.equal(withdrawals[1].recipient, CONSTANTS.HIVE_ENGINE_ACCOUNT);
-      assert.equal(withdrawals[1].memo, 'fee tx TXID00000005');
+      assert.equal(withdrawals[1].memo, 'fee tx TXID00000007');
       assert.equal(withdrawals[1].quantity, 0.007);
 
-      assert.equal(withdrawals[2].id, 'TXID00000006');
+      assert.equal(withdrawals[2].id, 'TXID00000008');
       assert.equal(withdrawals[2].type, 'HIVE');
       assert.equal(withdrawals[2].recipient, 'harpagon');
-      assert.equal(withdrawals[2].memo, 'withdrawal tx TXID00000006');
+      assert.equal(withdrawals[2].memo, 'withdrawal tx TXID00000008');
       assert.equal(withdrawals[2].quantity, 0.001);
 
-      assert.equal(withdrawals[3].id, 'TXID00000006-fee');
+      assert.equal(withdrawals[3].id, 'TXID00000008-fee');
       assert.equal(withdrawals[3].type, 'HIVE');
       assert.equal(withdrawals[3].recipient, CONSTANTS.HIVE_ENGINE_ACCOUNT);
-      assert.equal(withdrawals[3].memo, 'fee tx TXID00000006');
+      assert.equal(withdrawals[3].memo, 'fee tx TXID00000008');
       assert.equal(withdrawals[3].quantity, 0.001);
 
-      assert.equal(withdrawals[4].id, 'TXID00000007');
+      assert.equal(withdrawals[4].id, 'TXID00000009');
       assert.equal(withdrawals[4].type, 'HIVE');
       assert.equal(withdrawals[4].recipient, 'satoshi');
-      assert.equal(withdrawals[4].memo, 'withdrawal tx TXID00000007');
+      assert.equal(withdrawals[4].memo, 'withdrawal tx TXID00000009');
       assert.equal(withdrawals[4].quantity, 0.298);
 
-      assert.equal(withdrawals[5].id, 'TXID00000007-fee');
+      assert.equal(withdrawals[5].id, 'TXID00000009-fee');
       assert.equal(withdrawals[5].type, 'HIVE');
       assert.equal(withdrawals[5].recipient, CONSTANTS.HIVE_ENGINE_ACCOUNT);
-      assert.equal(withdrawals[5].memo, 'fee tx TXID00000007');
+      assert.equal(withdrawals[5].memo, 'fee tx TXID00000009');
       assert.equal(withdrawals[5].quantity, 0.002);
 
       resolve();

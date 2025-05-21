@@ -107,7 +107,7 @@ class Block {
   }
 
   applyPerUserTxLimit() {
-    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601) {
+    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601 && this.refHiveBlockNumber < 96287448) {
       const perUserTxLimit = 20;
       const filteredTransactions = [];
       const transactionsCountBySender = {};
@@ -143,10 +143,16 @@ class Block {
 
     let relIndex = 0;
     const allowCommentContract = this.refHiveBlockNumber > 54560500;
+
+    const userActionCountMap = {};
+
     for (let i = 0; i < nbTransactions; i += 1) {
       const transaction = this.transactions[i];
       log.info('Processing tx ', transaction);
-      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash); // eslint-disable-line
+
+      userActionCountMap[transaction.sender] = (userActionCountMap[transaction.sender] ?? 0) + 1;
+
+      await this.processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCountMap[transaction.sender]); // eslint-disable-line
 
       currentDatabaseHash = transaction.databaseHash;
 
@@ -244,8 +250,8 @@ class Block {
     }
   }
 
-  async processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash) {
-    const profStartTime  = performance.now();
+  async processTransaction(database, jsVMTimeout, transaction, currentDatabaseHash, userActionCount) {
+    const profStartTime = performance.now();
     const {
       sender,
       contract,
@@ -254,6 +260,7 @@ class Block {
     } = transaction;
 
     let results = null;
+    let burnResults = null;
     let newCurrentDatabaseHash = currentDatabaseHash;
 
     // init the database hash for that transactions
@@ -280,10 +287,51 @@ class Block {
           results = { logs: { errors: ['registerTick unauthorized'] } };
         }
       } else {
-        results = await SmartContracts.executeSmartContract(// eslint-disable-line
-          database, transaction, this.blockNumber, this.timestamp,
-          this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout,
-        );
+        
+        // always execute burnFee to keep logic more dynamic in future without updating core.
+        const shouldCheckBurnFee = this.refHiveBlockNumber >= 96287448 && userActionCount && sender != null && sender !== 'null';
+        if (shouldCheckBurnFee) {
+          const txPayloadObj = transaction.payload ? JSON.parse(transaction.payload) : {};
+          const resourceManagerTx = {
+            ...transaction,
+            contract: 'resourcemanager',
+            action: 'burnFee',
+            payload: JSON.stringify({
+              userActionCount,
+              contract: transaction.contract,
+              action: transaction.action,
+              payload: txPayloadObj
+            })
+          };
+          burnResults = await SmartContracts.executeSmartContract(// eslint-disable-line
+            database, resourceManagerTx, this.blockNumber, this.timestamp,
+            this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout
+          );
+        }
+
+        if ((burnResults?.logs?.errors?.length ?? 0) === 0) {
+          results = await SmartContracts.executeSmartContract(// eslint-disable-line
+            database, transaction, this.blockNumber, this.timestamp,
+            this.refHiveBlockId, this.prevRefHiveBlockId, jsVMTimeout
+          );
+        }
+
+        // Merge burnResults with results.
+        if (shouldCheckBurnFee)
+        {
+          results = results ?? {};
+          results.logs = {
+            events: [
+              ...(burnResults?.logs?.events ?? []),
+              ...(results?.logs?.events ?? [])
+            ],
+            errors: [
+              ...(burnResults?.logs?.errors ?? []),
+              ...(results?.logs?.errors ?? [])
+            ],
+          };
+        }
+
       }
     } else {
       results = { logs: { errors: ['the parameters sender, contract and action are required'] } };
@@ -297,7 +345,6 @@ class Block {
 
     // get the database hash
     newCurrentDatabaseHash = database.getDatabaseHash();
-
 
     log.info('Tx results: ', results);
     transaction.addLogs(results.logs);

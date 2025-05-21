@@ -136,7 +136,7 @@ async function assertAllErrorInLastBlock() {
 
 // distribution test suite
 describe('tokenfunds tests', function () {
-  this.timeout(30000);
+  this.timeout(10000);
 
   before((done) => {
     new Promise(async (resolve) => {

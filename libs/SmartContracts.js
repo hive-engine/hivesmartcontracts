@@ -359,7 +359,7 @@ class SmartContracts {
 
   // execute the smart contract and perform actions on the database if needed
   static async executeSmartContract(
-    database, transaction, blockNumber, timestamp, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout,
+    database, transaction, blockNumber, timestamp, refHiveBlockId, prevRefHiveBlockId, jsVMTimeout
   ) {
     try {
       const {
@@ -375,7 +375,6 @@ class SmartContracts {
       if (RESERVED_ACTIONS.includes(action)) return { logs: { errors: ['you cannot trigger this action'] } };
 
       const payloadObj = payload ? JSON.parse(payload) : {};
-
       const contractInDb = await database.findContract({ name: contract });
       if (contractInDb === null) {
         return { logs: { errors: ['contract doesn\'t exist'] } };
@@ -444,7 +443,6 @@ class SmartContracts {
       if (refHiveBlockNumber >= 55039841) {
         BigNumber.set({ RANGE: 500 });
       }
-
 
       // initialize the state that will be available in the VM
       const vmState = {
@@ -540,7 +538,6 @@ class SmartContracts {
       }
 
       const error = await SmartContracts.runContractCode(vmState, contractCode, jsVMTimeout);
-
       if (error) {
         const { name, message } = error;
         if (name && typeof name === 'string'

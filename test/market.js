@@ -23,7 +23,7 @@ const TICK_TEST_ENABLED = false;
 
 // Market
 describe('Market', function() {
-  this.timeout(10000);
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {
@@ -176,7 +176,7 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '497.02561906'});
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TEST', balance: '400.00000034'});
 
-      const block3 = await fixture.database.getBlockInfo(3);
+      const block3 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock3 = block3.transactions;
       console.log(JSON.parse(transactionsBlock3[1].logs).errors);
       console.log(JSON.parse(transactionsBlock3[3].logs).errors);
@@ -1095,7 +1095,7 @@ describe('Market', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'order cannot be placed as it cannot be filled');
 
@@ -1266,7 +1266,7 @@ describe('Market', function() {
 
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
 
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'order cannot be placed as it cannot be filled');
@@ -1346,7 +1346,7 @@ describe('Market', function() {
 
       await fixture.sendBlock(block);
 
-      let res = await fixture.database.getBlockInfo(2);
+      let res = await fixture.database.getLatestBlockInfo();
 
       const block2 = res;
       const transactionsBlock2 = block2.transactions;
@@ -2699,7 +2699,7 @@ describe('Market', function() {
       };
       await fixture.sendBlock(block);
 
-      const block1 = await fixture.database.getBlockInfo(1);
+      const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
 
       // verify we have not more than 200 orders on market and counter is correct

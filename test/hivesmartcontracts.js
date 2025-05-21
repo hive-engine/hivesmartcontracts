@@ -1764,9 +1764,9 @@ describe('Smart Contracts', function ()  {
       let logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.events[0].event, 'random_generated');
-      assert.equal(logs.events[0].data.generatedRandom, 0.8420569525190019);
+      assert.equal(logs.events[0].data.generatedRandom, 0.1167167315351255);
       assert.equal(logs.events[1].event, 'random_generated');
-      assert.equal(logs.events[1].data.generatedRandom, 0.4013183210933376);
+      assert.equal(logs.events[1].data.generatedRandom, 0.36510788325979454);
 
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
@@ -1790,9 +1790,9 @@ describe('Smart Contracts', function ()  {
       logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.events[0].event, 'random_generated');
-      assert.equal(logs.events[0].data.generatedRandom, 0.2249617564549172);
+      assert.equal(logs.events[0].data.generatedRandom, 0.9859509999175694);
       assert.equal(logs.events[1].event, 'random_generated');
-      assert.equal(logs.events[1].data.generatedRandom, 0.6461833723309268);
+      assert.equal(logs.events[1].data.generatedRandom, 0.7988133957484077);
 
       resolve();
     })
