@@ -19,6 +19,7 @@ const mktPoolContractPayload = setupContractPayload('marketpools', './contracts/
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
+const resourceManagerForkBlock = 96287448;
 
 // test cases for resourcemanager smart contract
 describe('resourcemanager', function () {
@@ -69,8 +70,8 @@ describe('resourcemanager', function () {
   });
 
   async function initializeResourceManager() {
-     // Initialize new resourcemanager contract before starting block 96087539
-     let refBlockNumber = 96087538;
+     // Initialize new resourcemanager contract before fork
+     let refBlockNumber = resourceManagerForkBlock - 1;
      let transactions = [];
      // deploy contracts
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
@@ -112,7 +113,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
 
@@ -164,7 +165,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
@@ -206,7 +207,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
@@ -246,7 +247,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       for (let i = 0; i < 50; i++) {
         transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.001", "price": "1", "isSignedWithActiveKey": true }'));
@@ -289,7 +290,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       for (let i = 0; i < 50; i++) {
         transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.001", "isSignedWithActiveKey": true }'));
@@ -332,7 +333,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "BEE:BEED", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'addLiquidity', '{ "tokenPair": "BEE:BEED", "baseQuantity": "1000", "quoteQuantity": "10000", "isSignedWithActiveKey": true }'));
@@ -383,7 +384,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
@@ -428,7 +429,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
@@ -490,7 +491,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
 
@@ -558,7 +559,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
 
@@ -627,7 +628,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
@@ -679,7 +680,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', `{ "numberOfFreeTx": 2, "multiTransactionFee": "0.01", "burnSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
 
@@ -739,7 +740,7 @@ describe('resourcemanager', function () {
 
       await initializeResourceManager();
 
-      let refBlockNumber = 96087539;
+      let refBlockNumber = resourceManagerForkBlock;
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{"denyMaxTx": 2}'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));

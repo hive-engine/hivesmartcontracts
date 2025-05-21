@@ -107,7 +107,7 @@ class Block {
   }
 
   applyPerUserTxLimit() {
-    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601 && this.refHiveBlockNumber < 96087539) {
+    if (this.enablePerUserTxLimit && this.refHiveBlockNumber >= 93100601 && this.refHiveBlockNumber < 96287448) {
       const perUserTxLimit = 20;
       const filteredTransactions = [];
       const transactionsCountBySender = {};
@@ -289,7 +289,8 @@ class Block {
       } else {
         
         // always execute burnFee to keep logic more dynamic in future without updating core.
-        if (this.refHiveBlockNumber >= 96087539 && userActionCount && sender != null && sender !== 'null') {
+        const shouldCheckBurnFee = this.refHiveBlockNumber >= 96287448 && userActionCount && sender != null && sender !== 'null';
+        if (shouldCheckBurnFee) {
           const txPayloadObj = transaction.payload ? JSON.parse(transaction.payload) : {};
           const resourceManagerTx = {
             ...transaction,
@@ -316,7 +317,7 @@ class Block {
         }
 
         // Merge burnResults with results.
-        if (this.refHiveBlockNumber >= 96087539 && userActionCount && sender != null && sender !== 'null') 
+        if (shouldCheckBurnFee)
         {
           results = results ?? {};
           results.logs = {
