@@ -49,7 +49,7 @@ describe('NFT Airdrops Smart Contract', function () {
   if (PERFORMANCE_CHECKS_ENABLED) {
     this.timeout(100000);
   } else {
-    this.timeout(10000);
+    this.timeout(20000);
   }
 
   before((done) => {

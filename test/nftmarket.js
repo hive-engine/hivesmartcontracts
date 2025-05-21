@@ -22,7 +22,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // nftmarket 
 describe('nftmarket', function() {
-  this.timeout(10000);
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {

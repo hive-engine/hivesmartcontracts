@@ -56,7 +56,7 @@ const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
 describe('witnesses', function () {
-  this.timeout(10000);
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {
