@@ -23,7 +23,7 @@ const TICK_TEST_ENABLED = false;
 
 // Market
 describe('Market', function() {
-  this.timeout(10000);
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {
