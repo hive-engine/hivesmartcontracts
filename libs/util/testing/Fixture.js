@@ -2,6 +2,9 @@
 const { fork } = require('child_process');
 const { Database } = require('../../Database');
 const blockchain = require('../../../plugins/Blockchain');
+const { setupContractPayload } = require('../contractUtil');
+const { CONSTANTS } = require('../../Constants');
+const { Transaction } = require('../../Transaction');
 
 const conf = {
   chainId: 'test-chain-id',
@@ -14,6 +17,7 @@ const conf = {
   databaseName: 'testssc',
   streamNodes: ['https://api.hive.blog'],
   enablePerUserTxLimit: false,
+  defaultLogLevel: "warn",
 };
 
 class Fixture {
@@ -112,6 +116,20 @@ class Fixture {
     await this.database.init(conf.databaseURL, conf.databaseName);
     this.refBlockNumber = 100000000;
     this.txId = 1;
+
+    // set up resource manager
+    const rmContractPayload = setupContractPayload('resourcemanager', './contracts/resourcemanager.js');
+    const transactions = [];
+    transactions.push(new Transaction(undefined, this.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(rmContractPayload)));
+    transactions.push(new Transaction(undefined, this.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{ "numberOfFreeTx": 10000 }'));
+    const block = {
+       refHiveBlockNumber: 10,
+       refHiveBlockId: 'ABCD1',
+       prevRefHiveBlockId: 'ABCD2',
+       timestamp: '2025-05-12T16:00:00',
+       transactions,
+     };
+     await this.sendBlock(block);
   }
 
   tearDown() {
