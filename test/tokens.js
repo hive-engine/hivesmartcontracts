@@ -671,7 +671,7 @@ describe('Tokens smart contract', function () {
       assert.equal(token.issuer, 'satoshi');
       assert.equal(token.symbol, 'TKN.TEST');
 
-      res = await fixture.database.getBlockInfo(2);
+      res = await fixture.database.getLatestBlockInfo();
 
       const logs = JSON.parse(res.transactions[0].logs);
       const events = logs.events;
