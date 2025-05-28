@@ -214,7 +214,7 @@ actions.buy = async (payload) => {
 
   const table = 'accountControls';
   const burnParams = await api.db.findOne('params', {});
-  let accountControl = await api.db.findOne(table, { account });
+  let accountControl = await api.db.findOne(table, { account: sender });
   const create = !accountControl;
 
   api.assert(!accountControl || !accountControl.isDenied, 'cannot be purchased as long as you are throttled.');
@@ -233,9 +233,9 @@ actions.buy = async (payload) => {
 
   date.setDate(date.getDate() + 31);
 
-  if (!accountControl) accountControl = { account, isDenied: false, isAllowed: false };
+  if (!accountControl) accountControl = { account: sender, isDenied: false, isAllowed: false };
 
-  accountControl.allowUntil = date.getTime();
+  accountControl.allowedUntil = date.getTime();
 
   if (create) await api.db.insert(table, accountControl);
   else await api.db.update(table, accountControl);

@@ -789,4 +789,62 @@ describe('resourcemanager', function () {
       });
   });
 
+  it('allowlist buyin for 31 days', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      let refBlockNumber = resourceManagerForkBlock;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getLatestBlockInfo();
+
+      const log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!log0.errors || log0.errors.length === 0);
+      assert.ok(log0.events && log0.events.length === 2 && log0.events[0].contract === 'tokens'
+         && log0.events[0].event === 'transfer' && log0.events[0].data.from === 'tate' && log0.events[0].data.quantity === '10'
+         && log0.events[0].data.symbol === 'BEED' && log0.events[0].data.to === 'null');
+      assert.ok(log0.events && log0.events.length === 2 && log0.events[1].contract === 'resourcemanager'
+        && log0.events[1].event === 'buy' && log0.events[1].data.fee === '10'
+        && log0.events[1].data.from === 'tate' && log0.events[1].data.symbol === 'BEED' && log0.events[1].data.to === 'null', 'Failed to buy into allowList');
+
+      const logs1 = JSON.parse(res.transactions[0].logs);
+      assert.ok(!logs1.errors || logs1.errors.length === 0, 'Transfer / burn should succeed');
+
+      // verify balance and db
+      await tableAsserts.assertUserBalances({ account: 'tate', symbol: 'BEED', balance: '0.00000000' });
+      await tableAsserts.assertUserBalances({ account: 'null', symbol: 'BEED', balance: '10' });
+      let dbRes = await fixture.database.findOne({
+        contract: 'resourcemanager',
+        table: 'accountControls',
+        query: {
+          account: 'tate'
+        }
+      });
+
+      let validUntil = new Date(`${res.timestamp}.000Z`);
+      validUntil.setDate(validUntil.getDate() + 31);
+      const validUntilMs = validUntil.getTime();
+      assert.ok(dbRes.allowedUntil == validUntilMs);
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
 });
