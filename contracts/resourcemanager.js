@@ -15,6 +15,7 @@ actions.createSSC = async () => {
     params.denyMaxTx = 1;
     params.multiTransactionFee = '0.001';
     params.burnSymbol = 'BEED';
+    params.allowListCosts = '10';
 
     await api.db.insert('params', params);
   }
@@ -37,6 +38,7 @@ actions.updateParams = async (payload) => {
     multiTransactionFee,
     burnSymbol,
     denyMaxTx,
+    allowListCosts
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -67,6 +69,14 @@ actions.updateParams = async (payload) => {
     const token = await api.db.findOneInTable('tokens', 'tokens', { symbol: burnSymbol });
     if (!api.assert(token, 'burnSymbol not available')) { return; }
     params.burnSymbol = burnSymbol;
+  }
+
+  if (allowListCosts) {
+    const allowCostsBN = api.BigNumber(allowListCosts);
+    if (!api.assert(typeof allowListCosts === 'string' && !allowCostsBN.isNaN() && allowCostsBN.gte(0) && allowCostsBN.isFinite(), 'invalid allowListCosts')) {
+      return;
+    }
+    params.allowListCosts = allowListCosts;
   }
 
   await api.db.update('params', params);
@@ -196,4 +206,42 @@ actions.burnFee = async (payload) => {
   api.emit('burnFee', {
     from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.multiTransactionFee,
   });
+};
+
+actions.buy = async (payload) => {
+  const { sender } = api;
+  if (sender === 'null' || sender == null) return;
+
+  const table = 'accountControls';
+  const burnParams = await api.db.findOne('params', {});
+  let accountControl = await api.db.findOne(table, { account });
+  const create = !accountControl;
+
+  api.assert(!accountControl || !accountControl.isDenied, 'cannot be purchased as long as you are throttled.');
+
+  const date = new Date(`${api.hiveBlockTimestamp}.000Z`);
+  const epochMs = date.getTime();
+  api.assert(!accountControl || 
+    (accountControl.allowedUntil === null || accountControl.allowedUntil === 'undefined' || epochMs > accountControl.allowedUntil), 
+    'can only be purchased once a month.');
+
+  const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
+    to: 'null', symbol: burnParams.burnSymbol, quantity: burnParams.allowListCosts, isSignedWithActiveKey: true,
+  });
+
+  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.allowListCosts), 'not enough tokens for allowList fee');
+
+  date.setDate(date.getDate() + 31);
+
+  if (!accountControl) accountControl = { account, isDenied: false, isAllowed: false };
+
+  accountControl.allowUntil = date.getTime();
+
+  if (create) await api.db.insert(table, accountControl);
+  else await api.db.update(table, accountControl);
+
+  api.emit('buy', {
+    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.allowListCosts,
+  });
+
 };
