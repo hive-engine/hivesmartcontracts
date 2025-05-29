@@ -76,7 +76,6 @@ const findMarketPools = async (parentSymbol, toggle) => {
     baseQuantity: pool.baseQuantity || '0',
     quoteQuantity: pool.quoteQuantity || '0',
   }));
-
   return validPools.length > 0 ? validPools : null;
 };
 
