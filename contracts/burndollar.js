@@ -373,7 +373,7 @@ actions.convert = async (payload) => {
           const tokenNameBase = hasEnoughStablePool[0].tokenPair.split(':')[1];
           const stableUSDValue = api.BigNumber(stablePrice).multipliedBy(stableQuant).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
-          // calulate the conservative value of the pool multiple the value of one side by 1.95, 1.95 used to ensure pools are not overvalued
+          // Calulate the conservative value of the pool multiple the value of one side by 1.95, 1.95 used to ensure pools are not overvalued
           const finalValueQuote = api.BigNumber(stableUSDValue).multipliedBy(1.95).toFixed(parentPairParams.precision, api.BigNumber.ROUND_DOWN);
 
           // users to be be informed of $500 barrier to entry/ the difference of $100 (500 vs 400) is for wiggle room for ease of use
