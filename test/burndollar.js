@@ -10,13 +10,9 @@ const { setupContractPayload } = require('../libs/util/contractUtil');
 const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
-const { query } = require('winston');
-const { table } = require('console');
-const { access } = require('fs');
-const { Query } = require('mongodb/lib/core');
 
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js')
 const bdContractPayload = setupContractPayload('burndollar', './contracts/burndollar.js');
 const beeContractPayload = setupContractPayload('beedollar', './contracts/beedollar.js');
 const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
@@ -72,108 +68,108 @@ describe('burndollar', function () {
       })
   });
 
-  // it('updates parameters on the burndollar contract', (done) => {
-  //   new Promise(async (resolve) => {
+  it('updates parameters on the burndollar contract', (done) => {
+    new Promise(async (resolve) => {
 
-  //     await fixture.setUp();
+      await fixture.setUp();
 
-  //     let refBlockNumber = fixture.getNextRefBlockNumber();
-  //     let transactions = [];
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'burndollar', 'updateParams', '{ "issueDTokenFee": "1200", "updateParamsFee": "200", "burnUsageFee": "2"}'));
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'burndollar', 'updateParams', '{ "issueDTokenFee": "1200", "updateParamsFee": "200", "burnUsageFee": "2"}'));
 
-  //     let block = {
-  //       refHiveBlockNumber: refBlockNumber,
-  //       refHiveBlockId: 'ABCD1',
-  //       prevRefHiveBlockId: 'ABCD2',
-  //       timestamp: '2018-06-01T00:00:00',
-  //       transactions,
-  //     };
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
 
-  //     await fixture.sendBlock(block);
+      await fixture.sendBlock(block);
 
-  //     const res = await fixture.database.getBlockInfo(1);
-  //     const block1 = res;
-  //     const transactionsBlock1 = block1.transactions;
+      const res = await fixture.database.getBlockInfo(1);
+      const block1 = res;
+      const transactionsBlock1 = block1.transactions;
 
-  //     // check if the params updated OK
-  //     const params = await fixture.database.findOne({
-  //       contract: 'burndollar',
-  //       table: 'params',
-  //       query: {}
-  //     });
+      // check if the params updated OK
+      const params = await fixture.database.findOne({
+        contract: 'burndollar',
+        table: 'params',
+        query: {}
+      });
 
-  //     console.log(" ")
-  //     console.log( '\u001b[' + 93 + 'm' + 'Test: updates parameters on the fee charges in the burndollar contract' + '\u001b[0m')
-  //     console.log(params)
-  //     assert.equal(params.issueDTokenFee, '1200');
-  //     assert.equal(params.updateParamsFee, '200');
-  //     assert.equal(params.burnUsageFee, '2');
+      console.log(" ")
+      console.log( '\u001b[' + 93 + 'm' + 'Test: updates parameters on the fee charges in the burndollar contract' + '\u001b[0m')
+      console.log(params)
+      assert.equal(params.issueDTokenFee, '1200');
+      assert.equal(params.updateParamsFee, '200');
+      assert.equal(params.burnUsageFee, '2');
 
-  //     resolve();
-  //   })
-  //     .then(() => {
-  //       fixture.tearDown();
-  //       done();
-  //     });
-  // });
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
 
-  //  it('fails to update parameters on the burndollar contract', (done) => {
-  //   new Promise(async (resolve) => {
+   it('fails to update parameters on the burndollar contract', (done) => {
+    new Promise(async (resolve) => {
 
-  //     await fixture.setUp();
+      await fixture.setUp();
 
-  //     let refBlockNumber = fixture.getNextRefBlockNumber();
-  //     let transactions = [];
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
-  //     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'updateParams', '{ "issueDTokenFee": "1200", "updateParamsFee": "200", "burnUsageFee": "2"}'));
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'updateParams', '{ "issueDTokenFee": "1200", "updateParamsFee": "200", "burnUsageFee": "2"}'));
 
-  //     let block = {
-  //       refHiveBlockNumber: refBlockNumber,
-  //       refHiveBlockId: 'ABCD1',
-  //       prevRefHiveBlockId: 'ABCD2',
-  //       timestamp: '2018-06-01T00:00:00',
-  //       transactions,
-  //     };
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
 
-  //     await fixture.sendBlock(block);
+      await fixture.sendBlock(block);
 
-  //     const res = await fixture.database.getBlockInfo(1);
-  //     const block1 = res;
-  //     const transactionsBlock1 = block1.transactions;
+      const res = await fixture.database.getBlockInfo(1);
+      const block1 = res;
+      const transactionsBlock1 = block1.transactions;
 
-  //     const params = await fixture.database.findOne({
-  //       contract: 'burndollar',
-  //       table: 'params',
-  //       query: {}
-  //     });
+      const params = await fixture.database.findOne({
+        contract: 'burndollar',
+        table: 'params',
+        query: {}
+      });
 
-  //     console.log(" ")
-  //     console.log( '\u001b[' + 93 + 'm' + 'Test: fails to update parameters on the burndollar contract' + '\u001b[0m')
-  //     console.log(params)
+      console.log(" ")
+      console.log( '\u001b[' + 93 + 'm' + 'Test: fails to update parameters on the burndollar contract' + '\u001b[0m')
+      console.log(params)
 
-  //     assert.equal(params.issueDTokenFee, '1000');
-  //     assert.equal(params.updateParamsFee, '100');
-  //     assert.equal(params.burnUsageFee, '1');
+      assert.equal(params.issueDTokenFee, '1000');
+      assert.equal(params.updateParamsFee, '100');
+      assert.equal(params.burnUsageFee, '1');
 
-  //     resolve();
-  //   })
-  //     .then(() => {
-  //       fixture.tearDown();
-  //       done();
-  //     });
-  //});
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
 
   it('generates errors when trying to create D tokens with wrong parameters', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
 
-      let refBlockNumber =  74391382; 
+      let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
@@ -207,18 +203,18 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "5000.0", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": ".5","minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": false }'));
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": 156, "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "RUTTMUTTT", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
-      // //trans 31 user must be issuer on the Parent token
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "BEE", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
-      // // trans32 the parent token is set to burn to null by default, but a user can send it to any other account
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "burnRouting": 123, "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
-      // // trans33 fee conversion rate must be between 0 and 100% as a decimal
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": "1.1","minConvertibleAmount": "1", "burnRouting": "drewlongshot",  "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
-      // //trans 35-37 the name XXX-D token already exists
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTEST.D", "precision": 3, "maxSupply": "10000", "isSignedWithActiveKey": true  }'));
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "URQTEST.D", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
-      // transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": ".5","minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": 156, "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "RUTTMUTTT", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      //trans 31 user must be issuer on the Parent token
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "BEE", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      // trans32 the parent token is set to burn to null by default, but a user can send it to any other account
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "burnRouting": 123, "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      // trans33 fee conversion rate must be between 0 and 100% as a decimal
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": "1.1","minConvertibleAmount": "1", "burnRouting": "drewlongshot",  "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      //trans 35-37 the name XXX-D token already exists
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTEST.D", "precision": 3, "maxSupply": "10000", "isSignedWithActiveKey": true  }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "URQTEST.D", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot','burndollar', 'createTokenD', '{ "symbol": "URQTEST", "feePercentage": ".5","minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
           
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -229,32 +225,28 @@ describe('burndollar', function () {
       };
 
       await fixture.sendBlock(block);
-
-      const res = await fixture.database.getBlockInfo(1);
-      const block1 = res;
-      const transactionsBlock1 = block1.transactions;
+      const latestBlock = await fixture.database.getLatestBlockInfo();
+      const transactionsBlock1 = latestBlock.transactions;;
 
       console.log(" ")
-      console.log( '\u001b[' + 93 + 'm' + 'Test: generates errors when trying to issue D tokens with wrong parameters' + '\u001b[0m')
-console.log(transactions[28])
-    
-      // console.log("26  ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
-      //console.log("28  ⚪",JSON.parse(transactionsBlock1[28]))
-      // console.log("29  ⚪",JSON.parse(transactionsBlock1[29].logs).errors[0])
-      // console.log("30  ⚪",JSON.parse(transactionsBlock1[30].logs).errors[0])
-      // console.log("31  ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
-      // console.log("32  ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0])
-      // console.log("33  ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0])
-      // console.log("36  ⚪",JSON.parse(transactionsBlock1[36].logs).errors[0])
+      console.log( '\u001b[' + 93 + 'm' + 'Test: generates errors when trying to issue D tokens with wrong parameters' + '\u001b[0m') 
+      console.log("26  ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
+      console.log("28  ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0])
+      console.log("29  ⚪",JSON.parse(transactionsBlock1[29].logs).errors[0])
+      console.log("30  ⚪",JSON.parse(transactionsBlock1[30].logs).errors[0])
+      console.log("31  ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
+      console.log("32  ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0])
+      console.log("33  ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0])
+      console.log("36  ⚪",JSON.parse(transactionsBlock1[36].logs).errors[0])
 
-      // assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'you must have enough BEED tokens cover the creation fees');
-      // assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'you must use a custom_json signed with your active key');
-      // assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
-      // assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
-      // assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], `You must be the token issuer in order to issue D token`);
-      // assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], `burn routing must be a valid Hive account name`);
-      // assert.equal(JSON.parse(transactionsBlock1[33].logs).errors[0], `fee percentage must be between 0 and 1 / 0% and 100%`);
-      // assert.equal(JSON.parse(transactionsBlock1[36].logs).errors[0], `D token must not already exist`);
+      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'you must have enough BEED tokens cover the creation fees');
+      assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'you must use a custom_json signed with your active key');
+      assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
+      assert.equal(JSON.parse(transactionsBlock1[30].logs).errors[0], 'symbol must be string of length 8 or less to create a xxx-D token');
+      assert.equal(JSON.parse(transactionsBlock1[31].logs).errors[0], `You must be the token issuer in order to issue D token`);
+      assert.equal(JSON.parse(transactionsBlock1[32].logs).errors[0], `burn routing must be a valid Hive account name`);
+      assert.equal(JSON.parse(transactionsBlock1[33].logs).errors[0], `fee percentage must be between 0 and 1 / 0% and 100%`);
+      assert.equal(JSON.parse(transactionsBlock1[36].logs).errors[0], `D token must not already exist`);
 
       resolve();
     })
@@ -263,134 +255,134 @@ console.log(transactions[28])
         done();
       });
   });
-
-//   it('creates a D token', (done) => {
-//     new Promise(async (resolve) => {
+  
+  it('creates a D token', (done) => {
+    new Promise(async (resolve) => {
       
-//       await fixture.setUp();
-//     let refBlockNumber =  74391382; 
-//       let transactions = [];
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(beeContractPayload)));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(beeContractPayload)));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 1
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 2
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "HBD Pegged", "url": "https://hive-engine.com", "symbol": "SWAP.HBD", "precision": 8, "maxSupply": "1000000000000" }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "SWAP.HBD", "to": "drewlongshot", "quantity": "1000", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'tokens', 'transfer', '{ "symbol": "SWAP.HIVE", "to": "drewlongshot", "quantity": "100000", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "drewlongshot", "quantity": "100000", "isSignedWithActiveKey": true }`));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "whale", "quantity": "100000", "isSignedWithActiveKey": true }`));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "SWAP.HBD", "to": "whale", "quantity": "100000", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'market', 'sell', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "quantity": "10000", "price": "10", "isSignedWithActiveKey": true }`));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'market', 'sell', '{ "symbol": "SWAP.HBD", "quantity": "10000", "price": "0.5", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'market', 'buy', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "quantity": "100", "price": "10", "isSignedWithActiveKey": true }`));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'market', 'buy', '{ "symbol": "SWAP.HBD", "quantity": "100", "price": "0.5","isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "SWAP.HIVE:BEE", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "SWAP.HIVE:BEE", "baseQuantity": "20000", "quoteQuantity": "200", "maxDeviation": "0", "isSignedWithActiveKey": true }')); 
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "baseQuantity": "20000", "quoteQuantity": "200", "maxDeviation": "0", "isSignedWithActiveKey": true }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:BEE", "tokenSymbol": "SWAP.HIVE", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "tokenSymbol": "SWAP.HBD", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
-//       // now, do a convert from bee to beed
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
-//       //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
-//       // trans 26 BEE should still be 2100 burned and BEED should be at 1000
-//       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
+      await fixture.setUp();
+      let refBlockNumber =  74391382; 
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(beeContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(beeContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 1
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 2
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "HBD Pegged", "url": "https://hive-engine.com", "symbol": "SWAP.HBD", "precision": 8, "maxSupply": "1000000000000" }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "SWAP.HBD", "to": "drewlongshot", "quantity": "1000", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_PEGGED_ACCOUNT, 'tokens', 'transfer', '{ "symbol": "SWAP.HIVE", "to": "drewlongshot", "quantity": "100000", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "drewlongshot", "quantity": "100000", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'transfer', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "to": "whale", "quantity": "100000", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "SWAP.HBD", "to": "whale", "quantity": "100000", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'market', 'sell', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "quantity": "10000", "price": "10", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'whale', 'market', 'sell', '{ "symbol": "SWAP.HBD", "quantity": "10000", "price": "0.5", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'market', 'buy', `{ "symbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}", "quantity": "100", "price": "10", "isSignedWithActiveKey": true }`));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'market', 'buy', '{ "symbol": "SWAP.HBD", "quantity": "100", "price": "0.5","isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "SWAP.HIVE:BEE", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "SWAP.HIVE:BEE", "baseQuantity": "20000", "quoteQuantity": "200", "maxDeviation": "0", "isSignedWithActiveKey": true }')); 
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "baseQuantity": "20000", "quoteQuantity": "200", "maxDeviation": "0", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:BEE", "tokenSymbol": "SWAP.HIVE", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'swapTokens', '{ "tokenPair": "SWAP.HIVE:SWAP.HBD", "tokenSymbol": "SWAP.HBD", "tokenAmount": "5", "tradeType": "exactOutput", "isSignedWithActiveKey": true}'));
+      // now, do a convert from bee to beed
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
+      //trans24-25 user is token_issuer on a parent token has to pay 1000 Beed to issue D token, ,and not pay a Bee fee of 100 for issue of parent token creatation of parent token brings bee burned total to 2100 
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "200", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
+      // trans 26 BEE should still be 2100 burned and BEED should be at 1000
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "feePercentage": ".5", "minConvertibleAmount": "1", "maxSupply": "20000", "precision": 2, "isSignedWithActiveKey": true }'));
       
-//       let block = {
-//         refHiveBlockNumber: refBlockNumber,
-//         refHiveBlockId: 'ABCD1',
-//         prevRefHiveBlockId: 'ABCD2',
-//         timestamp: '2018-06-01T00:00:00',
-//         transactions,
-//       };
-//       await fixture.sendBlock(block);
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2018-06-01T00:00:00',
+        transactions,
+      };
+      await fixture.sendBlock(block);
 
-//      const res = await fixture.database.getBlockInfo(1);
-//      const block1 = res;
-//      const transactionsBlock1 = block1.transactions;
+     const res = await fixture.database.getBlockInfo(1);
+     const block1 = res;
+     const transactionsBlock1 = block1.transactions;
 
-//      let res2 = await fixture.database.findOne({
-//         contract: 'tokens',
-//         table: 'balances',
-//         query: {account:'null', symbol:'BEE'}
-//       });
+     let res2 = await fixture.database.findOne({
+        contract: 'tokens',
+        table: 'balances',
+        query: {account:'null', symbol:'BEE'}
+      });
 
-//       let token = res2
+      let token = res2
 
-//      console.log(" ")
-//      console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D token' + '\u001b[0m')
-//      console.log (token)
-//      assert.equal(token.symbol, 'BEE');
-//      assert.equal(token.balance, '2100.00000000');
+     console.log(" ")
+     console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D token' + '\u001b[0m')
+     console.log (token)
+     assert.equal(token.symbol, 'BEE');
+     assert.equal(token.balance, '2100.00000000');
 
-//      res2 = await fixture.database.findOne({
-//       contract: 'tokens',
-//       table: 'balances',
-//       query: {account:'null', symbol: 'BEED'}
-//     });
+     res2 = await fixture.database.findOne({
+      contract: 'tokens',
+      table: 'balances',
+      query: {account:'null', symbol: 'BEED'}
+    });
 
-//      token = res2
-//      console.log(token)
-//      assert.equal(token.symbol, 'BEED');
-//      assert.equal(token.balance, '1000.0000');
+     token = res2
+     console.log(token)
+     assert.equal(token.symbol, 'BEED');
+     assert.equal(token.balance, '1000.0000');
 
-//      res2 = await fixture.database.findOne({
-//       contract: 'tokens',
-//       table: 'tokens',
-//       query: {symbol: 'URQTWO'}
-//     });
+     res2 = await fixture.database.findOne({
+      contract: 'tokens',
+      table: 'tokens',
+      query: {symbol: 'URQTWO'}
+    });
     
-//     token = res2
+    token = res2
 
-//     console.log(token)
-//     assert.equal(token.symbol, 'URQTWO');
-//     assert.equal(token.issuer, 'drewlongshot');
-//     assert.equal(token.name, 'token');
-//     assert.equal(token.maxSupply,  '20000.000');
-//     assert.equal(token.supply,  '200.000');
+    console.log(token)
+    assert.equal(token.symbol, 'URQTWO');
+    assert.equal(token.issuer, 'drewlongshot');
+    assert.equal(token.name, 'token');
+    assert.equal(token.maxSupply,  '20000.000');
+    assert.equal(token.supply,  '200.000');
 
-//     res2 = await fixture.database.findOne({
-//       contract: 'tokens',
-//       table: 'tokens',
-//       query: {symbol: 'URQTWO.D'}
-//     });
+    // res2 = await fixture.database.findOne({
+    //   contract: 'tokens',
+    //   table: 'tokens',
+    //   query: {symbol: 'URQTWO.D'}
+    // });
     
-//     token = res2
+    // token = res2
 
-//     console.log(token)
-//     assert.equal(token.symbol, 'URQTWO.D');
-//     assert.equal(token.issuer, 'null');
-//     assert.equal(token.name, 'URQTWO stablecoin');
-//     assert.equal(token.precision, 3);
-//     assert.equal(token.supply, '1000.000')
+    // console.log(token)
+    // assert.equal(token.symbol, 'URQTWO.D');
+    // assert.equal(token.issuer, 'null');
+    // assert.equal(token.name, 'URQTWO stablecoin');
+    // assert.equal(token.precision, 3);
+    // assert.equal(token.supply, '1000.000')
 
-//     res2 = await fixture.database.findOne({
-//       contract: 'burndollar',
-//       table: 'burnpair',
-//       query: {}
-//     });
+    res2 = await fixture.database.findOne({
+      contract: 'burndollar',
+      table: 'burnpair',
+      query: {}
+    });
     
-//     token = res2
+    token = res2
 
-//     console.log(token)
-//     assert.equal(token.symbol, 'URQTWO.D');
-//     assert.equal(token.issuer, 'drewlongshot');
-//     assert.equal(token.parentSymbol,'URQTWO')
-//     assert.equal(token.burnRouting, 'null')
-//     assert.equal(token.feePercentage,'.5')
+    console.log(token)
+    assert.equal(token.symbol, 'URQTWO.D');
+    assert.equal(token.issuer, 'drewlongshot');
+    assert.equal(token.parentSymbol,'URQTWO')
+    assert.equal(token.burnRouting, 'null')
+    assert.equal(token.feePercentage,'.5')
 
-//       resolve();
-//   })
-//       .then(() => {
-//         fixture.tearDown();
-//         done();
-//       });
-//    });
+      resolve();
+  })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+   });
 
 //   it('updates the params for the D token and charges 100 BEED', (done) => {
 //     new Promise(async (resolve) => {
