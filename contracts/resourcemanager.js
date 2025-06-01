@@ -228,7 +228,7 @@ actions.burnFee = async (payload) => {
   });
 };
 
-actions.buy = async (payload) => {
+actions.subscribe = async (payload) => {
   const { sender } = api;
   if (sender === 'null' || sender == null) return;
 

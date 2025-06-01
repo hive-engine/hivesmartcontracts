@@ -790,7 +790,7 @@ describe('resourcemanager', function () {
       });
   });
 
-  it('allowlist buyin for 31 days', (done) => {
+  it('allowlist subscription for 31 days', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -799,7 +799,7 @@ describe('resourcemanager', function () {
 
       let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -818,8 +818,8 @@ describe('resourcemanager', function () {
          && log0.events[0].event === 'transfer' && log0.events[0].data.from === 'tate' && log0.events[0].data.quantity === '10'
          && log0.events[0].data.symbol === 'BEED' && log0.events[0].data.to === 'null');
       assert.ok(log0.events && log0.events.length === 2 && log0.events[1].contract === 'resourcemanager'
-        && log0.events[1].event === 'buy' && log0.events[1].data.fee === '10'
-        && log0.events[1].data.from === 'tate' && log0.events[1].data.symbol === 'BEED' && log0.events[1].data.to === 'null', 'Failed to buy into allowList');
+        && log0.events[1].event === 'subscribe' && log0.events[1].data.fee === '10'
+        && log0.events[1].data.from === 'tate' && log0.events[1].data.symbol === 'BEED' && log0.events[1].data.to === 'null', 'Failed to subscribe');
 
       const logs1 = JSON.parse(res.transactions[0].logs);
       assert.ok(!logs1.errors || logs1.errors.length === 0, 'Transfer / burn should succeed');
@@ -849,7 +849,7 @@ describe('resourcemanager', function () {
       });
   });
 
-  it('allowlist buyin not allowed before expiration', (done) => {
+  it('allowlist subscription not allowed before expiration', (done) => {
     new Promise(async (resolve) => {
 
       await fixture.setUp();
@@ -858,7 +858,7 @@ describe('resourcemanager', function () {
 
       let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
@@ -870,7 +870,7 @@ describe('resourcemanager', function () {
       await fixture.sendBlock(block);
 
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
       block = {
         refHiveBlockNumber: ++refBlockNumber,
@@ -905,7 +905,7 @@ describe('resourcemanager', function () {
 
       let refBlockNumber = resourceManagerForkBlock;
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
       let block = {
         refHiveBlockNumber: refBlockNumber,
