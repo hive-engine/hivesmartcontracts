@@ -239,7 +239,6 @@ actions.subscribe = async (payload) => {
 
   api.assert(!accountControl || !accountControl.isDenied, 'cannot be purchased as long as you are throttled.');
 
-  api.debug(`buy action for ${sender} with params: ${JSON.stringify(accountControl)}`);
   const stillAllowed = isStillAllowed(accountControl);
   api.assert(!stillAllowed, 'can only be purchased once a month.');
 
