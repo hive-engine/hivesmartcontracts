@@ -259,7 +259,7 @@ actions.subscribe = async (payload) => {
   if (create) await api.db.insert(table, accountControl);
   else await api.db.update(table, accountControl);
 
-  api.emit('buy', {
+  api.emit('subscribe', {
     from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.allowListCosts,
   });
 
