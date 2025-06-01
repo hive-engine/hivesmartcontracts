@@ -90,6 +90,7 @@ describe('resourcemanager', function () {
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "url": "https://token.com", "symbol": "BEED", "precision": 8, "maxSupply": "100000" }'));
      // Issue some tokens to drew
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "BEED", "to": "drew", "quantity": "1", "isSignedWithActiveKey": true }'));
+     transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "BEED", "to": "tate", "quantity": "10", "isSignedWithActiveKey": true }'));
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', `{ "symbol": "BEED", "to": "${CONSTANTS.HIVE_ENGINE_ACCOUNT}", "quantity": "10000", "isSignedWithActiveKey": true }`));
      // Create test NFT
      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'create', '{ "isSignedWithActiveKey": true, "name":"test NFT", "symbol":"TSTNFT", "url":"http://mynft.com", "maxSupply":"3" }'));
@@ -838,6 +839,102 @@ describe('resourcemanager', function () {
       validUntil.setDate(validUntil.getDate() + 31);
       const validUntilMs = validUntil.getTime();
       assert.ok(dbRes.allowedUntil == validUntilMs);
+      assert.ok(dbRes.isAllowed === true);
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('allowlist buyin not allowed before expiration', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      let refBlockNumber = resourceManagerForkBlock;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+
+      block = {
+        refHiveBlockNumber: ++refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:31:06',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getLatestBlockInfo();
+      
+      const log0 = JSON.parse(res.transactions[0].logs);
+      assert.ok(log0.errors || log0.errors.length >= 1, 'Transaction should fail');
+      assert.equal(log0.errors[0], 'can only be purchased once a month.', 'Transaction should fail with correct error');
+
+      resolve();
+    })
+      .then(() => {
+        fixture.tearDown();
+        done();
+      });
+  });
+
+  it('allowlist expiration', (done) => {
+    new Promise(async (resolve) => {
+
+      await fixture.setUp();
+
+      await initializeResourceManager();
+
+      let refBlockNumber = resourceManagerForkBlock;
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'buy', '{ "isSignedWithActiveKey": true }'));
+
+      let block = {
+        refHiveBlockNumber: refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-05-12T16:30:03',
+        transactions,
+      };
+      await fixture.sendBlock(block);
+
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'market', 'cancel', '{ "account": "tate", "id": "TXID1235", "type": "buy", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'market', 'cancel', '{ "account": "tate", "id": "TXID1236", "type": "buy", "isSignedWithActiveKey": true }'));
+
+      block = {
+        refHiveBlockNumber: ++refBlockNumber,
+        refHiveBlockId: 'ABCD1',
+        prevRefHiveBlockId: 'ABCD2',
+        timestamp: '2025-06-12T16:33:06',
+        transactions,
+      };
+
+      await fixture.sendBlock(block);
+
+      const res = await fixture.database.getLatestBlockInfo();
+      
+      const log1 = JSON.parse(res.transactions[1].logs);
+      assert.ok(log1.events && log1.events.length >= 1, 'Transaction should have events');
+      assert.ok(log1.events[0].contract === 'resourcemanager' && log1.events[0].event === 'allowListSubscriptionExpired', 'AllowList subscription should have expired');
 
       resolve();
     })
