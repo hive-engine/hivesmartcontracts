@@ -108,840 +108,696 @@ describe('resourcemanager', function () {
      await tableAsserts.assertNoErrorInLastBlock();
   }
 
-  it('one action per block is free', (done) => {
-    new Promise(async (resolve) => {
+  it('one action per block is free', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    let res = await fixture.database.getLatestBlockInfo();
 
-      let res = await fixture.database.getLatestBlockInfo();
+    let txLogs = JSON.parse(res.transactions[0].logs);
+    assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.90000000' });
 
-      let txLogs = JSON.parse(res.transactions[0].logs);
-      assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.90000000' });
+    ++refBlockNumber;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
 
-      ++refBlockNumber;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+    res = await fixture.database.getLatestBlockInfo();
 
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-      res = await fixture.database.getLatestBlockInfo();
-
-      txLogs = JSON.parse(res.transactions[0].logs);
-      assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.80000000' });
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    txLogs = JSON.parse(res.transactions[0].logs);
+    assert.ok(!txLogs.errors || txLogs.errors.length === 0, 'First transaction should not have errors');
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.80000000' });
   });
 
-  it('two or more actions costs', (done) => {
-    new Promise(async (resolve) => {
+  it('two or more actions costs', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    const res = await fixture.database.getLatestBlockInfo();
 
-      const res = await fixture.database.getLatestBlockInfo();
+    const logs0 = JSON.parse(res.transactions[0].logs);
+    const logs1 = JSON.parse(res.transactions[1].logs);
 
-      const logs0 = JSON.parse(res.transactions[0].logs);
-      const logs1 = JSON.parse(res.transactions[1].logs);
+    assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+    assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length > 1, 'Second transaction should succeed but incur burn');
 
-      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
-      assert.ok(!logs1.errors || logs1.errors.length === 0 || logs1.events.length > 1, 'Second transaction should succeed but incur burn');
+    assert.ok(logs1.events && logs1.events.length > 1 && logs1.events[1].contract === 'resourcemanager'
+      && logs1.events[1].event === 'burnFee' && logs1.events[1].data.to === 'null' && logs1.events[1].data.fee === '0.001', 'Burn not protocolled');
 
-      assert.ok(logs1.events && logs1.events.length > 1 && logs1.events[1].contract === 'resourcemanager'
-        && logs1.events[1].event === 'burnFee' && logs1.events[1].data.to === 'null' && logs1.events[1].data.fee === '0.001', 'Burn not protocolled');
-
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.79900000' });
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.79900000' });
   });
 
-  it('multiple token transfers pay no fees', (done) => {
-    new Promise(async (resolve) => {
+  it('multiple token transfers pay no fees', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.5", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    const res = await fixture.database.getLatestBlockInfo();
 
-      const res = await fixture.database.getLatestBlockInfo();
+    const logs0 = JSON.parse(res.transactions[0].logs);
+    const logs1 = JSON.parse(res.transactions[1].logs);
 
-      const logs0 = JSON.parse(res.transactions[0].logs);
-      const logs1 = JSON.parse(res.transactions[1].logs);
+    assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'Second transaction should be free and succeed');
 
-      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'Second transaction should be free and succeed');
-
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.00000000' });
-      await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '1.00000000' });
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.00000000' });
+    await tableAsserts.assertUserBalances({ account: 'drewlongshot', symbol: 'BEED', balance: '1.00000000' });
   });
 
-  it('more actions more costs, no 20 limit on market operations', (done) => {
-    new Promise(async (resolve) => {
+  it('more actions more costs, no 20 limit on market operations', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    for (let i = 0; i < 50; i++) {
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.001", "price": "1", "isSignedWithActiveKey": true }'));
+    }
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      for (let i = 0; i < 50; i++) {
-        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.001", "price": "1", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    const res = await fixture.database.getLatestBlockInfo();
+
+    for (let i = 0; i < 50; i++) {
+      const logs = JSON.parse(res.transactions[i].logs);
+      if (i == 0) {
+        assert.ok(!logs.errors || logs.errors.length === 0, 'First transaction should be free and succeed');
+      } else {
+        assert.ok(!logs.errors || logs.errors.length === 0 || logs.events.length > 1, 'Other transactions should succeed but incur burn');
       }
+    }
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.90100000' });
+  });
 
-      const res = await fixture.database.getLatestBlockInfo();
+  it('20 limit on transfers', async () => {
+    await fixture.setUp();
 
-      for (let i = 0; i < 50; i++) {
-        const logs = JSON.parse(res.transactions[i].logs);
-        if (i == 0) {
-          assert.ok(!logs.errors || logs.errors.length === 0, 'First transaction should be free and succeed');
-        } else {
-          assert.ok(!logs.errors || logs.errors.length === 0 || logs.events.length > 1, 'Other transactions should succeed but incur burn');
-        }
+    await initializeResourceManager();
+
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    for (let i = 0; i < 50; i++) {
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.001", "isSignedWithActiveKey": true }'));
+    }
+
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    const res = await fixture.database.getLatestBlockInfo();
+
+    for (let i = 0; i < 50; i++) {
+      const logs = JSON.parse(res.transactions[i].logs);
+      if (i < 20) {
+        assert.ok(!logs.errors || logs.errors.length === 0, 'First 20 transactions should be free and succeed');
+      } else {
+        assert.equal(logs.errors[0], 'max transaction limit per block reached.');
       }
+    }
 
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.90100000' });
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.98000000' });
   });
 
-  it('20 limit on transfers', (done) => {
-    new Promise(async (resolve) => {
+  it('no 20 limit on marketpool actions', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "BEE:BEED", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'addLiquidity', '{ "tokenPair": "BEE:BEED", "baseQuantity": "1000", "quoteQuantity": "10000", "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      for (let i = 0; i < 50; i++) {
-        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "drewlongshot", "quantity": "0.001", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+    await tableAsserts.assertNoErrorInLastBlock();
+
+    refBlockNumber++;
+    transactions = [];
+
+    for (let i = 0; i < 50; i++) {
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'marketpools', 'swapTokens', '{ "tokenPair": "BEE:BEED", "tokenSymbol": "BEED", "tokenAmount": "0.01", "tradeType": "exactInput", "maxSlippage": "1", "isSignedWithActiveKey": true}'));
+    }
+
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T01:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    const res = await fixture.database.getLatestBlockInfo();
+    // All actions should succeed, and with no fee
+    await tableAsserts.assertNoErrorInLastBlock();
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.50000000' });
+  });
+
+  it('add to denyList and get blocked', async () => {
+    await fixture.setUp();
+
+    await initializeResourceManager();
+
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    const res = await fixture.database.getLatestBlockInfo();
+
+    // first tx (addAccount) has no errors
+    const log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+    assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
+      && log0.events[0].event === 'updateAccount' && log0.events[0].data.isDenied === true
+      && log0.events[0].data.updatedAccount === 'drew' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Failed to deny account');
+
+    const logs1 = JSON.parse(res.transactions[1].logs);
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+
+    const logs2 = JSON.parse(res.transactions[2].logs);
+    assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
+  });
+
+  it('check reset counter after 24h of denied user', async () => {
+    await fixture.setUp();
+
+    await initializeResourceManager();
+
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    let res = await fixture.database.getLatestBlockInfo();
+    const log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+
+    let logs1 = JSON.parse(res.transactions[1].logs);
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+
+    let logs2 = JSON.parse(res.transactions[2].logs);
+    assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
+
+    refBlockNumber++;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
+
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-13T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    res = await fixture.database.getLatestBlockInfo();
+
+    logs1 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+
+    logs2 = JSON.parse(res.transactions[1].logs);
+    assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
+  });
+
+  it('update account', async () => {
+    await fixture.setUp();
+
+    await initializeResourceManager();
+
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    let res = await fixture.database.getLatestBlockInfo();
+    let log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+
+    res = await fixture.database.findOne({
+      contract: 'resourcemanager',
+      table: 'accountControls',
+      query: {
+        account: 'drew'
       }
+    });
+    assert.ok(res && res.isDenied == true);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    refBlockNumber++;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": false}' ));
 
-      const res = await fixture.database.getLatestBlockInfo();
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-13T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      for (let i = 0; i < 50; i++) {
-        const logs = JSON.parse(res.transactions[i].logs);
-        if (i < 20) {
-          assert.ok(!logs.errors || logs.errors.length === 0, 'First 20 transactions should be free and succeed');
-        } else {
-          assert.equal(logs.errors[0], 'max transaction limit per block reached.');
-        }
+    res = await fixture.database.getLatestBlockInfo();
+
+    log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+
+    res = await fixture.database.findOne({
+      contract: 'resourcemanager',
+      table: 'accountControls',
+      query: {
+        account: 'drew'
       }
-
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.98000000' });
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    });
+    assert.ok(res && res.isDenied == false);
   });
 
-  it('no 20 limit on marketpool actions', (done) => {
-    new Promise(async (resolve) => {
+  it('add & remove moderator', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'createPool', '{ "tokenPair": "BEE:BEED", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'marketpools', 'addLiquidity', '{ "tokenPair": "BEE:BEED", "baseQuantity": "1000", "quoteQuantity": "10000", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-      await tableAsserts.assertNoErrorInLastBlock();
+    let res = await fixture.database.getLatestBlockInfo();
+    let log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
 
-      refBlockNumber++;
-      transactions = [];
-
-      for (let i = 0; i < 50; i++) {
-        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'marketpools', 'swapTokens', '{ "tokenPair": "BEE:BEED", "tokenSymbol": "BEED", "tokenAmount": "0.01", "tradeType": "exactInput", "maxSlippage": "1", "isSignedWithActiveKey": true}'));
+    res = await fixture.database.findOne({
+      contract: 'resourcemanager',
+      table: 'moderators',
+      query: {
+        account: 'satoshi'
       }
+    });
 
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T01:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    assert.ok(res && res.account === 'satoshi');
 
-      const res = await fixture.database.getLatestBlockInfo();
-      // All actions should succeed, and with no fee
-      await tableAsserts.assertNoErrorInLastBlock();
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.50000000' });
+    refBlockNumber++;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "remove"}' ));
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-13T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    res = await fixture.database.getLatestBlockInfo();
+
+    log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+
+    res = await fixture.database.findOne({
+      contract: 'resourcemanager',
+      table: 'accountControls',
+      query: {
+        account: 'drew'
+      }
+    });
+    assert.ok(!res);
   });
 
-  it('add to denyList and get blocked', (done) => {
-    new Promise(async (resolve) => {
+  it('moderator adds acc to denylist', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    let res = await fixture.database.getLatestBlockInfo();
+    let log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+    assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
+      && log0.events[0].event === 'updateModerator' && log0.events[0].data.account === 'satoshi'
+      && log0.events[0].data.action === 'add' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Adding moderator no emit or wrong');
 
-      const res = await fixture.database.getLatestBlockInfo();
+    let log1 = JSON.parse(res.transactions[1].logs);
+    assert.ok(!log1.errors || log1.errors.length === 0);
+    assert.ok(log1.events && log1.events.length === 1 && log1.events[0].contract === 'resourcemanager'
+      && log1.events[0].event === 'updateAccount' && log1.events[0].data.isDenied === true
+      && log1.events[0].data.updatedAccount === 'drew' && log1.events[0].data.from === 'satoshi', 'Faile to deny account as moderator');
 
-      // first tx (addAccount) has no errors
-      const log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
-      assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
-        && log0.events[0].event === 'updateAccount' && log0.events[0].data.isDenied === true
-        && log0.events[0].data.updatedAccount === 'drew' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Failed to deny account');
+    res = await fixture.database.findOne({
+      contract: 'resourcemanager',
+      table: 'accountControls',
+      query: {
+        account: 'drew'
+      }
+    });
 
-      const logs1 = JSON.parse(res.transactions[1].logs);
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
-
-      const logs2 = JSON.parse(res.transactions[2].logs);
-      assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    assert.ok(res && res.account === 'drew' && res.isDenied);
   });
 
-  it('check reset counter after 24h of denied user', (done) => {
-    new Promise(async (resolve) => {
+  it('updates parameters to 2 free tx, 0.01 BEE fee', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    let transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', `{ "numberOfFreeTx": 2, "multiTransactionFee": "0.01", "burnSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+    await tableAsserts.assertNoErrorInLastBlock();
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    refBlockNumber++;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
 
-      let res = await fixture.database.getLatestBlockInfo();
-      const log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let logs1 = JSON.parse(res.transactions[1].logs);
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
+    const res = await fixture.database.getLatestBlockInfo();
 
-      let logs2 = JSON.parse(res.transactions[2].logs);
-      assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
+    const logs0 = JSON.parse(res.transactions[0].logs);
+    const logs1 = JSON.parse(res.transactions[1].logs);
+    const logs2 = JSON.parse(res.transactions[2].logs);
 
-      refBlockNumber++;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
+    assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'Second transaction should be free and succeed');
+    assert.ok(!logs2.errors || logs2.errors.length === 0 || logs2.events.length > 1, 'Third transaction should succeed but incur burn');
 
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-13T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    assert.ok(logs2.events && logs2.events.length > 1 && logs2.events[1].contract === 'resourcemanager'
+      && logs2.events[1].event === 'burnFee' && logs2.events[1].data.to === 'null' && logs2.events[1].data.fee === '0.01' && logs2.events[1].data.symbol === 'BEE', 'Burn not protocolled');
 
-      res = await fixture.database.getLatestBlockInfo();
-
-      logs1 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
-
-      logs2 = JSON.parse(res.transactions[1].logs);
-      assert.equal(logs2.errors[0], 'max transaction limit per day reached.');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.70000000' });
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEE', balance: '198.99000000' });
   });
 
-  it('update account', (done) => {
-    new Promise(async (resolve) => {
+  it('updates parameters to 2 denyMaxTx', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    let transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{"denyMaxTx": 2}'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+    await tableAsserts.assertNoErrorInLastBlock();
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    refBlockNumber++;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
 
-      let res = await fixture.database.getLatestBlockInfo();
-      let log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
+    block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      res = await fixture.database.findOne({
-        contract: 'resourcemanager',
-        table: 'accountControls',
-        query: {
-          account: 'drew'
-        }
-      });
-      assert.ok(res && res.isDenied == true);
+    let res = await fixture.database.getLatestBlockInfo();
+    let logs1 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
 
-      refBlockNumber++;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": false}' ));
+    let logs2 = JSON.parse(res.transactions[1].logs);
+    assert.ok(!logs2.errors || logs2.errors.length === 0, 'Second action from drew should succeed');
 
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-13T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-
-      res = await fixture.database.getLatestBlockInfo();
-
-      log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
-
-      res = await fixture.database.findOne({
-        contract: 'resourcemanager',
-        table: 'accountControls',
-        query: {
-          account: 'drew'
-        }
-      });
-      assert.ok(res && res.isDenied == false);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    let logs3 = JSON.parse(res.transactions[2].logs);
+    assert.equal(logs3.errors[0], 'max transaction limit per day reached.');
   });
 
-  it('add & remove moderator', (done) => {
-    new Promise(async (resolve) => {
+  it('allowlist subscription for 31 days', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    const res = await fixture.database.getLatestBlockInfo();
 
-      let res = await fixture.database.getLatestBlockInfo();
-      let log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
+    const log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!log0.errors || log0.errors.length === 0);
+    assert.ok(log0.events && log0.events.length === 2 && log0.events[0].contract === 'tokens'
+        && log0.events[0].event === 'transfer' && log0.events[0].data.from === 'tate' && log0.events[0].data.quantity === '10'
+        && log0.events[0].data.symbol === 'BEED' && log0.events[0].data.to === 'null');
+    assert.ok(log0.events && log0.events.length === 2 && log0.events[1].contract === 'resourcemanager'
+      && log0.events[1].event === 'subscribe' && log0.events[1].data.fee === '10'
+      && log0.events[1].data.from === 'tate' && log0.events[1].data.symbol === 'BEED' && log0.events[1].data.to === 'null', 'Failed to subscribe');
 
-      res = await fixture.database.findOne({
-        contract: 'resourcemanager',
-        table: 'moderators',
-        query: {
-          account: 'satoshi'
-        }
-      });
+    const logs1 = JSON.parse(res.transactions[0].logs);
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'Transfer / burn should succeed');
 
-      assert.ok(res && res.account === 'satoshi');
+    // verify balance and db
+    await tableAsserts.assertUserBalances({ account: 'tate', symbol: 'BEED', balance: '0.00000000' });
+    await tableAsserts.assertUserBalances({ account: 'null', symbol: 'BEED', balance: '10' });
+    let dbRes = await fixture.database.findOne({
+      contract: 'resourcemanager',
+      table: 'accountControls',
+      query: {
+        account: 'tate'
+      }
+    });
 
-      refBlockNumber++;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "remove"}' ));
-
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-13T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-
-      res = await fixture.database.getLatestBlockInfo();
-
-      log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
-
-      res = await fixture.database.findOne({
-        contract: 'resourcemanager',
-        table: 'accountControls',
-        query: {
-          account: 'drew'
-        }
-      });
-      assert.ok(!res);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    let validUntil = new Date(`${res.timestamp}.000Z`);
+    validUntil.setDate(validUntil.getDate() + 31);
+    const validUntilMs = validUntil.getTime();
+    assert.ok(dbRes.allowedUntil == validUntilMs);
+    assert.ok(dbRes.isAllowed === true);
   });
 
-  it('moderator adds acc to denylist', (done) => {
-    new Promise(async (resolve) => {
+  it('allowlist subscription not allowed before expiration', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateModerator', '{"account": "satoshi", "action": "add"}' ));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'satoshi', 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
-      let res = await fixture.database.getLatestBlockInfo();
-      let log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
-      assert.ok(log0.events && log0.events.length === 1 && log0.events[0].contract === 'resourcemanager'
-        && log0.events[0].event === 'updateModerator' && log0.events[0].data.account === 'satoshi'
-        && log0.events[0].data.action === 'add' && log0.events[0].data.from === CONSTANTS.HIVE_ENGINE_ACCOUNT, 'Adding moderator no emit or wrong');
+    block = {
+      refHiveBlockNumber: ++refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:31:06',
+      transactions,
+    };
 
-      let log1 = JSON.parse(res.transactions[1].logs);
-      assert.ok(!log1.errors || log1.errors.length === 0);
-      assert.ok(log1.events && log1.events.length === 1 && log1.events[0].contract === 'resourcemanager'
-        && log1.events[0].event === 'updateAccount' && log1.events[0].data.isDenied === true
-        && log1.events[0].data.updatedAccount === 'drew' && log1.events[0].data.from === 'satoshi', 'Faile to deny account as moderator');
+    await fixture.sendBlock(block);
 
-      res = await fixture.database.findOne({
-        contract: 'resourcemanager',
-        table: 'accountControls',
-        query: {
-          account: 'drew'
-        }
-      });
-
-      assert.ok(res && res.account === 'drew' && res.isDenied);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    const res = await fixture.database.getLatestBlockInfo();
+    
+    const log0 = JSON.parse(res.transactions[0].logs);
+    assert.ok(log0.errors || log0.errors.length >= 1, 'Transaction should fail');
+    assert.equal(log0.errors[0], 'can only be purchased once a month.', 'Transaction should fail with correct error');
   });
 
-  it('updates parameters to 2 free tx, 0.01 BEE fee', (done) => {
-    new Promise(async (resolve) => {
+  it('allowlist expiration', async () => {
+    await fixture.setUp();
 
-      await fixture.setUp();
+    await initializeResourceManager();
 
-      await initializeResourceManager();
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
 
-      let refBlockNumber = resourceManagerForkBlock;
-      let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', `{ "numberOfFreeTx": 2, "multiTransactionFee": "0.01", "burnSymbol": "${CONSTANTS.UTILITY_TOKEN_SYMBOL}" }`));
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-05-12T16:30:03',
+      transactions,
+    };
+    await fixture.sendBlock(block);
 
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-      await tableAsserts.assertNoErrorInLastBlock();
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'market', 'cancel', '{ "account": "tate", "id": "TXID1235", "type": "buy", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'market', 'cancel', '{ "account": "tate", "id": "TXID1236", "type": "buy", "isSignedWithActiveKey": true }'));
 
-      refBlockNumber++;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    block = {
+      refHiveBlockNumber: ++refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2025-06-12T16:33:06',
+      transactions,
+    };
 
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
+    await fixture.sendBlock(block);
 
-      const res = await fixture.database.getLatestBlockInfo();
-
-      const logs0 = JSON.parse(res.transactions[0].logs);
-      const logs1 = JSON.parse(res.transactions[1].logs);
-      const logs2 = JSON.parse(res.transactions[2].logs);
-
-      assert.ok(!logs0.errors || logs0.errors.length === 0, 'First transaction should be free and succeed');
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'Second transaction should be free and succeed');
-      assert.ok(!logs2.errors || logs2.errors.length === 0 || logs2.events.length > 1, 'Third transaction should succeed but incur burn');
-
-      assert.ok(logs2.events && logs2.events.length > 1 && logs2.events[1].contract === 'resourcemanager'
-        && logs2.events[1].event === 'burnFee' && logs2.events[1].data.to === 'null' && logs2.events[1].data.fee === '0.01' && logs2.events[1].data.symbol === 'BEE', 'Burn not protocolled');
-
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.70000000' });
-      await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEE', balance: '198.99000000' });
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
-
-  it('updates parameters to 2 denyMaxTx', (done) => {
-    new Promise(async (resolve) => {
-
-      await fixture.setUp();
-
-      await initializeResourceManager();
-
-      let refBlockNumber = resourceManagerForkBlock;
-      let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{"denyMaxTx": 2}'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateAccount', '{"account": "drew", "isDenied": true}' ));
-
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2018-06-01T00:00:00',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-      await tableAsserts.assertNoErrorInLastBlock();
-
-      refBlockNumber++;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "a", "type": "number", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "b", "type": "number", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'nft', 'addProperty', '{ "symbol": "TSTNFT", "name": "c", "type": "number", "isSignedWithActiveKey": true }'));
-
-      block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-
-      let res = await fixture.database.getLatestBlockInfo();
-      let logs1 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'First action from drew should succeed');
-
-      let logs2 = JSON.parse(res.transactions[1].logs);
-      assert.ok(!logs2.errors || logs2.errors.length === 0, 'Second action from drew should succeed');
-
-      let logs3 = JSON.parse(res.transactions[2].logs);
-      assert.equal(logs3.errors[0], 'max transaction limit per day reached.');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
-
-  it('allowlist subscription for 31 days', (done) => {
-    new Promise(async (resolve) => {
-
-      await fixture.setUp();
-
-      await initializeResourceManager();
-
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
-
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-
-      const res = await fixture.database.getLatestBlockInfo();
-
-      const log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!log0.errors || log0.errors.length === 0);
-      assert.ok(log0.events && log0.events.length === 2 && log0.events[0].contract === 'tokens'
-         && log0.events[0].event === 'transfer' && log0.events[0].data.from === 'tate' && log0.events[0].data.quantity === '10'
-         && log0.events[0].data.symbol === 'BEED' && log0.events[0].data.to === 'null');
-      assert.ok(log0.events && log0.events.length === 2 && log0.events[1].contract === 'resourcemanager'
-        && log0.events[1].event === 'subscribe' && log0.events[1].data.fee === '10'
-        && log0.events[1].data.from === 'tate' && log0.events[1].data.symbol === 'BEED' && log0.events[1].data.to === 'null', 'Failed to subscribe');
-
-      const logs1 = JSON.parse(res.transactions[0].logs);
-      assert.ok(!logs1.errors || logs1.errors.length === 0, 'Transfer / burn should succeed');
-
-      // verify balance and db
-      await tableAsserts.assertUserBalances({ account: 'tate', symbol: 'BEED', balance: '0.00000000' });
-      await tableAsserts.assertUserBalances({ account: 'null', symbol: 'BEED', balance: '10' });
-      let dbRes = await fixture.database.findOne({
-        contract: 'resourcemanager',
-        table: 'accountControls',
-        query: {
-          account: 'tate'
-        }
-      });
-
-      let validUntil = new Date(`${res.timestamp}.000Z`);
-      validUntil.setDate(validUntil.getDate() + 31);
-      const validUntilMs = validUntil.getTime();
-      assert.ok(dbRes.allowedUntil == validUntilMs);
-      assert.ok(dbRes.isAllowed === true);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
-
-  it('allowlist subscription not allowed before expiration', (done) => {
-    new Promise(async (resolve) => {
-
-      await fixture.setUp();
-
-      await initializeResourceManager();
-
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
-
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
-
-      block = {
-        refHiveBlockNumber: ++refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:31:06',
-        transactions,
-      };
-
-      await fixture.sendBlock(block);
-
-      const res = await fixture.database.getLatestBlockInfo();
-      
-      const log0 = JSON.parse(res.transactions[0].logs);
-      assert.ok(log0.errors || log0.errors.length >= 1, 'Transaction should fail');
-      assert.equal(log0.errors[0], 'can only be purchased once a month.', 'Transaction should fail with correct error');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
-
-  it('allowlist expiration', (done) => {
-    new Promise(async (resolve) => {
-
-      await fixture.setUp();
-
-      await initializeResourceManager();
-
-      let refBlockNumber = resourceManagerForkBlock;
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'resourcemanager', 'subscribe', '{ "isSignedWithActiveKey": true }'));
-
-      let block = {
-        refHiveBlockNumber: refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-05-12T16:30:03',
-        transactions,
-      };
-      await fixture.sendBlock(block);
-
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'market', 'cancel', '{ "account": "tate", "id": "TXID1235", "type": "buy", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'tate', 'market', 'cancel', '{ "account": "tate", "id": "TXID1236", "type": "buy", "isSignedWithActiveKey": true }'));
-
-      block = {
-        refHiveBlockNumber: ++refBlockNumber,
-        refHiveBlockId: 'ABCD1',
-        prevRefHiveBlockId: 'ABCD2',
-        timestamp: '2025-06-12T16:33:06',
-        transactions,
-      };
-
-      await fixture.sendBlock(block);
-
-      const res = await fixture.database.getLatestBlockInfo();
-      
-      const log1 = JSON.parse(res.transactions[1].logs);
-      assert.ok(log1.events && log1.events.length >= 1, 'Transaction should have events');
-      assert.ok(log1.events[0].contract === 'resourcemanager' && log1.events[0].event === 'allowListSubscriptionExpired', 'AllowList subscription should have expired');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+    const res = await fixture.database.getLatestBlockInfo();
+    
+    const log1 = JSON.parse(res.transactions[1].logs);
+    assert.ok(log1.events && log1.events.length >= 1, 'Transaction should have events');
+    assert.ok(log1.events[0].contract === 'resourcemanager' && log1.events[0].event === 'allowListSubscriptionExpired', 'AllowList subscription should have expired');
   });
 
 });
