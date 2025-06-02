@@ -62,6 +62,19 @@ describe('Database', function () {
         })
   });
 
+  it('should compute deterministic genesis hash', (done) => {
+    new Promise(async (resolve) => {
+      await fixture.setUp();
+      const res = await fixture.database.getBlockInfo(0);
+      assert.equal(res.hash, "ee85776941dd608172b983e3c0d7f6c31e7600ccc092bd7c479550ef9909fe84");
+      resolve();
+      })
+    .then(() => {
+      fixture.tearDown();
+      done();
+    });
+  });
+
   it('should get the latest block', (done) => {
     new Promise(async (resolve) => {
 
