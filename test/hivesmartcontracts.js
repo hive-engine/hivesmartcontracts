@@ -14,115 +14,6 @@ const { assertError } = require('../libs/util/testing/Asserts');
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
 
-// Database
-describe('Database', function () {
-
-  this.timeout(10000);
-
-  before((done) => {
-    new Promise(async (resolve) => {
-      client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
-      db = await client.db(conf.databaseName);
-      await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
-  });
-  
-  after((done) => {
-    new Promise(async (resolve) => {
-      await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
-  });
-
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
-      db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
-  });
-
-  afterEach((done) => {
-      // runs after each test in this block
-      new Promise(async (resolve) => {
-        await db.dropDatabase()
-        resolve();
-      })
-        .then(() => {
-          done()
-        })
-  });
-
-  it('should compute deterministic genesis hash', (done) => {
-    new Promise(async (resolve) => {
-      await fixture.setUp();
-      const res = await fixture.database.getBlockInfo(0);
-      assert.equal(res.hash, "ee85776941dd608172b983e3c0d7f6c31e7600ccc092bd7c479550ef9909fe84");
-      resolve();
-      })
-    .then(() => {
-      fixture.tearDown();
-      done();
-    });
-  });
-
-  it('should get the latest block', (done) => {
-    new Promise(async (resolve) => {
-
-      await fixture.setUp();
-
-      let refBlockNumber = fixture.getNextRefBlockNumber();
-      let transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', ''));
-
-      let block = new Block(
-        '2018-06-01T00:00:00',
-        0,
-        '',
-        '',
-        transactions,
-        123456788,
-        'PREV_HASH',
-      );
-
-      await fixture.database.addBlock(block);
-
-      refBlockNumber = fixture.getNextRefBlockNumber();
-      transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', ''));
-
-      block = new Block(
-        '2018-06-01T00:00:00',
-        0,
-        '',
-        '',
-        transactions,
-        123456789,
-        'PREV_HASH',
-      );
-
-      await fixture.database.addBlock(block);
-
-      const res = await fixture.database.getLatestBlockInfo();
-      assert.equal(res.blockNumber, 123456790);
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-  });
-});
-
 // smart contracts
 describe('Smart Contracts', function ()  {
   this.timeout(10000);
@@ -171,9 +62,51 @@ describe('Smart Contracts', function ()  {
         })
   });
 
-  it('should deploy a basic smart contract', (done) => {
-    new Promise(async (resolve) => {
+  it('should compute deterministic genesis hash', async () => {
+      await fixture.setUp();
+      const res = await fixture.database.getBlockInfo(0);
+      assert.equal(res.hash, "ee85776941dd608172b983e3c0d7f6c31e7600ccc092bd7c479550ef9909fe84");
+  });
 
+  it('should get the latest block', async () => {
+      await fixture.setUp();
+      let refBlockNumber = fixture.getNextRefBlockNumber();
+      let transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', ''));
+
+      let block = new Block(
+        '2018-06-01T00:00:00',
+        0,
+        '',
+        '',
+        transactions,
+        123456788,
+        'PREV_HASH',
+      );
+
+      await fixture.database.addBlock(block);
+
+      refBlockNumber = fixture.getNextRefBlockNumber();
+      transactions = [];
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', ''));
+
+      block = new Block(
+        '2018-06-01T00:00:00',
+        0,
+        '',
+        '',
+        transactions,
+        123456789,
+        'PREV_HASH',
+      );
+
+      await fixture.database.addBlock(block);
+
+      const res = await fixture.database.getLatestBlockInfo();
+      assert.equal(res.blockNumber, 123456790);
+  });
+
+  it('should deploy a basic smart contract', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -208,17 +141,9 @@ describe('Smart Contracts', function ()  {
 
       assert.equal(contract._id, 'testcontract');
       assert.equal(contract.owner, CONSTANTS.HIVE_ENGINE_ACCOUNT);
-      resolve()
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should create a table during the smart contract deployment', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should create a table during the smart contract deployment', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -257,17 +182,9 @@ describe('Smart Contracts', function ()  {
       res = await fixture.database.getTableDetails({ contract: 'testcontract', table: 'testTable' });
 
       assert.notEqual(res, null);
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should create a table with indexes during the smart contract deployment', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should create a table with indexes during the smart contract deployment', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -310,18 +227,9 @@ describe('Smart Contracts', function ()  {
 
       assert.equal(indexes.index2_1[0][0], 'index2');
       assert.equal(indexes.index2_1[0][1], 1);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should add a record into a smart contract table', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should add a record into a smart contract table', async () => {
       await fixture.setUp();
       
       const smartContractCode = `
@@ -366,18 +274,9 @@ describe('Smart Contracts', function ()  {
       const user = await fixture.database.findOne({ contract: 'usersContract', table: 'users', query: { "id": CONSTANTS.HIVE_ENGINE_ACCOUNT } });
 
       assert.equal(user.id, CONSTANTS.HIVE_ENGINE_ACCOUNT);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should update a record from a smart contract table', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should update a record from a smart contract table', async () => {
       await fixture.setUp();
       
       const smartContractCode = `
@@ -435,18 +334,9 @@ describe('Smart Contracts', function ()  {
 
       assert.equal(user.id, CONSTANTS.HIVE_ENGINE_ACCOUNT);
       assert.equal(user.username, 'MyUsernameUpdated');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should remove a record from a smart contract table', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should remove a record from a smart contract table', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -499,18 +389,9 @@ describe('Smart Contracts', function ()  {
       const user = await fixture.database.findOne({ contract: 'usersContract', table: 'users', query: { "id": CONSTANTS.HIVE_ENGINE_ACCOUNT } });
 
       assert.equal(user, null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should read the records from a smart contract table via pagination', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should read the records from a smart contract table via pagination', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -598,18 +479,9 @@ describe('Smart Contracts', function ()  {
       users = await fixture.database.find(payload);
 
       assert.equal(users.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should read the records from a smart contract table using an index ascending (integer)', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should read the records from a smart contract table using an index ascending (integer)', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -703,18 +575,9 @@ describe('Smart Contracts', function ()  {
       users = await fixture.database.find(payload);
 
       assert.equal(users.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should read the records from a smart contract table using an index ascending (string)', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('should read the records from a smart contract table using an index ascending (string)', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -808,18 +671,9 @@ describe('Smart Contracts', function ()  {
       users = await fixture.database.find(payload);;
 
       assert.equal(users.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should read the records from a smart contract table using an index descending (integer)', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should read the records from a smart contract table using an index descending (integer)', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -912,18 +766,9 @@ describe('Smart Contracts', function ()  {
       users = await fixture.database.find(payload);;
 
       assert.equal(users.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should read the records from a smart contract table using an index descending (string)', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('should read the records from a smart contract table using an index descending (string)', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1016,18 +861,9 @@ describe('Smart Contracts', function ()  {
       users = await fixture.database.find(payload);;
 
       assert.equal(users.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should allow only the owner of the smart contract to perform certain actions', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should allow only the owner of the smart contract to perform certain actions', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1094,18 +930,9 @@ describe('Smart Contracts', function ()  {
       user = await fixture.database.findOne({ contract: 'usersContract', table: 'users', query: { "id": "Dan" } });
 
       assert.equal(user.id, "Dan");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should perform a search in a smart contract table from another smart contract', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should perform a search in a smart contract table from another smart contract', async () => {
       await fixture.setUp();
 
       const usersSmartContractCode = `
@@ -1183,18 +1010,9 @@ describe('Smart Contracts', function ()  {
       const book = await fixture.database.findOne({ contract: 'booksContract', table: 'books', query: { "userId": CONSTANTS.HIVE_ENGINE_ACCOUNT } });
 
       assert.equal(book.title, "The Awesome Book");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should execute a smart contract from another smart contract', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should execute a smart contract from another smart contract', async () => {
       await fixture.setUp();
 
       const usersSmartContractCode = `
@@ -1275,18 +1093,9 @@ describe('Smart Contracts', function ()  {
       const book = await fixture.database.findOne({ contract: 'booksContract', table: 'books', query: { "userId": CONSTANTS.HIVE_ENGINE_ACCOUNT } });
 
       assert.equal(book.title, "The Awesome Book");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should emit an event from a smart contract', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should emit an event from a smart contract', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1328,18 +1137,9 @@ describe('Smart Contracts', function ()  {
 
       assert.equal(logs.events[0].event, 'contract_create');
       assert.equal(logs.events[0].data.contractName, 'testcontract');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should emit an event from another smart contract', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should emit an event from another smart contract', async () => {
       await fixture.setUp();
 
       const usersSmartContractCode = `
@@ -1406,19 +1206,10 @@ describe('Smart Contracts', function ()  {
       assert.equal(logs.events[0].event, 'contract_create');
       assert.equal(logs.events[0].data.contractName, 'testcontract');
       assert.equal(txs[0].executedCodeHash, '8f9127047c5d1b13db1d08452fc5de68fb0e787025a405a58a780e545bd21dab9d0452e18c4662c7a59f0068fa7b0e1302c50e470fc486043c624fead2559628');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
 
-  it('should trim executionCodeHash after cutoff', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should trim executionCodeHash after cutoff', async () => {
       await fixture.setUp();
 
       const usersSmartContractCode = `
@@ -1484,18 +1275,9 @@ describe('Smart Contracts', function ()  {
       assert.equal(logs.events[0].event, 'contract_create');
       assert.equal(logs.events[0].data.contractName, 'testcontract');
       assert.equal(txs[0].executedCodeHash, 'defd36cc6c47126c8ca875bd1952a09bbf6d7baaab13f75252b0d717b0d07664');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should log a node error during the deployment of a smart contract if an error is thrown up to block 83680408', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should log a node error during the deployment of a smart contract if an error is thrown up to block 83680408', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1535,18 +1317,9 @@ describe('Smart Contracts', function ()  {
       const logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.errors[0], "SyntaxError: Unexpected identifier");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should log a custom error during the deployment of a smart contract if an error is thrown after block 83680408', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should log a custom error during the deployment of a smart contract if an error is thrown after block 83680408', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1586,18 +1359,9 @@ describe('Smart Contracts', function ()  {
       const logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.errors[0], "A node.js error occoured during deployment");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should log an error during the execution of a smart contract if an error is thrown', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should log an error during the execution of a smart contract if an error is thrown', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1641,18 +1405,9 @@ describe('Smart Contracts', function ()  {
       const logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.errors[0], "ReferenceError: test1 is not defined");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should log an error from another smart contract', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should log an error from another smart contract', async () => {
       await fixture.setUp();
 
       const usersSmartContractCode = `
@@ -1715,18 +1470,9 @@ describe('Smart Contracts', function ()  {
       const logs = JSON.parse(txs[0].logs);
 
       assert.equal(logs.errors[0], "ReferenceError: test1 is not defined");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should generate random numbers in a deterministic way', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should generate random numbers in a deterministic way', async () => {
       await fixture.setUp();
 
       const smartContractCode = `
@@ -1806,18 +1552,9 @@ describe('Smart Contracts', function ()  {
       assert.equal(logs.events[0].data.generatedRandom, 0.9859509999175694);
       assert.equal(logs.events[1].event, 'random_generated');
       assert.equal(logs.events[1].data.generatedRandom, 0.7988133957484077);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should update a smart contract', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should update a smart contract', async () => {
       await fixture.setUp();
 
       let smartContractCode = `
@@ -1886,12 +1623,5 @@ describe('Smart Contracts', function ()  {
       res = await fixture.database.getTableDetails({ contract: 'testcontract', table: 'testUpdateTable' })
 
       assert.notEqual(res, null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 });
