@@ -15,7 +15,7 @@ actions.createSSC = async () => {
     params.denyMaxTx = 1;
     params.multiTransactionFee = '0.001';
     params.burnSymbol = 'BEED';
-    params.allowListCosts = '10';
+    params.allowlistBurnFee = '10';
 
     await api.db.insert('params', params);
   }
@@ -38,7 +38,7 @@ actions.updateParams = async (payload) => {
     multiTransactionFee,
     burnSymbol,
     denyMaxTx,
-    allowListCosts
+    allowlistBurnFee
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -71,12 +71,12 @@ actions.updateParams = async (payload) => {
     params.burnSymbol = burnSymbol;
   }
 
-  if (allowListCosts) {
-    const allowCostsBN = api.BigNumber(allowListCosts);
-    if (!api.assert(typeof allowListCosts === 'string' && !allowCostsBN.isNaN() && allowCostsBN.gte(0) && allowCostsBN.isFinite(), 'invalid allowListCosts')) {
+  if (allowlistBurnFee) {
+    const allowCostsBN = api.BigNumber(allowlistBurnFee);
+    if (!api.assert(typeof allowlistBurnFee === 'string' && !allowCostsBN.isNaN() && allowCostsBN.gte(0) && allowCostsBN.isFinite(), 'invalid allowlistBurnFee')) {
       return;
     }
-    params.allowListCosts = allowListCosts;
+    params.allowlistBurnFee = allowlistBurnFee;
   }
 
   await api.db.update('params', params);
@@ -158,7 +158,7 @@ const isStillAllowed = (accountControls) => {
   if (!accountControls || !accountControls.isAllowed) 
     return false;
 
-  if (accountControls.allowedUntil === null || accountControls.allowedUntil === 'undefined') 
+  if (!accountControls.allowedUntil) 
     return false;
 
   const date = new Date(`${api.hiveBlockTimestamp}.000Z`);
@@ -243,10 +243,10 @@ actions.subscribe = async (payload) => {
   api.assert(!stillAllowed, 'can only be purchased once a month.');
 
   const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
-    to: 'null', symbol: burnParams.burnSymbol, quantity: burnParams.allowListCosts, isSignedWithActiveKey: true,
+    to: 'null', symbol: burnParams.burnSymbol, quantity: burnParams.allowlistBurnFee, isSignedWithActiveKey: true,
   });
 
-  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.allowListCosts), 'not enough tokens for allowList fee');
+  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.allowlistBurnFee), 'not enough tokens for allowList fee');
 
   const date = new Date(`${api.hiveBlockTimestamp}.000Z`);
   date.setDate(date.getDate() + 31);
@@ -260,7 +260,7 @@ actions.subscribe = async (payload) => {
   else await api.db.update(table, accountControl);
 
   api.emit('subscribe', {
-    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.allowListCosts,
+    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.allowlistBurnFee, subscribedUntil: accountControl.allowedUntil,
   });
 
 };
