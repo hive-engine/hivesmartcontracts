@@ -673,7 +673,7 @@ describe('resourcemanager', function () {
     assert.equal(logs3.errors[0], 'max transaction limit per day reached.');
   });
 
-  it('allowlist subscription for 31 days', async () => {
+  it('allowlist subscription for 30 days', async () => {
     await fixture.setUp();
 
     await initializeResourceManager();
@@ -717,7 +717,7 @@ describe('resourcemanager', function () {
     });
 
     let validUntil = new Date(`${res.timestamp}.000Z`);
-    validUntil.setDate(validUntil.getDate() + 31);
+    validUntil.setDate(validUntil.getDate() + 30);
     const validUntilMs = validUntil.getTime();
     assert.ok(dbRes.allowedUntil == validUntilMs);
     assert.ok(dbRes.isAllowed === true);

@@ -249,7 +249,7 @@ actions.subscribe = async (payload) => {
   api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.allowlistBurnFee), 'not enough tokens for allowList fee');
 
   const date = new Date(`${api.hiveBlockTimestamp}.000Z`);
-  date.setDate(date.getDate() + 31);
+  date.setDate(date.getDate() + 30);
 
   if (!accountControl) accountControl = { account: sender, isDenied: false, isAllowed: true };
 
