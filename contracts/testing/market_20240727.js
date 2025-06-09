@@ -848,7 +848,7 @@ actions.buy = async (payload) => {
         const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity: nbTokensToLock, to: CONTRACT_NAME });
 
         if (res.errors === undefined
-          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === nbTokensToLock && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && api.BigNumber(el.data.quantity).eq(nbTokensToLock) && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
           const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
             .dividedBy(1000)
             .toNumber();
@@ -921,7 +921,7 @@ actions.sell = async (payload) => {
         const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
 
         if (res.errors === undefined
-          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+          && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && api.BigNumber(el.data.quantity).eq(quantity) && el.data.symbol === symbol) !== undefined) {
           const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
             .dividedBy(1000)
             .toNumber();
@@ -978,7 +978,7 @@ actions.marketBuy = async (payload) => {
       const result = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity, to: CONTRACT_NAME });
 
       if (result.errors === undefined
-        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && api.BigNumber(el.data.quantity).eq(quantity) && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
         let hiveRemaining = quantity;
         let offset = 0;
         let volumeTraded = 0;
@@ -1169,7 +1169,7 @@ actions.marketSell = async (payload) => {
       const result = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
 
       if (result.errors === undefined
-        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && api.BigNumber(el.data.quantity).eq(quantity) && el.data.symbol === symbol) !== undefined) {
         let tokensRemaining = quantity;
         let offset = 0;
         let volumeTraded = 0;

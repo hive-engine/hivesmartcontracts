@@ -437,9 +437,10 @@ actions.create = async (payload) => {
 
 actions.issue = async (payload) => {
   const {
-    to, symbol, quantity, isSignedWithActiveKey,
+    to, symbol, isSignedWithActiveKey,
     callingContractInfo,
   } = payload;
+  let quantity = payload.quantity;
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
@@ -463,7 +464,7 @@ actions.issue = async (payload) => {
       && api.assert(api.BigNumber(token.maxSupply).minus(token.supply).gte(quantity), 'quantity exceeds available supply')) {
       if (api.assert(api.isValidAccountName(finalTo), 'invalid to')) {
         // we made all the required verification, let's now issue the tokens
-
+        quantity = api.BigNumber(quantity).toFixed(token.precision);
         let res = await addBalance(token.issuer, token, quantity, 'balances');
 
         if (res === true && finalTo !== token.issuer) {
@@ -498,9 +499,10 @@ actions.issue = async (payload) => {
 
 actions.issueToContract = async (payload) => {
   const {
-    to, symbol, quantity, isSignedWithActiveKey,
+    to, symbol, isSignedWithActiveKey,
     callingContractInfo,
   } = payload;
+  let quantity = payload.quantity;
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
@@ -523,7 +525,7 @@ actions.issueToContract = async (payload) => {
       // a valid contract name is between 3 and 50 characters in length
       if (api.assert(finalTo.length >= 3 && finalTo.length <= 50, 'invalid to')) {
         // we made all the required verification, let's now issue the tokens
-
+        quantity = api.BigNumber(quantity).toFixed(token.precision);
         const res = await addBalance(finalTo, token, quantity, 'contractsBalances');
 
         if (res === true) {
@@ -548,8 +550,9 @@ actions.issueToContract = async (payload) => {
 
 actions.transfer = async (payload) => {
   const {
-    to, symbol, quantity, isSignedWithActiveKey,
+    to, symbol, isSignedWithActiveKey,
   } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(to && typeof to === 'string'
@@ -570,6 +573,7 @@ actions.transfer = async (payload) => {
         if (api.assert(token !== null, 'symbol does not exist')
           && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
           && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
+          //quantity = api.BigNumber(quantity).toFixed(token.precision);
           if (await subBalance(api.sender, token, quantity, 'balances')) {
             const res = await addBalance(finalTo, token, quantity, 'balances');
 
@@ -602,8 +606,9 @@ actions.transfer = async (payload) => {
 
 actions.transferToContract = async (payload) => {
   const {
-    from, to, symbol, quantity, isSignedWithActiveKey,
+    from, to, symbol, isSignedWithActiveKey,
   } = payload;
+  let quantity = payload.quantity;
 
   const finalFrom = (from === undefined || api.sender !== 'null') ? api.sender : from;
 
@@ -622,6 +627,7 @@ actions.transferToContract = async (payload) => {
         if (api.assert(token !== null, 'symbol does not exist')
           && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
           && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
+          quantity = api.BigNumber(quantity).toFixed(token.precision);
           if (await subBalance(finalFrom, token, quantity, 'balances')) {
             const res = await addBalance(finalTo, token, quantity, 'contractsBalances');
 
@@ -650,8 +656,9 @@ actions.transferFromContract = async (payload) => {
   // this action can only be called by the 'null' account which only the core code can use
   if (api.assert(api.sender === 'null', 'not authorized')) {
     const {
-      from, to, symbol, quantity, type,
+      from, to, symbol, type,
     } = payload;
+    let quantity = payload.quantity;
     const types = ['user', 'contract'];
 
     if (api.assert(to && typeof to === 'string'
@@ -675,6 +682,7 @@ actions.transferFromContract = async (payload) => {
           if (api.assert(token !== null, 'symbol does not exist')
             && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
             && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
+            quantity = api.BigNumber(quantity).toFixed(token.precision);
             if (await subBalance(from, token, quantity, 'contractsBalances')) {
               const res = await addBalance(finalTo, token, quantity, table);
 
@@ -875,10 +883,10 @@ actions.enableStaking = async (payload) => {
 actions.stake = async (payload) => {
   const {
     symbol,
-    quantity,
     to,
     isSignedWithActiveKey,
   } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -896,6 +904,7 @@ actions.stake = async (payload) => {
       && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
       && api.assert(token.stakingEnabled === true, 'staking not enabled')
       && api.assert(api.BigNumber(quantity).gt(0), 'must stake positive quantity')) {
+      quantity = api.BigNumber(quantity).toFixed(token.precision);
       if (await subBalance(api.sender, token, quantity, 'balances')) {
         const res = await addStake(finalTo, token, quantity);
 
@@ -922,10 +931,10 @@ actions.stake = async (payload) => {
 actions.stakeFromContract = async (payload) => {
   const {
     symbol,
-    quantity,
     to,
     callingContractInfo,
   } = payload;
+  let quantity = payload.quantity;
 
   // can only be called from a contract
   if (callingContractInfo
@@ -942,6 +951,7 @@ actions.stakeFromContract = async (payload) => {
       && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
       && api.assert(token.stakingEnabled === true, 'staking not enabled')
       && api.assert(api.BigNumber(quantity).gt(0), 'must stake positive quantity')) {
+      quantity = api.BigNumber(quantity).toFixed(token.precision);
       if (await subBalance(callingContractInfo.name, token, quantity, 'contractsBalances')) {
         const res = await addStake(finalTo, token, quantity);
 
@@ -1048,7 +1058,8 @@ const startUnstake = async (account, token, quantity) => {
 };
 
 actions.unstake = async (payload) => {
-  const { symbol, quantity, isSignedWithActiveKey } = payload;
+  const { symbol, isSignedWithActiveKey } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1062,6 +1073,7 @@ actions.unstake = async (payload) => {
       && api.assert(token.stakingEnabled === true, 'staking not enabled')
       && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
       && api.assert(api.BigNumber(quantity).gt(0), 'must unstake positive quantity')) {
+      quantity = api.BigNumber(quantity).toFixed(token.precision);
       if (await startUnstake(api.sender, token, quantity)) {
         api.emit('unstakeStart', { account: api.sender, symbol, quantity });
       }
@@ -1185,10 +1197,10 @@ actions.enableDelegation = async (payload) => {
 actions.delegate = async (payload) => {
   const {
     symbol,
-    quantity,
     to,
     isSignedWithActiveKey,
   } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1205,6 +1217,7 @@ actions.delegate = async (payload) => {
         && api.assert(token.delegationEnabled === true, 'delegation not enabled')
         && api.assert(finalTo !== api.sender, 'cannot delegate to yourself')
         && api.assert(api.BigNumber(quantity).gt(0), 'must delegate positive quantity')) {
+        quantity = api.BigNumber(quantity).toFixed(token.precision);
         const balanceFrom = await api.db.findOne('balances', { account: api.sender, symbol });
 
         if (api.assert(balanceFrom !== null, 'balanceFrom does not exist')
@@ -1362,10 +1375,10 @@ actions.delegate = async (payload) => {
 actions.undelegate = async (payload) => {
   const {
     symbol,
-    quantity,
     from,
     isSignedWithActiveKey,
   } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1382,6 +1395,7 @@ actions.undelegate = async (payload) => {
         && api.assert(token.delegationEnabled === true, 'delegation not enabled')
         && api.assert(finalFrom !== api.sender, 'cannot undelegate from yourself')
         && api.assert(api.BigNumber(quantity).gt(0), 'must undelegate positive quantity')) {
+        quantity = api.BigNumber(quantity).toFixed(token.precision);
         const balanceTo = await api.db.findOne('balances', { account: api.sender, symbol });
 
         if (api.assert(balanceTo !== null, 'balanceTo does not exist')

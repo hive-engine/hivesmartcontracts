@@ -46,7 +46,7 @@ const tokenTransferVerified = ({ transaction, from, fromType, to, toType, quanti
       && el.data.symbol === UTILITY_TOKEN_SYMBOL
       && el.data.from === from
       && el.data.to === to
-      && el.data.quantity === quantity) !== undefined) {
+      && api.BigNumber(el.data.quantity).eq(quantity)) !== undefined) {
     return true;
   }
   return false;

@@ -80,7 +80,7 @@ actions.withdraw = async (payload) => {
       const res = await api.executeSmartContract('tokens', 'transfer', { symbol: 'SWAP.HIVE', quantity, to: api.owner });
 
       if (res.errors === undefined
-        && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transfer' && el.data.from === api.sender && el.data.to === api.owner && el.data.quantity === quantity && el.data.symbol === 'SWAP.HIVE') !== undefined) {
+        && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transfer' && el.data.from === api.sender && el.data.to === api.owner && api.BigNumber(el.data.quantity).eq(quantity) && el.data.symbol === 'SWAP.HIVE') !== undefined) {
         // withdrawal
         let memo = `withdrawal tx ${api.transactionId}`;
 
