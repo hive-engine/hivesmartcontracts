@@ -15,6 +15,7 @@ actions.createSSC = async () => {
     params.denyMaxTx = 1;
     params.multiTransactionFee = '0.001';
     params.burnSymbol = 'BEED';
+    params.allowlistBurnFee = '10';
 
     await api.db.insert('params', params);
   }
@@ -37,6 +38,7 @@ actions.updateParams = async (payload) => {
     multiTransactionFee,
     burnSymbol,
     denyMaxTx,
+    allowlistBurnFee
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -67,6 +69,14 @@ actions.updateParams = async (payload) => {
     const token = await api.db.findOneInTable('tokens', 'tokens', { symbol: burnSymbol });
     if (!api.assert(token, 'burnSymbol not available')) { return; }
     params.burnSymbol = burnSymbol;
+  }
+
+  if (allowlistBurnFee) {
+    const allowCostsBN = api.BigNumber(allowlistBurnFee);
+    if (!api.assert(typeof allowlistBurnFee === 'string' && !allowCostsBN.isNaN() && allowCostsBN.gte(0) && allowCostsBN.isFinite(), 'invalid allowlistBurnFee')) {
+      return;
+    }
+    params.allowlistBurnFee = allowlistBurnFee;
   }
 
   await api.db.update('params', params);
@@ -143,6 +153,19 @@ const transferIsSuccessful = (result, action, from, to, symbol, quantity) => res
     && el.data.to === to
     && api.BigNumber(el.data.quantity).eq(quantity)
     && el.data.symbol === symbol) !== undefined;
+  
+const isStillAllowed = (accountControls) => {
+  if (!accountControls || !accountControls.isAllowed) 
+    return false;
+
+  if (!accountControls.allowedUntil) 
+    return false;
+
+  const date = new Date(`${api.hiveBlockTimestamp}.000Z`);
+  const nowEpochMs = date.getTime();
+
+  return nowEpochMs < accountControls.allowedUntil;
+}
 
 actions.burnFee = async (payload) => {
   const { sender } = api;
@@ -175,7 +198,14 @@ actions.burnFee = async (payload) => {
 
   // no burn needed for any acc on allowList
   if (accountControls && accountControls.isAllowed) {
-    return;
+    if (isStillAllowed(accountControls))
+      return;
+
+    accountControls.isAllowed = false;
+    api.emit('allowListSubscriptionExpired', {
+      from: api.sender,
+    });
+    await api.db.update('accountControls', accountControls);
   }
 
   // for non market/marketpools, omit burn, but enforce 20 action limit
@@ -196,4 +226,41 @@ actions.burnFee = async (payload) => {
   api.emit('burnFee', {
     from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.multiTransactionFee,
   });
+};
+
+actions.subscribe = async (payload) => {
+  const { sender } = api;
+  if (sender === 'null' || sender == null) return;
+
+  const table = 'accountControls';
+  const burnParams = await api.db.findOne('params', {});
+  let accountControl = await api.db.findOne(table, { account: sender });
+  const create = !accountControl;
+
+  api.assert(!accountControl || !accountControl.isDenied, 'cannot be purchased as long as you are throttled.');
+
+  const stillAllowed = isStillAllowed(accountControl);
+  api.assert(!stillAllowed, 'can only be purchased once a month.');
+
+  const feeTransfer = await api.executeSmartContract('tokens', 'transfer', {
+    to: 'null', symbol: burnParams.burnSymbol, quantity: burnParams.allowlistBurnFee, isSignedWithActiveKey: true,
+  });
+
+  api.assert(transferIsSuccessful(feeTransfer, 'transfer', api.sender, 'null', burnParams.burnSymbol, burnParams.allowlistBurnFee), 'not enough tokens for allowList fee');
+
+  const date = new Date(`${api.hiveBlockTimestamp}.000Z`);
+  date.setDate(date.getDate() + 30);
+
+  if (!accountControl) accountControl = { account: sender, isDenied: false, isAllowed: true };
+
+  accountControl.allowedUntil = date.getTime();
+  accountControl.isAllowed = true;
+
+  if (create) await api.db.insert(table, accountControl);
+  else await api.db.update(table, accountControl);
+
+  api.emit('subscribe', {
+    from: api.sender, to: 'null', symbol: burnParams.burnSymbol, fee: burnParams.allowlistBurnFee, subscribedUntil: accountControl.allowedUntil,
+  });
+
 };

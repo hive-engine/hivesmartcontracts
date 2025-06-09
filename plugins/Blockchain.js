@@ -30,9 +30,28 @@ const createGenesisBlock = async (payload) => {
     genesisTransactions.unshift(new Transaction(genesisHiveBlock, 0, 'null', 'null', 'null', JSON.stringify({ chainId, genesisHiveBlock })));
 
     genesisBlock = new Block('2018-06-01T00:00:00', 0, '', '', genesisTransactions, -1, '0');
-    await genesisBlock.produceBlock(database, javascriptVMTimeout);
 
-    await database.insertGenesisBlock(genesisBlock);
+    log.info(`Start session for genesis block`);
+    const session = database.startSession();
+    try {
+      await session.withTransaction(async (liveSession) => {
+        try {
+          await genesisBlock.produceBlock(database, javascriptVMTimeout);
+
+          await database.insertGenesisBlock(genesisBlock);
+        } catch (e) {
+          // Log and rethrow as generic Error to prevent any transactional retry
+          log.warn(e);
+          throw new Error("Error while procesing block");
+        }
+      });
+    } catch (e) {
+      log.warn(e);
+      throw e;
+    } finally {
+      log.info(`End session for genesis block`);
+      await database.endSession();
+    }
   }
 };
 
