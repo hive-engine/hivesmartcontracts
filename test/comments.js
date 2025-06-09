@@ -318,52 +318,26 @@ async function runBeneficiaryTest(options) {
 describe('comments', function () {
   this.timeout(10000);
 
-  before((done) => {
-    new Promise(async (resolve) => {
+  before(async () => {
       client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
       db = await client.db(conf.databaseName);
       await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
   
-  after((done) => {
-    new Promise(async (resolve) => {
+  after(async () => {
       await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
+  beforeEach(async () => {
       db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  afterEach((done) => {
-      // runs after each test in this block
-      new Promise(async (resolve) => {
+  afterEach(async () => {
         fixture.tearDown();
         await db.dropDatabase()
-        resolve();
-      })
-        .then(() => {
-          done()
-        })
   });
 
-  it('should create reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('should create reward pool', async () => {
       await fixture.setUp();
 
       let transactions = [];
@@ -432,17 +406,9 @@ describe('comments', function () {
 
       // fee not paid
       await tableAsserts.assertUserBalances({account: CONSTANTS.HIVE_ENGINE_ACCOUNT, symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, balance: hiveEngineBeeBalance.balance, stake: "0"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not create reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('should not create reward pool', async () => {
       await fixture.setUp();
 
       let transactions = [];
@@ -607,17 +573,9 @@ describe('comments', function () {
       assertError(txs[60], 'rewardReductionPercentage should be between "0" and "100" with precision at most 1');
       // 61 successfully creates token, testing for token dupe pools
       assertError(txs[62], 'cannot create multiple reward pools per token');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should update reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('should update reward pool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -689,17 +647,9 @@ describe('comments', function () {
 
       // check no fee
       await tableAsserts.assertUserBalances({account: CONSTANTS.HIVE_ENGINE_ACCOUNT, symbol: CONSTANTS.UTILITY_TOKEN_SYMBOL, balance: hiveEngineBeeBalance.balance, stake: "0"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not update reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('should not update reward pool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -841,17 +791,9 @@ describe('comments', function () {
       assertError(txs[59], 'rewardReductionPercentage should be between "0" and "100" with precision at most 1');
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"disableDownvote":false,"ignoreDeclinePayout":false},"pendingClaims":"0","active":true});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not setMute', (done) => {
-    new Promise(async (resolve) => {
+  it('should not setMute', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -880,17 +822,9 @@ describe('comments', function () {
       assertError(txs[2], 'mute must be a boolean');
       assertError(txs[3], 'mute must be a boolean');
       assertError(txs[4], 'must be issuer of token');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should setMute', (done) => {
-    new Promise(async (resolve) => {
+  it('should setMute', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -912,17 +846,9 @@ describe('comments', function () {
 
       const vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'author', rewardPoolId: 1}});
       assert(vp.mute);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not setPostMute', (done) => {
-    new Promise(async (resolve) => {
+  it('should not setPostMute', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -955,17 +881,9 @@ describe('comments', function () {
       assertError(txs[4], 'mute must be a boolean');
       assertError(txs[5], 'mute must be a boolean');
       assertError(txs[6], 'must be issuer of token');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('does not pay for muted post', (done) => {
-    new Promise(async (resolve) => {
+  it('does not pay for muted post', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1"});
@@ -1031,17 +949,9 @@ describe('comments', function () {
       assert.equal(post, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not resetPool', (done) => {
-    new Promise(async (resolve) => {
+  it('should not resetPool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1066,17 +976,9 @@ describe('comments', function () {
       assertError(txs[0], 'operation must be signed with your active key');
       assertError(txs[1], 'reward pool not found');
       assertError(txs[2], 'must be issuer of token');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should resetPool', (done) => {
-    new Promise(async (resolve) => {
+  it('should resetPool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1126,17 +1028,9 @@ describe('comments', function () {
       expectedRewardPool.lastRewardTimestamp = 1528416000000;
       expectedRewardPool.createdTimestamp = 1528416000000;
       await assertPool(expectedRewardPool);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should deactivate and reactivate reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('should deactivate and reactivate reward pool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1174,17 +1068,9 @@ describe('comments', function () {
       await tableAsserts.assertNoErrorInLastBlock();
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not deactivate reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('should not deactivate reward pool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1211,17 +1097,9 @@ describe('comments', function () {
       assertError(txs[2], 'must be issuer of token')
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":true});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not process reward pool when inactive', (done) => {
-    new Promise(async (resolve) => {
+  it('should not process reward pool when inactive', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1271,17 +1149,9 @@ describe('comments', function () {
       assert.equal(res.transactions[2].logs, "{}");
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0","lastRewardTimestamp":1527811200000,"lastClaimDecayTimestamp":1527811200000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0","active":false});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not create comment', (done) => {
-    new Promise(async (resolve) => {
+  it('should not create comment', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1309,17 +1179,9 @@ describe('comments', function () {
 
       const posts = await fixture.database.find({ contract: 'comments', table: 'posts', query: {}});
       assert.equal(posts.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not reactivate comment after payout', (done) => {
-    new Promise(async (resolve) => {
+  it('should not reactivate comment after payout', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1387,17 +1249,9 @@ describe('comments', function () {
 
       posts = await fixture.database.find({ contract: 'comments', table: 'posts', query: {}});
       assert.equal(JSON.stringify(posts), '[]');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should fall back to post if metadata not present', (done) => {
-    new Promise(async (resolve) => {
+  it('should fall back to post if metadata not present', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1430,17 +1284,9 @@ describe('comments', function () {
       assert.equal(postMetadata, null);
       postMetadata = await fixture.database.findOne({ contract: 'comments', table: 'postMetadata', query: { authorperm: "@author1/re-test1" }});
       assert.equal(JSON.stringify(postMetadata), '{"_id":{"authorperm":"@author1/re-test1"},"authorperm":"@author1/re-test1","rewardPoolIds":[1]}');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not vote', (done) => {
-    new Promise(async (resolve) => {
+  it('should not vote', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1477,17 +1323,9 @@ describe('comments', function () {
 
       let votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1"}});
       assert.equal(votes.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays out voted post n^1, curation n^0.5', (done) => {
-    new Promise(async (resolve) => {
+  it('pays out voted post n^1, curation n^0.5', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "0.5"});
@@ -1580,7 +1418,7 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       // ratio between author rewards should satisfy rshares1^a / rshares2^a ~ payout1 / payout2
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"27194.59082809"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"48406.37167400"}}');
@@ -1599,17 +1437,9 @@ describe('comments', function () {
       assert.equal(post2, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499582","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"55.5992921371","active":true,"intervalPendingClaims":"55.5992921371","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays out voted post n^1.03, curation n^0.7', (done) => {
-    new Promise(async (resolve) => {
+  it('pays out voted post n^1.03, curation n^0.7', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.7"});
@@ -1702,7 +1532,7 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       // ratio between author rewards should satisfy rshares1^a / rshares2^a ~ payout1 / payout2
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"26894.12143368"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"48706.84106812"}}');
@@ -1721,17 +1551,9 @@ describe('comments', function () {
       assert.equal(post2, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('vote past payout is ignored', (done) => {
-    new Promise(async (resolve) => {
+  it('vote past payout is ignored', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1"});
@@ -1787,17 +1609,9 @@ describe('comments', function () {
       assert.equal(res.transactions[1].logs, "{}");
       let vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 1}});
       assert(vp == null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('second vote ignores curation', (done) => {
-    new Promise(async (resolve) => {
+  it('second vote ignores curation', async () => {
       await fixture.setUp();
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.5"});
 
@@ -1893,7 +1707,7 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       // ratio between author rewards should satisfy rshares1^a / rshares2^a ~ payout1 / payout2
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"12663.08250736"}}');
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'curationReward' && ev.data.authorperm === '@author1/test1' && ev.data.account === 'voter1'), undefined);
@@ -1905,17 +1719,9 @@ describe('comments', function () {
       assert.equal(post, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"277073.83498528","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"11.6943264346","active":true,"intervalPendingClaims":"11.6943264346","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
- it('successfully downvotes', (done) => {
-    new Promise(async (resolve) => {
+ it('successfully downvotes', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.7"});
@@ -2003,7 +1809,7 @@ describe('comments', function () {
       await tableAsserts.assertNoErrorInLastBlock();
 
       res = await fixture.database.getLatestBlockInfo();
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'newVote')), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"-10.0000000000"}}');
       vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527897600000,"votingPower":10000,"downvotingPower":8000}');
@@ -2037,7 +1843,7 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       // ratio between author rewards should satisfy rshares1^a / rshares2^a ~ payout1 / payout2
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"0.00000000"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"0.00000000"}}');
@@ -2056,17 +1862,9 @@ describe('comments', function () {
       assert.equal(post2, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"3.0376631067","active":true,"intervalPendingClaims":"3.0376631067","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('applies disableDownvote', (done) => {
-    new Promise(async (resolve) => {
+  it('applies disableDownvote', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.7", disableDownvote: true});
@@ -2154,7 +1952,7 @@ describe('comments', function () {
       await tableAsserts.assertNoErrorInLastBlock();
 
       res = await fixture.database.getLatestBlockInfo();
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'newVote')), '{"contract":"comments","event":"newVote","data":{"rewardPoolId":1,"symbol":"TKN","rshares":"0"}}');
       vp2 = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter2', rewardPoolId: 1}});
       assert.equal(JSON.stringify(vp2), '{"_id":{"rewardPoolId":1,"account":"voter2"},"rewardPoolId":1,"account":"voter2","lastVoteTimestamp":1527897600000,"votingPower":10000,"downvotingPower":10000}');
@@ -2188,7 +1986,7 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       // ratio between author rewards should satisfy rshares1^a / rshares2^a ~ payout1 / payout2
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"24886.91876912"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test2')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test2","symbol":"TKN","account":"author1","quantity":"50715.00624649"}}');
@@ -2207,17 +2005,9 @@ describe('comments', function () {
       assert.equal(post2, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151196.14996879","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"6.0754809144","active":true,"intervalPendingClaims":"6.0754809144","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('voting repeatedly decays as expected', (done) => {
-    new Promise(async (resolve) => {
+  it('voting repeatedly decays as expected', async () => {
       await fixture.setUp();
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.5", voteRegenerationDays: 5, downvoteRegenerationDays: 10, cashoutWindowDays: 14});
 
@@ -2325,17 +2115,9 @@ describe('comments', function () {
       vp = await fixture.database.findOne({ contract: 'comments', table: 'votingPower', query: { account: 'voter1', rewardPoolId: 1}});
 
       assert.equal(JSON.stringify(vp), '{"_id":{"rewardPoolId":1,"account":"voter1"},"rewardPoolId":1,"account":"voter1","lastVoteTimestamp":1528675200000,"votingPower":9999,"downvotingPower":10000}');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('create comment with two reward pools', (done) => {
-    new Promise(async (resolve) => {
+  it('create comment with two reward pools', async () => {
       await fixture.setUp();
       let transactions = [];
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2400,17 +2182,9 @@ describe('comments', function () {
       assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"ABC","authorperm":"@author1/test1","weight":10000,"rshares":"50.0000000000","curationWeight":"50.0000000000","timestamp":1527811200000,"voter":"voter1"}]');
       let votes2 = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 2, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(votes2), '[{"_id":{"rewardPoolId":2,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":2,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"10.0000000000","curationWeight":"3.1622776601","timestamp":1527811200000,"voter":"voter1"}]');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('create comment and reply with two reward pools using tags', (done) => {
-    new Promise(async (resolve) => {
+  it('create comment and reply with two reward pools using tags', async () => {
       await fixture.setUp();
       let transactions = [];
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2493,17 +2267,9 @@ describe('comments', function () {
       assert.equal(reply, null);
       reply2 = await fixture.database.findOne({ contract: 'comments', table: 'posts', query: { rewardPoolId: 2, authorperm: "@author4/excluded" }});
       assert.equal(reply2, null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('voting power reflects delegations', (done) => {
-    new Promise(async (resolve) => {
+  it('voting power reflects delegations', async () => {
       await fixture.setUp();
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.5"});
 
@@ -2548,17 +2314,9 @@ describe('comments', function () {
 
       let votes = await fixture.database.find({ contract: 'comments', table: 'votes', query: { rewardPoolId: 1, authorperm: "@author1/test1" }});
       assert.equal(JSON.stringify(votes), '[{"_id":{"rewardPoolId":1,"authorperm":"@author1/test1","voter":"voter1"},"rewardPoolId":1,"symbol":"TKN","authorperm":"@author1/test1","weight":10000,"rshares":"60.0000000000","curationWeight":"7.7459666924","timestamp":1527811200000,"voter":"voter1"}]');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays out maxPostsProcessedPerRound and respects voteQueryLimit', (done) => {
-    new Promise(async (resolve) => {
+  it('pays out maxPostsProcessedPerRound and respects voteQueryLimit', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1.03", curationRewardCurveParameter: "0.7"});
@@ -2669,7 +2427,7 @@ describe('comments', function () {
       await fixture.sendBlock(block);
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       // reward pool should be 302400, calc will be ~ 10^1.03  / (30.1203427857*(1 - 3/(15*24*3600)) + 10^1.03 + 17.8^1.03) * 302400 * 0.5
       // ~26894.12143379302 (rounding affects result)
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"26894.12143368"}}');
@@ -2752,7 +2510,7 @@ describe('comments', function () {
 
       await tableAsserts.assertUserBalances({account: "author1", symbol: "TKN", balance: "25621.33564182", stake: "25621.33564182"});
       await tableAsserts.assertUserBalances({account: "bene1", symbol: "TKN", balance: "12176.71026703", stake: "12176.71026703"});
-      await tableAsserts.assertUserBalances({account: "bene2", symbol: "TKN", balance: "2.4353421", stake: "2.43534200"});
+      await tableAsserts.assertUserBalances({account: "bene2", symbol: "TKN", balance: "2.43534210", stake: "2.43534200"});
       await tableAsserts.assertUserBalances({account: "voter1", symbol: "TKN", balance: "29484.10098072", stake: "29494.10098071"});
       await tableAsserts.assertUserBalances({account: "voter2", symbol: "TKN", balance: "8316.38027018", stake: "8326.38027018"});
 
@@ -2780,17 +2538,9 @@ describe('comments', function () {
 
       // check that lastClaimDecayTimestamp has advanced
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499640","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.7","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"60.2413130878","active":true,"intervalPendingClaims":"60.2413130878","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('processes maintenanceTokensPerBlock per block', (done) => {
-    new Promise(async (resolve) => {
+  it('processes maintenanceTokensPerBlock per block', async () => {
       await fixture.setUp();
       let transactions = [];
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2942,7 +2692,7 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'ABC')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"ABC","quantity":"0.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'ABC')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"ABC","quantity":"0.5000"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1' && ev.data.symbol === 'ABC')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":1,"authorperm":"@author1/test1","symbol":"ABC","account":"author1","quantity":"6300.0875"}}');
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN'), undefined);
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1' && ev.data.symbol === 'TKN'), undefined);
@@ -2968,50 +2718,25 @@ describe('comments', function () {
 
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'ABC'), undefined);
       assert.equal(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1' && ev.data.symbol === 'ABC'), undefined);
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.5"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"1.50000000"}}');
       assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'authorReward' && ev.data.authorperm === '@author1/test1' && ev.data.symbol === 'TKN')), '{"contract":"comments","event":"authorReward","data":{"rewardPoolId":2,"authorperm":"@author1/test1","symbol":"TKN","account":"author1","quantity":"75600.61250209"}}');
       assert.equal(JSON.parse(res.transactions[1].logs).events, undefined);
 
       await assertPool({"_id":1,"symbol":"ABC","rewardPool":"25199.6500","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"2","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":75,"cashoutWindowDays":7,"rewardPerInterval":"0.5","rewardIntervalSeconds":6,"voteRegenerationDays":5,"downvoteRegenerationDays":5,"stakedRewardPercentage":50,"votePowerConsumption":300,"downvotePowerConsumption":1000,"tags":["scottest"]},"pendingClaims":"4999.9305563590","active":true,"intervalPendingClaims":"4999.9305563590","intervalRewardPool":"50400.0000"});
       await assertPool({"_id":2,"symbol":"TKN","rewardPool":"151198.77499582","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1.03","curationRewardCurve":"power","curationRewardCurveParameter":"0.5","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"21.4302124796","active":true,"intervalPendingClaims":"21.4302124796","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays beneficiary', (done) => {
-    new Promise(async (resolve) => {
+  it('pays beneficiary', async () => {
       await fixture.setUp();
-
       await runBeneficiaryTest({});
-      
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays beneficiary with all muted users', (done) => {
-    new Promise(async (resolve) => {
+  it('pays beneficiary with all muted users', async () => {
       await fixture.setUp();
-
       await runBeneficiaryTest({ muteAll: true });
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays beneficiary with app tax', (done) => {
-    new Promise(async (resolve) => {
+  it('pays beneficiary with app tax', async () => {
       await fixture.setUp();
 
       await runBeneficiaryTest({ appTaxConfig: {
@@ -3019,16 +2744,9 @@ describe('comments', function () {
           percent: 50,
           beneficiary: "neoxianburn",
       }});
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays beneficiary with 100% app tax', (done) => {
-    new Promise(async (resolve) => {
+  it('pays beneficiary with 100% app tax', async () => {
       await fixture.setUp();
 
       await runBeneficiaryTest({ appTaxConfig: {
@@ -3036,33 +2754,19 @@ describe('comments', function () {
           percent: 100,
           beneficiary: "neoxianburn",
       }});
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('pays beneficiary with exempt app tax', (done) => {
-    new Promise(async (resolve) => {
+  it('pays beneficiary with exempt app tax', async () => {
       await fixture.setUp();
 
       await runBeneficiaryTest({ appTaxConfig: {
           app: "neoxiancity",
           percent: 50,
           beneficiary: "neoxianburn",
-      }, appTaxExempt: true});
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+      }});
   });
 
-  it('does not pay for post declined payout', (done) => {
-    new Promise(async (resolve) => {
+  it('does not pay for post declined payout', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1"});
@@ -3128,17 +2832,9 @@ describe('comments', function () {
       assert.equal(post, null);
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"302400.00000000","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('ignores declined payout with ignoreDeclinePayout', (done) => {
-    new Promise(async (resolve) => {
+  it('ignores declined payout with ignoreDeclinePayout', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1", ignoreDeclinePayout: true});
@@ -3206,17 +2902,9 @@ describe('comments', function () {
 
       rewardPool = await fixture.database.findOne({ contract: 'comments', table: 'rewardPools', query: { _id: 1}});
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"151198.07499387","lastRewardTimestamp":1528416000000,"lastClaimDecayTimestamp":1528416000000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"1.5","rewardIntervalSeconds":3,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"19.9997453728","active":true,"intervalPendingClaims":"19.9997453728","intervalRewardPool":"302400.00000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('inserts correct amount to reward pool', (done) => {
-    new Promise(async (resolve) => {
+  it('inserts correct amount to reward pool', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1", "rewardPerInterval": "0.01", "rewardIntervalSeconds": 6});
@@ -3264,23 +2952,15 @@ describe('comments', function () {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.01"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.01000000"}}');
 
       contractBalance = await fixture.database.findOne({ contract: 'tokens', table: 'contractsBalances', query: { "account": "comments", "symbol": "TKN" }});
-      assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.01","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
+      assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.01000000","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0.01000000","lastRewardTimestamp":1527811206000,"lastClaimDecayTimestamp":1527811206000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.01","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"]},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"0.01000000"});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-it('inserts correct amount to reward pool with reduction', (done) => {
-    new Promise(async (resolve) => {
+it('inserts correct amount to reward pool with reduction', async () => {
       await fixture.setUp();
 
       await setUpRewardPool({ postRewardCurveParameter: "1", curationRewardCurveParameter: "1", "rewardPerInterval": "0.01", "rewardIntervalSeconds": 6, "rewardReductionPercentage": "0.5", "rewardReductionIntervalSeconds": 12});
@@ -3328,10 +3008,10 @@ it('inserts correct amount to reward pool with reduction', (done) => {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.01"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.01000000"}}');
 
       contractBalance = await fixture.database.findOne({ contract: 'tokens', table: 'contractsBalances', query: { "account": "comments", "symbol": "TKN" }});
-      assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.01","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
+      assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.01000000","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0.01000000","lastRewardTimestamp":1527811206000,"lastClaimDecayTimestamp":1527811206000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.01","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"rewardReductionPercentage":"0.5","rewardReductionIntervalSeconds":12},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"0.01000000","lastRewardReductionTimestamp":1527811200000});
 
@@ -3352,7 +3032,7 @@ it('inserts correct amount to reward pool with reduction', (done) => {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.00995"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.00995000"}}');
 
       contractBalance = await fixture.database.findOne({ contract: 'tokens', table: 'contractsBalances', query: { "account": "comments", "symbol": "TKN" }});
       assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.01995000","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
@@ -3376,18 +3056,11 @@ it('inserts correct amount to reward pool with reduction', (done) => {
       res = await fixture.database.getLatestBlockInfo();
       await tableAsserts.assertNoErrorInLastBlock();
 
-      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.00995"}}');
+      assert.equal(JSON.stringify(JSON.parse(res.transactions[0].logs).events.find(ev => ev.event === 'issueToContract' && ev.data.symbol === 'TKN')), '{"contract":"tokens","event":"issueToContract","data":{"from":"tokens","to":"comments","symbol":"TKN","quantity":"0.00995000"}}');
 
       contractBalance = await fixture.database.findOne({ contract: 'tokens', table: 'contractsBalances', query: { "account": "comments", "symbol": "TKN" }});
       assert.equal(JSON.stringify(contractBalance), '{"_id":1,"account":"comments","symbol":"TKN","balance":"0.02990000","stake":"0","pendingUnstake":"0","delegationsIn":"0","delegationsOut":"0","pendingUndelegations":"0"}');
 
       await assertPool({"_id":1,"symbol":"TKN","rewardPool":"0.02990000","lastRewardTimestamp":1527811218000,"lastClaimDecayTimestamp":1527811218000,"createdTimestamp":1527811200000,"config":{"postRewardCurve":"power","postRewardCurveParameter":"1","curationRewardCurve":"power","curationRewardCurveParameter":"1","curationRewardPercentage":50,"cashoutWindowDays":7,"rewardPerInterval":"0.00995000","rewardIntervalSeconds":6,"voteRegenerationDays":14,"downvoteRegenerationDays":14,"stakedRewardPercentage":50,"votePowerConsumption":200,"downvotePowerConsumption":2000,"tags":["scottest"],"rewardReductionPercentage":"0.5","rewardReductionIntervalSeconds":12},"pendingClaims":"0.0000000000","active":true,"intervalPendingClaims":"0.0000000000","intervalRewardPool":"0.02990000","lastRewardReductionTimestamp":1527811212000});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 });

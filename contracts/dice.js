@@ -31,7 +31,7 @@ actions.roll = async (payload) => {
 
       // check if the tokens were locked
       if (res.errors === undefined
-        && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === api.sender && el.data.to === CONTRACT_NAME && el.data.quantity === amount && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+        && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === api.sender && el.data.to === CONTRACT_NAME && api.BigNumber(el.data.quantity).eq(amount) && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
         // get a deterministic random number
         const random = api.random();
 

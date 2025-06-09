@@ -130,52 +130,26 @@ async function setUpEnv(configOverride = {}) {
 describe('distribution', function () {
   this.timeout(10000);
 
-  before((done) => {
-    new Promise(async (resolve) => {
+  before(async () => {
       client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
       db = await client.db(conf.databaseName);
       await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
   
-  after((done) => {
-    new Promise(async (resolve) => {
+  after(async () => {
       await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
+  beforeEach(async () => {
       db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  afterEach((done) => {
-      // runs after each test in this block
-      new Promise(async (resolve) => {
-        fixture.tearDown();
-        await db.dropDatabase()
-        resolve();
-      })
-        .then(() => {
-          done()
-        })
+  afterEach(async () => {
+      fixture.tearDown();
+      await db.dropDatabase()
   });
 
-  it('should not create invalid distribution', (done) => {
-    new Promise(async (resolve) => {
+  it('should not create invalid distribution', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -244,17 +218,9 @@ describe('distribution', function () {
       });
   
       assert.ok(!res, 'invalid distribution created');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should create valid distribution', (done) => {
-    new Promise(async (resolve) => {
+  it('should create valid distribution', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -285,17 +251,10 @@ describe('distribution', function () {
       });
       assert.ok(res.length === 2, 'newly created distribution not found');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });
 
-  it('should not set distribution active', (done) => {
-    new Promise(async (resolve) => {
+  it('should not set distribution active', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -342,16 +301,9 @@ describe('distribution', function () {
       assertError(txs[1], 'distribution id not found');
       assertError(txs[2], 'you must be the creator of this distribution');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not update invalid distribution', (done) => {
-    new Promise(async (resolve) => {
+  it('should not update invalid distribution', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -428,16 +380,9 @@ describe('distribution', function () {
       assertError(txs[15], 'invalid bonusCurve settings');
       assertError(txs[16], 'invalid bonusCurve settings');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should update distribution', (done) => {
-    new Promise(async (resolve) => {
+  it('should update distribution', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -492,16 +437,9 @@ describe('distribution', function () {
       assert.strictEqual(res[0].tokenRecipients.length, 2, 'distribution recipient addition not updated');
       assert.strictEqual(res[1].excludeAccount[0], 'donchate', 'excludeAccount not updated');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not accept deposits when inactive or invalid', (done) => {
-    new Promise(async (resolve) => {
+  it('should not accept deposits when inactive or invalid', async () => {
       await fixture.setUp();
       await setUpEnv();
 
@@ -544,7 +482,7 @@ describe('distribution', function () {
       assertError(txs[0], 'distribution must be active to deposit');
 
       // should still be as initialized
-      await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKN', balance: '500'});
+      await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKN', balance: '500.00000000'});
       await tableAsserts.assertUserBalances({ account: 'dantheman', symbol: 'TKN'});
 
       refBlockNumber = fixture.getNextRefBlockNumber();
@@ -569,19 +507,12 @@ describe('distribution', function () {
       assertError(txs[2], 'invalid quantity');
 
       // should still be as initialized
-      await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKN', balance: '500'});
+      await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKN', balance: '500.00000000'});
       await tableAsserts.assertUserBalances({ account: 'dantheman', symbol: 'TKN'});
      
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
   
-  it('should hold payments on deposit not exceeding tokenMinPayout', (done) => {
-    new Promise(async (resolve) => {
+  it('should hold payments on deposit not exceeding tokenMinPayout', async () => {
       await fixture.setUp();
       await setUpEnv();
 
@@ -629,16 +560,9 @@ describe('distribution', function () {
       // should have tokenBalance
       await assertDistTokenBalance(id, 'TKN', 5);
       
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should flush fixed distribution', (done) => {
-    new Promise(async (resolve) => {
+  it('should flush fixed distribution', async () => {
       await fixture.setUp();
       await setUpEnv();
 
@@ -686,16 +610,9 @@ describe('distribution', function () {
       // contract should be flushed
       await assertDistTokenBalance(id, 'TKN', 0);
       
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should flush pool distribution', (done) => {
-    new Promise(async (resolve) => {
+  it('should flush pool distribution', async () => {
       await fixture.setUp();
       await setUpEnv();
 
@@ -757,16 +674,9 @@ describe('distribution', function () {
       await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3080.90909090'});
       await assertDistTokenBalance(1, 'TKNA', '0.00000001');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });  
 
-  it('should tick fixed strategy batches', (done) => {
-    new Promise(async (resolve) => {
+  it('should tick fixed strategy batches', async () => {
       await fixture.setUp();
       await setUpEnv();
 
@@ -832,16 +742,9 @@ describe('distribution', function () {
       // contract should be flushed
       await assertDistTokenBalance(id, 'TKN', 0);
       
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should tick pool strategy batches', (done) => {
-    new Promise(async (resolve) => {
+  it('should tick pool strategy batches', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -939,17 +842,10 @@ describe('distribution', function () {
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '2999.99999999'});
       await assertDistTokenBalance(1, 'TKNA', '93.33333336');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });
 
-  it('should limit number of transfers per block', (done) => {
-    new Promise(async (resolve) => {
+  it('should limit number of transfers per block', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -1062,17 +958,10 @@ describe('distribution', function () {
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '999.50000000'});
       await assertDistTokenBalance(1, 'TKNA', '0.00000002');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });
 
-  it('should apply bonus curve', (done) => {
-    new Promise(async (resolve) => {
+  it('should apply bonus curve', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -1134,7 +1023,7 @@ describe('distribution', function () {
 
       await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKNA', balance: '1900.00000000'});
       await tableAsserts.assertUserBalances({ account: 'investor', symbol: 'TKNA', balance: '1999.66666666'});
-      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000'});
+      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000.00000000'});
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '999.83333333'});
       await assertDistTokenBalance(1, 'TKNA', '99.00000001');
 
@@ -1196,17 +1085,10 @@ describe('distribution', function () {
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '1000.21127471'});
       await assertDistTokenBalance(1, 'TKNA', '97.00000003');      
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });
 
-  it('should accept deposits from DTF', (done) => {
-    new Promise(async (resolve) => {
+  it('should accept deposits from DTF', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -1282,17 +1164,10 @@ describe('distribution', function () {
       await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3444.54545454'});
       await assertDistTokenBalance(1, 'TKNA', '500.00000001'); // 1/2 tick + rounding dust
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });  
 
-  it('should apply update 2', (done) => {
-    new Promise(async (resolve) => {
+  it('should apply update 2', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -1383,18 +1258,11 @@ describe('distribution', function () {
       await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '2996.06060606'});
       await assertDistTokenBalance(1, 'TKNA', '93.33333334');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });  
 
 
-  it('should adjust bonus curve', (done) => {
-    new Promise(async (resolve) => {
+  it('should adjust bonus curve', async () => {
 
       await fixture.setUp();
       await setUpEnv();
@@ -1455,7 +1323,7 @@ describe('distribution', function () {
 
       await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKNA', balance: '1900.00000000'});
       await tableAsserts.assertUserBalances({ account: 'investor', symbol: 'TKNA', balance: '1999.66666666'});
-      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000'});
+      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000.00000000'});
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '999.83333333'});
       await assertDistTokenBalance(1, 'TKNA', '99.00000001');
       await assertTimeFactor('investor', 'TKNA:TKNB', '1527811200000');
@@ -1485,7 +1353,7 @@ describe('distribution', function () {
 
       await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKNA', balance: '1900.00000000'});
       await tableAsserts.assertUserBalances({ account: 'investor', symbol: 'TKNA', balance: '1999.46347940'});
-      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000'});
+      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000.00000000'});
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '1000.03652058'});
       await assertDistTokenBalance(1, 'TKNA', '98.00000002');
       await assertTimeFactor('investor', 'TKNA:TKNB', '1527897600000');
@@ -1516,18 +1384,12 @@ describe('distribution', function () {
 
       await tableAsserts.assertUserBalances({ account: 'donchate', symbol: 'TKNA', balance: '1900.00000000'});
       await tableAsserts.assertUserBalances({ account: 'investor', symbol: 'TKNA', balance: '2000.26191384'});
-      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000'});
+      await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'TKNA', balance: '3000.00000000'});
       await tableAsserts.assertUserBalances({ account: 'minnow', symbol: 'TKNA', balance: '1000.23808613'});
       await assertDistTokenBalance(1, 'TKNA', '97.00000003');
       await assertTimeFactor('investor', 'TKNA:TKNB', '1527897600000');
       await assertTimeFactor('minnow', 'TKNA:TKNB', '1527811200000');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
 
   });
   /// END TESTS

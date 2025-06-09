@@ -347,7 +347,7 @@ actions.deposit = async (payload) => {
     // deposit requested tokens to contract
     const res = await api.executeSmartContract('tokens', 'transferToContract', { symbol, quantity, to: 'distribution' });
     if (res.errors === undefined
-      && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === api.sender && el.data.to === 'distribution' && el.data.quantity === quantity) !== undefined) {
+      && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === api.sender && el.data.to === 'distribution' && api.BigNumber(el.data.quantity).eq(quantity)) !== undefined) {
       await updateTokenBalances(dist, depToken, quantity);
       api.emit('deposit', { distId: id, symbol, quantity });
     }

@@ -573,7 +573,7 @@ actions.transfer = async (payload) => {
         if (api.assert(token !== null, 'symbol does not exist')
           && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
           && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
-          quantity = api.BigNumber(quantity).toFixed(token.precision);
+          //quantity = api.BigNumber(quantity).toFixed(token.precision);
           if (await subBalance(api.sender, token, quantity, 'balances')) {
             const res = await addBalance(finalTo, token, quantity, 'balances');
 

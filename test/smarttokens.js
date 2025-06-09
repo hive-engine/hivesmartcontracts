@@ -73,52 +73,26 @@ async function assertParams(key, value) {
 describe('smart tokens', function () {
   this.timeout(10000);
 
-  before((done) => {
-    new Promise(async (resolve) => {
+  before(async () => {
       client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
       db = await client.db(conf.databaseName);
       await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  after((done) => {
-    new Promise(async (resolve) => {
+  after(async () => {
       await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
+  beforeEach(async () => {
       db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  afterEach((done) => {
-      // runs after each test in this block
-      new Promise(async (resolve) => {
+  afterEach(async () => {
         fixture.tearDown();
         await db.dropDatabase()
-        resolve();
-      })
-        .then(() => {
-          done()
-        })
   });
 
-  it('should enable delegation', (done) => {
-    new Promise(async (resolve) => {
+  it('should enable delegation', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -158,17 +132,9 @@ describe('smart tokens', function () {
       assert.equal(token.unstakingCooldown, 7);
       assert.equal(token.delegationEnabled, true);
       assert.equal(token.undelegationCooldown, 7);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not enable delegation', (done) => {
-    new Promise(async (resolve) => {
+  it('should not enable delegation', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -207,17 +173,9 @@ describe('smart tokens', function () {
       assertError(txs[9], 'undelegationCooldown must be an integer between 1 and 18250');
       assertError(txs[10], 'undelegationCooldown must be an integer between 1 and 18250');
       assertError(txs[12], 'delegation already enabled');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should delegate tokens', (done) => {
-    new Promise(async (resolve) => {
+  it('should delegate tokens', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -311,7 +269,7 @@ describe('smart tokens', function () {
       await tableAsserts.assertUserBalances({
           account: 'ned',
           symbol: 'TKN',
-          balance: "100",
+          balance: "100.00000000",
           stake: "0",
           delegationsIn: "0.00000001",
       });
@@ -336,17 +294,9 @@ describe('smart tokens', function () {
       assert.equal(delegations[1].from, 'satoshi');
       assert.equal(delegations[1].to, 'ned');
       assert.equal(delegations[1].quantity, '0.00000001');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not delegate tokens', (done) => {
-    new Promise(async (resolve) => {
+  it('should not delegate tokens', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -406,17 +356,9 @@ describe('smart tokens', function () {
       assert.equal(balance.stake, 0);
       assert.equal(balance.delegationsOut, 0);
       assert.equal(balance.delegationsIn, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should undelegate tokens', (done) => {
-    new Promise(async (resolve) => {
+  it('should undelegate tokens', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -647,17 +589,9 @@ describe('smart tokens', function () {
       blockDate = new Date('2018-06-02T00:00:01.000Z')
       assert.equal(pendingUndelegations[1].completeTimestamp, blockDate.setUTCDate(blockDate.getUTCDate() + 7));
       assert.ok(pendingUndelegations[1].txID);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not undelegate tokens', (done) => {
-    new Promise(async (resolve) => {
+  it('should not undelegate tokens', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -710,17 +644,9 @@ describe('smart tokens', function () {
       assert.equal(JSON.parse(txs[18].logs).errors[0], 'delegation does not exist');
       assert.equal(JSON.parse(txs[20].logs).errors[0], 'overdrawn delegation');
       assert.equal(JSON.parse(txs[21].logs).errors[0], 'cannot undelegate from yourself');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should process the pending undelegations', (done) => {
-    new Promise(async (resolve) => {
+  it('should process the pending undelegations', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -815,17 +741,9 @@ describe('smart tokens', function () {
       assert.equal(event.data.account, 'satoshi');
       assert.equal(event.data.quantity, '0.00000001');
       assert.equal(event.data.symbol, 'TKN');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should enable staking', (done) => {
-    new Promise(async (resolve) => {
+  it('should enable staking', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -859,17 +777,9 @@ describe('smart tokens', function () {
       assert.equal(token.issuer, 'harpagon');
       assert.equal(token.stakingEnabled, true);
       assert.equal(token.unstakingCooldown, 7);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not enable staking', (done) => {
-    new Promise(async (resolve) => {
+  it('should not enable staking', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -917,17 +827,9 @@ describe('smart tokens', function () {
       assert.equal(JSON.parse(txs[6].logs).errors[0], 'must be the issuer');
       assert.equal(JSON.parse(txs[7].logs).errors[0], 'unstakingCooldown must be an integer between 1 and 18250');
       assert.equal(JSON.parse(txs[8].logs).errors[0], 'unstakingCooldown must be an integer between 1 and 18250');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not enable staking again', (done) => {
-    new Promise(async (resolve) => {
+  it('should not enable staking again', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -966,17 +868,9 @@ describe('smart tokens', function () {
       res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
       assertError(txs[4], 'staking already enabled');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should stake tokens', (done) => {
-    new Promise(async (resolve) => {
+  it('should stake tokens', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1080,17 +974,9 @@ describe('smart tokens', function () {
       const token = res;
 
       await assertTotalStaked('0.00000003');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not stake tokens', (done) => {
-    new Promise(async (resolve) => {
+  it('should not stake tokens', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1129,7 +1015,7 @@ describe('smart tokens', function () {
 
       assert.equal(balance.symbol, 'TKN');
       assert.equal(balance.account, 'satoshi');
-      assert.equal(balance.balance, "100");
+      assert.equal(balance.balance, "100.00000000");
       assert.equal(balance.stake, 0);
 
       res = await fixture.database.getLatestBlockInfo();
@@ -1141,17 +1027,9 @@ describe('smart tokens', function () {
       assert.equal(JSON.parse(txs[7].logs).errors[0], 'must stake positive quantity');
       assert.equal(JSON.parse(txs[8].logs).errors[0], 'overdrawn balance');
       assert.equal(JSON.parse(txs[9].logs).errors[0], 'symbol precision mismatch');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should start the unstake process', (done) => {
-    new Promise(async (resolve) => {
+  it('should start the unstake process', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1239,17 +1117,9 @@ describe('smart tokens', function () {
       const blockDate = new Date('2018-06-30T00:02:00.000Z')
       assert.equal(unstake.nextTransactionTimestamp, blockDate.setUTCDate(blockDate.getUTCDate() + 7));
       assert.ok(unstake.txID);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not start the unstake process', (done) => {
-    new Promise(async (resolve) => {
+  it('should not start the unstake process', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1296,19 +1166,11 @@ describe('smart tokens', function () {
 
       assert.equal(balance.symbol, 'TKN');
       assert.equal(balance.account, 'satoshi');
-      assert.equal(balance.balance, "100");
+      assert.equal(balance.balance, "100.00000000");
       assert.equal(balance.stake, 0);
-
-            resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not start the unstake process multi tx', (done) => {
-    new Promise(async (resolve) => {
+  it('should not start the unstake process multi tx', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1367,17 +1229,9 @@ describe('smart tokens', function () {
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
       assert.equal(JSON.parse(txs[0].logs).errors[0], 'overdrawn stake');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should cancel an unstake', (done) => {
-    new Promise(async (resolve) => {
+  it('should cancel an unstake', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1516,17 +1370,9 @@ describe('smart tokens', function () {
       unstake = res;
 
       assert.equal(unstake, null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should cancel a multi tx unstake', (done) => {
-    new Promise(async (resolve) => {
+  it('should cancel a multi tx unstake', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1622,17 +1468,9 @@ describe('smart tokens', function () {
       await assertTotalStaked('0.00000005');
 
       await assertNoPendingUnstake('satoshi2', 'TKN');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not cancel an unstake', (done) => {
-    new Promise(async (resolve) => {
+  it('should not cancel an unstake', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1775,17 +1613,9 @@ describe('smart tokens', function () {
       blockDate = new Date('2018-06-30T00:02:00.000Z')
       assert.equal(unstake.nextTransactionTimestamp, blockDate.setUTCDate(blockDate.getUTCDate() + 7));
       assert.ok(unstake.txID);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should process the pending unstakes', (done) => {
-    new Promise(async (resolve) => {
+  it('should process the pending unstakes', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -1943,17 +1773,9 @@ describe('smart tokens', function () {
       assert.equal(event.data.symbol, 'TKN');
 
       await assertTotalStaked(0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should process the pending unstakes (with multi transactions)', (done) => {
-    new Promise(async (resolve) => {
+  it('should process the pending unstakes (with multi transactions)', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2202,19 +2024,9 @@ describe('smart tokens', function () {
       unstake = res;
 
       assert.equal(unstake, null);
-
-
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not delegate tokens with unstaking', (done) => {
-    new Promise(async (resolve) => {
+  it('should not delegate tokens with unstaking', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2299,13 +2111,5 @@ describe('smart tokens', function () {
       assert.equal(balance.pendingUnstake, '0.00000005');
       assert.equal(balance.delegationsOut, '0.00000002');
       assert.equal(balance.delegationsIn, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
-
 });
