@@ -13,12 +13,12 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const miningContractPayload = setupContractPayload('mining', './contracts/mining.js');
-const distributionContractPayload = setupContractPayload('distribution', './contracts/distribution.js');
-const inflationContractPayload = setupContractPayload('inflation', './contracts/inflation.js');
-const witnessContractPayload = setupContractPayload('witnesses', './contracts/witnesses.js');
-const contractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds.js');
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const miningContractPayload = setupContractPayload('mining', './contracts/mining_minify.js');
+const distributionContractPayload = setupContractPayload('distribution', './contracts/distribution_minify.js');
+const inflationContractPayload = setupContractPayload('inflation', './contracts/inflation_minify.js');
+const witnessContractPayload = setupContractPayload('witnesses', './contracts/witnesses_minify.js');
+const contractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds_minify.js');
 
 function addGovernanceTokenTransactions(fixture, transactions, blockNumber) {
   transactions.push(new Transaction(blockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', `{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}", "precision": 5, "maxSupply": "10000000", "isSignedWithActiveKey": true }`));

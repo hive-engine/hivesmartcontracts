@@ -14,11 +14,11 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds.js');
-const miningContractPayload = setupContractPayload('mining', './contracts/mining.js');
-const witnessContractPayload = setupContractPayload('witnesses', './contracts/witnesses.js');
-const commentsContractPayload = setupContractPayload('comments', './contracts/comments.js', (contractCode) => contractCode.replace(/POST_QUERY_LIMIT = .*;/, 'POST_QUERY_LIMIT = 1;'));
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds_minify.js');
+const miningContractPayload = setupContractPayload('mining', './contracts/mining_minify.js');
+const witnessContractPayload = setupContractPayload('witnesses', './contracts/witnesses_minify.js');
+const commentsContractPayload = setupContractPayload('comments', './contracts/comments_minify.js', (contractCode) => contractCode.replace(/POST_QUERY_LIMIT = .*;/, 'POST_QUERY_LIMIT = 1;'));
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);

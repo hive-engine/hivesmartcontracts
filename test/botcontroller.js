@@ -13,10 +13,10 @@ const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const mktContractPayload = setupContractPayload('market', './contracts/market.js');
-const bcContractPayload = setupContractPayload('botcontroller', './contracts/botcontroller.js');
-const mmContractPayload = setupContractPayload('marketmaker', './contracts/marketmaker.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const mktContractPayload = setupContractPayload('market', './contracts/market_minify.js');
+const bcContractPayload = setupContractPayload('botcontroller', './contracts/botcontroller_minify.js');
+const mmContractPayload = setupContractPayload('marketmaker', './contracts/marketmaker_minify.js');
 
 const fixture = new Fixture();
 const tickBlockOffset = 1; // resource manager in fixture setup

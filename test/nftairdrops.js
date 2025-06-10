@@ -19,9 +19,9 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const nftContractPayload = setupContractPayload('nft', './contracts/nft.js');
-const contractPayload = setupContractPayload('nftairdrops', './contracts/nftairdrops.js');
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const nftContractPayload = setupContractPayload('nft', './contracts/nft_minify.js');
+const contractPayload = setupContractPayload('nftairdrops', './contracts/nftairdrops_minify.js');
 
 // prepare test contract for creating airdrops via another contract
 const testSmartContractCode = `

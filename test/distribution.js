@@ -13,12 +13,12 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const contractPayload = setupContractPayload('distribution', './contracts/distribution.js');
-const marketpoolsPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
-const dtfPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds.js');
-const miningPayload = setupContractPayload('mining', './contracts/mining.js');
-const witnessPayload = setupContractPayload('witnesses', './contracts/witnesses.js');
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const contractPayload = setupContractPayload('distribution', './contracts/distribution_minify.js');
+const marketpoolsPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
+const dtfPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds_minify.js');
+const miningPayload = setupContractPayload('mining', './contracts/mining_minify.js');
+const witnessPayload = setupContractPayload('witnesses', './contracts/witnesses_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);

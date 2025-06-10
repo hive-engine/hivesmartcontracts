@@ -17,8 +17,8 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const contractPayload = setupContractPayload('claimdrops', './contracts/claimdrops.js');
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const contractPayload = setupContractPayload('claimdrops', './contracts/claimdrops_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
