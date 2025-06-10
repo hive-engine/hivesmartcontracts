@@ -13,9 +13,9 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const nftContractPayload = setupContractPayload('nft', './contracts/nft.js');
-const critterContractPayload = setupContractPayload('crittermanager', './contracts/crittermanager.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const nftContractPayload = setupContractPayload('nft', './contracts/nft_minify.js');
+const critterContractPayload = setupContractPayload('crittermanager', './contracts/crittermanager_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);

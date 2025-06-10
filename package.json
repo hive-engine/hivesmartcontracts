@@ -7,7 +7,8 @@
     "start": "node --max-old-space-size=8192 app.js",
     "lint": "eslint .gitignore .",
     "lintfix": "eslint .gitignore . --fix",
-    "test": "./node_modules/mocha/bin/_mocha --forbid-only --recursive --exit",
+    "minify:files": "for file in contracts/*.js; do if expr \"$file\" : '.*_minify\\.js$' >/dev/null; then continue; fi; filename=$(basename \"$file\" .js); terser \"$file\" --keep-fnames -c -o \"contracts/${filename}_minify.js\"; done",
+    "test": "npm run minify:files; ./node_modules/mocha/bin/_mocha --forbid-only --recursive --exit",
     "test0": "./node_modules/mocha/bin/_mocha ./test/hivesmartcontracts.js --exit",
     "test1": "./node_modules/mocha/bin/_mocha ./test/nft.js --exit",
     "test2": "./node_modules/mocha/bin/_mocha ./test/tokens.js --exit",
@@ -69,6 +70,7 @@
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.22.0",
-    "mocha": "^11.1.0"
+    "mocha": "^11.1.0",
+    "terser": "^5.42.0"
   }
 }

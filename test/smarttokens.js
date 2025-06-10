@@ -12,10 +12,10 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const contractPayload = setupContractPayload('tokens', './contracts/tokens.js');
+const contractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
 const oldContractPayload = setupContractPayload('tokens', './contracts/testing/tokens_20200923.js');
-const miningContractPayload = setupContractPayload('mining', './contracts/mining.js');
-const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds.js');
+const miningContractPayload = setupContractPayload('mining', './contracts/mining_minify.js');
+const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);

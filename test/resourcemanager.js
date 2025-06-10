@@ -11,11 +11,11 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const nftContractPayload = setupContractPayload('nft', './contracts/nft.js');
-const mktContractPayload = setupContractPayload('market', './contracts/market.js');
-const rmContractPayload = setupContractPayload('resourcemanager', './contracts/resourcemanager.js');
-const mktPoolContractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const nftContractPayload = setupContractPayload('nft', './contracts/nft_minify.js');
+const mktContractPayload = setupContractPayload('market', './contracts/market_minify.js');
+const rmContractPayload = setupContractPayload('resourcemanager', './contracts/resourcemanager_minify.js');
+const mktPoolContractPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);

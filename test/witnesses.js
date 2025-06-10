@@ -35,12 +35,12 @@ const signPayload = (signingKey, payload, isPayloadSHA256 = false) => {
   return signingKey.sign(buffer).toString();
 };
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const miningContractPayload = setupContractPayload('mining', './contracts/mining.js');
-const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds.js');
-const nftauctionContractPayload = setupContractPayload('nftauction', './contracts/nftauction.js');
-const inflationContractPayload = setupContractPayload('inflation', './contracts/inflation.js');
-const witnessesContractPayload = setupContractPayload('witnesses', './contracts/witnesses.js',
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const miningContractPayload = setupContractPayload('mining', './contracts/mining_minify.js');
+const tokenfundsContractPayload = setupContractPayload('tokenfunds', './contracts/tokenfunds_minify.js');
+const nftauctionContractPayload = setupContractPayload('nftauction', './contracts/nftauction_minify.js');
+const inflationContractPayload = setupContractPayload('inflation', './contracts/inflation_minify.js');
+const witnessesContractPayload = setupContractPayload('witnesses', './contracts/witnesses_minify.js',
   (contractCode) => contractCode.replace(/NB_TOP_WITNESSES[ ]?=[ ]?[0-9]+/, 'NB_TOP_WITNESSES = 4').replace(/MAX_ROUND_PROPOSITION_WAITING_PERIOD[ ]?=[ ]?[0-9]+/, 'MAX_ROUND_PROPOSITION_WAITING_PERIOD = 20').replace(/NB_WITNESSES_SIGNATURES_REQUIRED[ ]?=[ ]?[0-9]+/, 'NB_WITNESSES_SIGNATURES_REQUIRED = 3').replace(/WITNESS_APPROVE_EXPIRE_BLOCKS[ ]?=[ ]?[0-9e]+/, 'WITNESS_APPROVE_EXPIRE_BLOCKS = 50').replace(/numberOfTopWitnesses:[0-9]+/, 'numberOfTopWitnesses:4').replace(/numberOfWitnessSlots:[0-9]+/, 'numberOfWitnessSlots:5').replace(/maxRoundPropositionWaitingPeriod:[0-9]+/,'maxRoundPropositionWaitingPeriod:20').replace(/witnessSignaturesRequired:[0-9]+/,'witnessSignaturesRequired:3').replace(/witnessApproveExpireBlocks:[0-9e]+/,'witnessApproveExpireBlocks:50'));
 const oldWitnessContractPayload = setupContractPayload('witnesses', './contracts/testing/witnesses_20240224.js',
   (contractCode) => contractCode.replace(/NB_TOP_WITNESSES = .*;/, 'NB_TOP_WITNESSES = 4;').replace(/MAX_ROUND_PROPOSITION_WAITING_PERIOD = .*;/, 'MAX_ROUND_PROPOSITION_WAITING_PERIOD = 20;').replace(/NB_WITNESSES_SIGNATURES_REQUIRED = .*;/, 'NB_WITNESSES_SIGNATURES_REQUIRED = 3;').replace(/WITNESS_APPROVE_EXPIRE_BLOCKS = .*;/, 'WITNESS_APPROVE_EXPIRE_BLOCKS = 50;'));
