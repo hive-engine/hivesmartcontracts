@@ -252,10 +252,11 @@ const proposeRound = async (witness, round, retry = 0) => {
           && (response.data.error.message === 'current round is lower'
             || response.data.error.message === 'current witness is different')) {
           if (retry < 3) {
+            // Allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
-            }, 8000 * (retry + 1)); // allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
+            }, 8000 * (retry + 1));
           }
         }
       }
@@ -274,10 +275,24 @@ const proposeRound = async (witness, round, retry = 0) => {
 };
 
 const manageRoundProposition = async () => {
-  // get the current round info
-  const params = await findOne('witnesses', 'params', {});
+  // ensure node is not too far behind (say 10 minutes)
+  const latestBlockInfo = database.getLatestBlockInfo();
+  const latestBlockTime = new Date(`${latestBlockInfo.timestamp}.000Z`).getTime();
 
-  if (params) {
+  try {
+    if (new Date().getTime() - latestBlockTime > 10 * 60 * 1000) {
+      console.log('Node too far behind, disable proposing rounds');
+      return;
+    }
+
+    // get the current round info
+    const params = await findOne('witnesses', 'params', {});
+
+    if (!params) {
+      console.log('Cannot load witnesses params');
+      return;
+    }
+
     if (currentRound < params.round) {
       // eslint-disable-next-line prefer-destructuring
       currentRound = params.round;
@@ -293,10 +308,7 @@ const manageRoundProposition = async () => {
     }
 
     // get the schedule for the lastBlockRound
-    console.log('currentRound', currentRound);
-    console.log('currentWitness', currentWitness);
-    console.log('lastBlockRound', lastBlockRound);
-    console.log('lastProposedRound', lastProposedRound);
+    console.log(`currentRound: ${currentRound}, currentWitness: ${currentWitness}, lastBlockRound: ${lastBlockRound}, lastProposedRound: ${lastProposedRound}`);
 
     // get the witness participating in this round
     const schedules = await find('witnesses', 'schedules', { round: currentRound });
@@ -304,48 +316,76 @@ const manageRoundProposition = async () => {
     // check if this witness is part of the round
     const witnessFound = schedules.find(w => w.witness === WITNESS_ACCOUNT);
 
-    const { witnessSignaturesRequired } = params;
+    const { witnessSignaturesRequired, blockNumberWitnessChange } = params;
 
-    if (witnessFound !== undefined
-      && lastProposedRound === null
-      && currentWitness === WITNESS_ACCOUNT
-      && currentRound > lastProposedRoundNumber) {
-      // handle round propositions
-      const block = await database.getBlockInfo(lastBlockRound);
-
-      if (block !== null) {
-        const startblockNum = params.lastVerifiedBlockNumber + 1;
-        const calculatedRoundHash = await calculateRoundHash(startblockNum, lastBlockRound);
-        const signature = signPayload(calculatedRoundHash, true);
-
-        lastProposedRoundNumber = currentRound;
-        lastProposedRound = {
-          round: currentRound,
-          roundHash: calculatedRoundHash,
-          signatures: [[WITNESS_ACCOUNT, signature]],
-          witnessSignaturesRequired,
+    if (witnessFound === undefined) {
+      console.log('Witness not in current schedule');
+      return;
+    }
+    if (lastProposedRound !== null) {
+      // Already handling current round. Expected condition.
+      return;
+    }
+    if (currentWitness !== WITNESS_ACCOUNT) {
+      console.log('Not the current witness');
+      return;
+    }
+    if (currentRound <= lastProposedRoundNumber) {
+      // Waiting for current round to resolve, expected behavior.
+      // If we are close to the deadline, submit partial round
+      if (currentRound === lastProposedRoundNumber
+          && blockNumberWitnessChange - latestBlockInfo.blockNumber <= 10
+          && lastProposedRound.signatures.length > 0) {
+        const json = {
+          contractName: 'witnesses',
+          contractAction: 'proposeRound',
+          contractPayload: {
+            roundHash: lastProposedRound.roundHash,
+            signatures: lastProposedRound.signatures,
+          },
         };
+        console.log('Near block change time, sending current signatures');
+        await hiveClient.sendCustomJSON(json);
+        lastVerifiedRoundNumber = lastProposedRound.round;
+      }
+      return;
+    }
 
-        const round = {
-          round: currentRound,
-          roundHash: calculatedRoundHash,
-          signature,
-          account: process.env.ACCOUNT,
-        };
+    // handle round propositions
+    const block = await database.getBlockInfo(lastBlockRound);
 
-        for (let index = 0; index < schedules.length; index += 1) {
-          const schedule = schedules[index];
-          if (schedule.witness !== WITNESS_ACCOUNT) {
-            proposeRound(schedule.witness, round);
-          }
+    if (block !== null) {
+      const startblockNum = params.lastVerifiedBlockNumber + 1;
+      const calculatedRoundHash = await calculateRoundHash(startblockNum, lastBlockRound);
+      const signature = signPayload(calculatedRoundHash, true);
+
+      lastProposedRoundNumber = currentRound;
+      lastProposedRound = {
+        round: currentRound,
+        roundHash: calculatedRoundHash,
+        signatures: [[WITNESS_ACCOUNT, signature]],
+        witnessSignaturesRequired,
+      };
+
+      const round = {
+        round: currentRound,
+        roundHash: calculatedRoundHash,
+        signature,
+        account: process.env.ACCOUNT,
+      };
+
+      for (let index = 0; index < schedules.length; index += 1) {
+        const schedule = schedules[index];
+        if (schedule.witness !== WITNESS_ACCOUNT) {
+          proposeRound(schedule.witness, round);
         }
       }
     }
+  } finally {
+    manageRoundPropositionTimeoutHandler = setTimeout(() => {
+      manageRoundProposition();
+    }, 3000);
   }
-
-  manageRoundPropositionTimeoutHandler = setTimeout(() => {
-    manageRoundProposition();
-  }, 3000);
 };
 
 const proposeRoundHandler = async (args, callback) => {
@@ -492,7 +532,7 @@ const init = async (conf, callback) => {
       serverP2P.set('trust proxy', true);
       serverP2P.set('trust proxy', 'loopback');
       serverP2P.post('/p2p', jayson.server(p2p(), { maxBatchLength: 0 }).middleware()); // Batch is disabled for P2P as it is not used by the P2P layer at all right now. If in the future requests are batched, this should be updated
-      serverP2P.use((err, _req, res, _next) => {
+      serverP2P.use((err, _req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Error processing requests' });
       });

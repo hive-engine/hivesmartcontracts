@@ -112,7 +112,6 @@ class Fixture {
   }
 
   async setUp() {
-    console.log("Please remember to run npm run minify:files");
     await this.loadPlugin(blockchain);
     this.database = new Database();
     await this.database.init(conf.databaseURL, conf.databaseName);
