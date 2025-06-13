@@ -10,10 +10,10 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js')
-const bdContractPayload = setupContractPayload('burndollar', './contracts/burndollar.js');
-const beeContractPayload = setupContractPayload('beedollar', './contracts/beedollar.js');
-const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js')
+const bdContractPayload = setupContractPayload('burndollar', './contracts/burndollar_minify.js');
+const beeContractPayload = setupContractPayload('beedollar', './contracts/beedollar_minify.js');
+const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
