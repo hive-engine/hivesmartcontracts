@@ -427,7 +427,7 @@ actions.convert = async (payload) => {
           const childName = parentPairParams.symbol;
 
           api.emit('Converted token to dollar token', {
-            symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: parentPairParams.precision, childSymbol: childName, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
+            symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: parentPairParams.precision, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
           });
         }
       }
