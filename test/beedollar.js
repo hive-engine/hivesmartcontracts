@@ -12,9 +12,10 @@ const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const bdContractPayload = setupContractPayload('beedollar', './contracts/beedollar.js');
-const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const bdContractPayload = setupContractPayload('beedollar', './contracts/beedollar_minify.js');
+const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
+const marketContractPayload = setupContractPayload('market', './contracts/market_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
@@ -23,52 +24,27 @@ const tableAsserts = new TableAsserts(fixture);
 describe('beedollar', function () {
   this.timeout(10000);
 
-  before((done) => {
-    new Promise(async (resolve) => {
-      client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
-      db = await client.db(conf.databaseName);
-      await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
+  before(async () => {
+    client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
+    db = await client.db(conf.databaseName);
+    await db.dropDatabase();
   });
   
-  after((done) => {
-    new Promise(async (resolve) => {
-      await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
+  after(async () => {
+    await client.close();
   });
 
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
-      db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
+  beforeEach(async () => {
+    db = await client.db(conf.databaseName);
   });
 
-  afterEach((done) => {
+  afterEach(async () => {
     // runs after each test in this block
-    new Promise(async (resolve) => {
-      fixture.tearDown();
-      await db.dropDatabase()
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
+    fixture.tearDown();
+    await db.dropDatabase()
   });
 
-  it('updates parameters', (done) => {
-    new Promise(async (resolve) => {
+  it('updates parameters', async () => {
 
       await fixture.setUp();
 
@@ -106,16 +82,9 @@ describe('beedollar', function () {
       assert.equal(params.minConvertibleAmount, '5.5');
       assert.equal(params.feePercentage, '0.025');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('rejects invalid parameters', (done) => {
-    new Promise(async (resolve) => {
+  it('rejects invalid parameters', async () => {
 
       await fixture.setUp();
 
@@ -150,16 +119,9 @@ describe('beedollar', function () {
       assert.equal(params.minConvertibleAmount, '1');
       assert.equal(params.feePercentage, '0.01');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('converts BEE to BEE Dollars', (done) => {
-    new Promise(async (resolve) => {
+  it('converts BEE to BEE Dollars', async () => {
 
       await fixture.setUp();
 
@@ -169,6 +131,7 @@ describe('beedollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(marketContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(mpContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 2
@@ -202,7 +165,7 @@ describe('beedollar', function () {
 
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
-
+      
       let res = await fixture.database.find({
         contract: 'marketpools',
         table: 'pools',
@@ -242,16 +205,9 @@ describe('beedollar', function () {
       assert.equal(token.maxSupply, '9007199254740991.0000');
       assert.equal(token.supply, '8.9453');
 
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('fails to convert BEE to BEE Dollars', (done) => {
-    new Promise(async (resolve) => {
+  it('fails to convert BEE to BEE Dollars', async () => {
 
       await fixture.setUp();
 
@@ -261,6 +217,7 @@ describe('beedollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tknContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(bdContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(marketContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(mpContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 2
@@ -318,25 +275,18 @@ describe('beedollar', function () {
       const latestBlock = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = latestBlock.transactions;
 
-      console.log(JSON.parse(transactionsBlock1[22].logs).errors);
       console.log(JSON.parse(transactionsBlock1[23].logs).errors);
       console.log(JSON.parse(transactionsBlock1[24].logs).errors);
       console.log(JSON.parse(transactionsBlock1[25].logs).errors);
       console.log(JSON.parse(transactionsBlock1[26].logs).errors);
       console.log(JSON.parse(transactionsBlock1[27].logs).errors);
+      console.log(JSON.parse(transactionsBlock1[28].logs).errors);
 
-      assert.equal(JSON.parse(transactionsBlock1[22].logs).errors[0], 'you must use a custom_json signed with your active key');
-      assert.equal(JSON.parse(transactionsBlock1[23].logs).errors[0], 'invalid params');
-      assert.equal(JSON.parse(transactionsBlock1[24].logs).errors[0], 'amount to convert must be >= 1');
+      assert.equal(JSON.parse(transactionsBlock1[23].logs).errors[0], 'you must use a custom_json signed with your active key');
+      assert.equal(JSON.parse(transactionsBlock1[24].logs).errors[0], 'invalid params');
       assert.equal(JSON.parse(transactionsBlock1[25].logs).errors[0], 'amount to convert must be >= 1');
-      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'symbol precision mismatch');
-      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'not enough balance');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+      assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'amount to convert must be >= 1');
+      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'symbol precision mismatch');
+      assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'not enough balance');
   });
 });

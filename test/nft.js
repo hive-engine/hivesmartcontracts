@@ -13,9 +13,9 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const nftContractPayload = setupContractPayload('nft', './contracts/nft.js');
-const miningContractPayload = setupContractPayload('mining', './contracts/mining.js');
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const nftContractPayload = setupContractPayload('nft', './contracts/nft_minify.js');
+const miningContractPayload = setupContractPayload('mining', './contracts/mining_minify.js');
 
 // prepare test contract for issuing & transferring NFT instances
 const testSmartContractCode = `

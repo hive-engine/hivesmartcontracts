@@ -111,7 +111,7 @@ actions.updateParams = async (payload) => {
 const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) => {
   if (result.errors === undefined
     && result.events && result.events.find(el => el.contract === 'tokens' && el.event === eventStr
-      && el.data.from === from && el.data.to === to && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+      && el.data.from === from && el.data.to === to && api.BigNumber(el.data.quantity).eq(quantity) && el.data.symbol === symbol) !== undefined) {
     return true;
   }
   return false;

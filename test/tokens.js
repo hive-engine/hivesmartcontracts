@@ -14,7 +14,7 @@ const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
 const dummyParamsContractPayload = setupContractPayload('tokens', './contracts/testing/tokens_unused_params.js');
-const contractPayload = setupContractPayload('tokens', './contracts/tokens.js');
+const contractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);

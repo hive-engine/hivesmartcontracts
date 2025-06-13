@@ -543,7 +543,7 @@ actions.swapTokens = async (payload) => {
 
   const res = await api.executeSmartContract('tokens', 'transferToContract', { symbol: symbolIn, quantity: tokenQuantity.in.toFixed(), to: 'marketpools' });
   if (res.errors === undefined
-    && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === api.sender && el.data.to === 'marketpools' && el.data.quantity === tokenQuantity.in.toFixed()) !== undefined) {
+    && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === api.sender && el.data.to === 'marketpools' && api.BigNumber(el.data.quantity).eq(tokenQuantity.in)) !== undefined) {
     await api.transferTokens(api.sender, symbolOut, tokenQuantity.out.toFixed(), 'user');
     await updatePoolStats(pool, tokenPairDelta[0], tokenPairDelta[1], false, true);
     api.emit('swapTokens', { symbolIn, symbolOut, fee: tokenPairFee });

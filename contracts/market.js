@@ -18,6 +18,16 @@ const ACCOUNT_BLACKLIST = {
   'temp': 1,
   'shaggroed': 1,
   'shaggythesecond': 1,
+}
+
+// helper function to check that token transfers succeeded
+const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) => {
+  if (result.errors === undefined
+    && result.events && result.events.find(el => el.contract === 'tokens' && el.event === eventStr
+    && el.data.from === from && el.data.to === to && api.BigNumber(el.data.quantity).eq(quantity) && el.data.symbol === symbol) !== undefined) {
+    return true;
+  }
+  return false;
 };
 
 const countOpenOrders = async (account) => {
@@ -897,8 +907,7 @@ actions.buy = async (payload) => {
           const nbTokensToLock = nbTokensToLockRaw.toFixed(HIVE_PEGGED_SYMBOL_PRESICION, api.BigNumber.ROUND_UP);
           const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity: nbTokensToLock, to: CONTRACT_NAME });
 
-          if (res.errors === undefined
-            && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === nbTokensToLock && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+          if (isTokenTransferVerified(res, finalAccount, CONTRACT_NAME, HIVE_PEGGED_SYMBOL, nbTokensToLock, 'transferToContract')) {
             const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
               .dividedBy(1000)
               .toNumber();
@@ -972,8 +981,7 @@ actions.sell = async (payload) => {
           // lock symbol tokens
           const res = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
 
-          if (res.errors === undefined
-            && res.events && res.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+          if (isTokenTransferVerified(res, finalAccount, CONTRACT_NAME, symbol, quantity, 'transferToContract')) {
             const timestampSec = api.BigNumber(new Date(`${api.hiveBlockTimestamp}.000Z`).getTime())
               .dividedBy(1000)
               .toNumber();
@@ -1031,8 +1039,7 @@ actions.marketBuy = async (payload) => {
       // lock HIVE_PEGGED_SYMBOL tokens
       const result = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol: HIVE_PEGGED_SYMBOL, quantity, to: CONTRACT_NAME });
 
-      if (result.errors === undefined
-        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === HIVE_PEGGED_SYMBOL) !== undefined) {
+      if (isTokenTransferVerified(result, finalAccount, CONTRACT_NAME, HIVE_PEGGED_SYMBOL, quantity, 'transferToContract')) {
         let hiveRemaining = quantity;
         let offset = 0;
         let volumeTraded = 0;
@@ -1225,8 +1232,7 @@ actions.marketSell = async (payload) => {
       // lock symbol tokens
       const result = await api.executeSmartContract('tokens', 'transferToContract', { from: finalAccount, symbol, quantity, to: CONTRACT_NAME });
 
-      if (result.errors === undefined
-        && result.events && result.events.find(el => el.contract === 'tokens' && el.event === 'transferToContract' && el.data.from === finalAccount && el.data.to === CONTRACT_NAME && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+      if (isTokenTransferVerified(result, finalAccount, CONTRACT_NAME, symbol, quantity, 'transferToContract')) {
         let tokensRemaining = quantity;
         let offset = 0;
         let volumeTraded = 0;

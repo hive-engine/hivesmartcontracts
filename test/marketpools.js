@@ -13,10 +13,11 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const nftContractPayload = setupContractPayload('nft', './contracts/nft.js');
-const miningPayload = setupContractPayload('mining', './contracts/mining.js');
-const contractPayload = setupContractPayload('marketpools', './contracts/marketpools.js');
+const tokensContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const nftContractPayload = setupContractPayload('nft', './contracts/nft_minify.js');
+const miningPayload = setupContractPayload('mining', './contracts/mining_minify.js');
+const marketPayload = setupContractPayload('market', './contracts/market_minify.js');
+const contractPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
 
 const fixture = new Fixture();
 const tableAsserts = new TableAsserts(fixture);
@@ -100,7 +101,7 @@ async function assertAllErrorInLastBlock() {
 
 async function getLastPoolId() {
   let blk = await fixture.database.getLatestBlockInfo();
-  let eventLog = JSON.parse(blk.transactions[7].logs);
+  let eventLog = JSON.parse(blk.transactions[8].logs);
   let createEvent = eventLog.events.find(x => x.event === 'createPool');
   return createEvent.data.id;
 }
@@ -109,58 +110,32 @@ async function getLastPoolId() {
 describe('marketpools tests', function () {
   this.timeout(20000);
 
-  before((done) => {
-    new Promise(async (resolve) => {
+  before(async () => {
       client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
       db = await client.db(conf.databaseName);
       await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
   
-  after((done) => {
-    new Promise(async (resolve) => {
+  after(async () => {
       await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
+  beforeEach(async () => {
       db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  afterEach((done) => {
-      // runs after each test in this block
-      new Promise(async (resolve) => {
+  afterEach(async () => {
         fixture.tearDown();
         await db.dropDatabase()
-        resolve();
-      })
-        .then(() => {
-          done()
-        })
   });
 
-  it('should not create invalid pool', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should not create invalid pool', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2
@@ -189,13 +164,13 @@ describe('marketpools tests', function () {
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
 
-      assertError(txs[7], 'you must use a transaction signed with your active key');
-      assertError(txs[8], 'invalid tokenPair format');
-      assertError(txs[9], 'tokenPair cannot be the same token');
-      assertError(txs[10], 'baseSymbol does not exist');
-      assertError(txs[11], 'quoteSymbol does not exist');
-      assertError(txs[13], 'a pool already exists for this tokenPair');
+      assertError(txs[8], 'you must use a transaction signed with your active key');
+      assertError(txs[9], 'invalid tokenPair format');
+      assertError(txs[10], 'tokenPair cannot be the same token');
+      assertError(txs[11], 'baseSymbol does not exist');
+      assertError(txs[12], 'quoteSymbol does not exist');
       assertError(txs[14], 'a pool already exists for this tokenPair');
+      assertError(txs[15], 'a pool already exists for this tokenPair');
       
       res = await fixture.database.find({
         contract: 'marketpools',
@@ -204,23 +179,15 @@ describe('marketpools tests', function () {
       });
   
       assert.ok(!res || res.length === 0, 'uncaught errors, invalid pool created');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should create valid pool', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should create valid pool', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -251,24 +218,15 @@ describe('marketpools tests', function () {
       });
       assert.ok(res, 'newly created pool not found');
       await assertShareConsistency("GLD:SLV");
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should allow owner to update params', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should allow owner to update params', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -292,24 +250,15 @@ describe('marketpools tests', function () {
         query: {},
       });
       assert.ok(res.poolCreationFee === '2000', 'fee has not changed');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should not add liquidity to invalid pairs/pools', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should not add liquidity to invalid pairs/pools', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -347,16 +296,16 @@ describe('marketpools tests', function () {
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
 
-      assertError(txs[8], 'you must use a transaction signed with your active key');
-      assertError(txs[9], 'invalid baseQuantity');
-      assertError(txs[10], 'invalid quoteQuantity');
-      assertError(txs[11], 'quoteSymbol does not exist');
-      assertError(txs[17], 'exceeded max price impact for adding liquidity');
-      assertError(txs[18], 'insufficient token balance');
-      assertError(txs[19], 'baseQuantity precision mismatch');
-      assertError(txs[21], 'insufficient token balance');
-      assertError(txs[22], 'maxPriceImpact must be greater than 0');
-      assertError(txs[23], 'exceeded max price impact for adding liquidity');
+      assertError(txs[9], 'you must use a transaction signed with your active key');
+      assertError(txs[10], 'invalid baseQuantity');
+      assertError(txs[11], 'invalid quoteQuantity');
+      assertError(txs[12], 'quoteSymbol does not exist');
+      assertError(txs[18], 'exceeded max price impact for adding liquidity');
+      assertError(txs[19], 'insufficient token balance');
+      assertError(txs[20], 'baseQuantity precision mismatch');
+      assertError(txs[22], 'insufficient token balance');
+      assertError(txs[23], 'maxPriceImpact must be greater than 0');
+      assertError(txs[24], 'exceeded max price impact for adding liquidity');
       
       res = await fixture.database.findOne({
         contract: 'marketpools',
@@ -365,22 +314,15 @@ describe('marketpools tests', function () {
       });
   
       assert.ok(!res, 'uncaught errors, invalid LP created');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not add liquidity beyond oracle deviation', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should not add liquidity beyond oracle deviation', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -418,8 +360,8 @@ describe('marketpools tests', function () {
       // console.log(res);
       let txs = res.transactions;
 
-      assertError(txs[17], 'exceeded max deviation from order book');
-      assertError(txs[22], 'exceeded max deviation from order book');
+      assertError(txs[18], 'exceeded max deviation from order book');
+      assertError(txs[23], 'exceeded max deviation from order book');
       
       res = await fixture.database.findOne({
         contract: 'marketpools',
@@ -428,23 +370,15 @@ describe('marketpools tests', function () {
       });
   
       assert.ok(!res, 'uncaught errors, invalid LP created');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should allow user determined oracle deviation', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should allow user determined oracle deviation', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -482,7 +416,7 @@ describe('marketpools tests', function () {
       // console.log(res);
       let txs = res.transactions;
 
-      assertError(txs[17], 'exceeded max deviation from order book');
+      assertError(txs[18], 'exceeded max deviation from order book');
       
       res = await fixture.database.findOne({
         contract: 'marketpools',
@@ -491,23 +425,15 @@ describe('marketpools tests', function () {
       });
   
       assert.ok(res, 'expected LP to be created for investor');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });  
 
-  it('should add liquidity and update positions', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should add liquidity and update positions', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -558,24 +484,15 @@ describe('marketpools tests', function () {
       assert.ok(lpool.basePrice === '15.99753393', `pool price not as expected - ${lpool.basePrice}`);
       assert.ok(lpool.baseQuantity === '1002.11637812', `pool baseQuantity not as expected - ${lpool.baseQuantity}`);
       assert.ok(lpool.quoteQuantity === '16031.39076567', `pool quoteQuantity not as expected - ${lpool.quoteQuantity}`);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should add liquidity and update positions with mixed precision', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should add liquidity and update positions with mixed precision', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -623,23 +540,15 @@ describe('marketpools tests', function () {
         query: { tokenPair: "GLD:SLV" },
       });
       await assertShareConsistency("GLD:SLV");
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });  
 
-  it('should not remove liquidity from invalid pairs/pools', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should not remove liquidity from invalid pairs/pools', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -671,10 +580,10 @@ describe('marketpools tests', function () {
       let res = await fixture.database.getLatestBlockInfo();
       let txs = res.transactions;
 
-      assertError(txs[12], 'no existing liquidity position');
-      assertError(txs[14], 'you must use a transaction signed with your active key');
-      assertError(txs[15], 'invalid sharesOut, must be > 0 <= 100');
-      assertError(txs[17], 'no existing liquidity position');
+      assertError(txs[13], 'no existing liquidity position');
+      assertError(txs[15], 'you must use a transaction signed with your active key');
+      assertError(txs[16], 'invalid sharesOut, must be > 0 <= 100');
+      assertError(txs[18], 'no existing liquidity position');
       
       let lpos = await fixture.database.findOne({
         contract: 'marketpools',
@@ -690,22 +599,15 @@ describe('marketpools tests', function () {
   
       assert.ok(!lpos, 'uncaught errors, invalid LP created');
       assert.ok(lpos2.shares === '4000', 'uncaught errors, invalid LP removed');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });  
 
-  it('should remove liquidity and update positions', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should remove liquidity and update positions', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -774,23 +676,15 @@ describe('marketpools tests', function () {
       assert.ok(lpool.quoteQuantity === '24000.06079337', `pool quoteQuantity not as expected - ${lpool.quoteQuantity}`);
       await tableAsserts.assertUserBalances({ account: 'investor', symbol: 'GLD', balance: '500.00006255'});
       await tableAsserts.assertUserBalances({ account: 'whale', symbol: 'GLD', balance: '1000.00000012'});
-      
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should not swap tokens with errors', (done) => {
-    new Promise(async (resolve) => {
+  it('should not swap tokens with errors', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -853,22 +747,15 @@ describe('marketpools tests', function () {
       assertError(txs[8], 'exceeded max slippage for swap');
       assertError(txs[9], 'symbolOut precision mismatch');
       assertError(txs[10], 'invalid tradeType');
-     
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should swap tokens in either direction', (done) => {
-    new Promise(async (resolve) => {
+  it('should swap tokens in either direction', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -929,23 +816,15 @@ describe('marketpools tests', function () {
         quotePrice: 0.09999950,        
       });
       await assertShareConsistency("GLD:SLV");
-     
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('should not create invalid reward pools', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should not create invalid reward pools', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
@@ -984,30 +863,23 @@ describe('marketpools tests', function () {
       let txs = res.transactions;
       let rewardPoolId = 'GLD:EXT-GLDSLV';
 
-      assertError(txs[13], 'pool must have liquidity positions');
-      assertError(txs[17], 'invalid tokenPair format');
-      assertError(txs[18], 'invalid lotteryWinners: integer between 1 and 20 only');
-      assertError(txs[19], 'invalid lotteryIntervalHours: integer between 1 and 720 only');
-      assertError(txs[20], 'minedToken does not exist');
-      assertError(txs[21], 'must be called from a contract');
-      assertError(txs[23], 'pool already exists');
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
+      assertError(txs[14], 'pool must have liquidity positions');
+      assertError(txs[18], 'invalid tokenPair format');
+      assertError(txs[19], 'invalid lotteryWinners: integer between 1 and 20 only');
+      assertError(txs[20], 'invalid lotteryIntervalHours: integer between 1 and 720 only');
+      assertError(txs[21], 'minedToken does not exist');
+      assertError(txs[22], 'must be called from a contract');
+      assertError(txs[24], 'pool already exists');
   });  
 
-  it('should create and run reward pools', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should create and run reward pools', async () => {
       await fixture.setUp();
 
       // setup
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
@@ -1085,25 +957,16 @@ describe('marketpools tests', function () {
       };
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });
 
-  it('should update and run reward pools', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should update and run reward pools', async () => {
       await fixture.setUp();
 
       // setup
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
@@ -1182,25 +1045,16 @@ describe('marketpools tests', function () {
       };
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });  
 
-  it('should create and run query-limited reward pools', (done) => {
-    new Promise(async (resolve) => {
-
+  it('should create and run query-limited reward pools', async () => {
       await fixture.setUp();
 
       // setup
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(miningPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
@@ -1279,23 +1133,16 @@ describe('marketpools tests', function () {
       };
       await fixture.sendBlock(block);
       await tableAsserts.assertNoErrorInLastBlock();
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
-
   });    
 
-  it('handles differing token precision', (done) => {
-    new Promise(async (resolve) => {
+  it('handles differing token precision', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
       let transactions = [];
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(tokensContractPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(marketPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(contractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 1
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(contractPayload))); // update 2      
@@ -1338,7 +1185,7 @@ describe('marketpools tests', function () {
       // console.log(res);
 
       // verify swap execution
-      await tableAsserts.assertUserBalances({ account: 'buyer', symbol: 'GLD', balance: '1000'});
+      await tableAsserts.assertUserBalances({ account: 'buyer', symbol: 'GLD', balance: '1000.00000000'});
       await tableAsserts.assertUserBalances({ account: 'buyer', symbol: 'SLV', balance: '0.001'});
       await assertContractBalance('marketpools', 'GLD', 1000);
       await assertContractBalance('marketpools', 'SLV', 1016.418);
@@ -1353,13 +1200,6 @@ describe('marketpools tests', function () {
         quotePrice: 0.98384719,        
       });
       await assertShareConsistency("GLD:SLV");
-     
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
   // END TESTS
 });

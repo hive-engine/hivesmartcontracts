@@ -11,9 +11,9 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens.js');
-const pegContractPayload = setupContractPayload('hivepegged', './contracts/hivepegged.js');
-const mktContractPayload = setupContractPayload('market', './contracts/market.js', (contractCode) => contractCode.replace(/ORDER_FETCH_LIMIT = .*;/, 'ORDER_FETCH_LIMIT = 2;'));
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
+const pegContractPayload = setupContractPayload('hivepegged', './contracts/hivepegged_minify.js');
+const mktContractPayload = setupContractPayload('market', './contracts/market_minify.js', (contractCode) => contractCode.replace(/ORDER_FETCH_LIMIT = .*;/, 'ORDER_FETCH_LIMIT = 2;'));
 const oldMktContractPayload = setupContractPayload('market', './contracts/testing/market_20240727.js');
 
 const fixture = new Fixture();
@@ -25,53 +25,26 @@ const TICK_TEST_ENABLED = false;
 describe('Market', function() {
   this.timeout(20000);
 
-  before((done) => {
-    new Promise(async (resolve) => {
+  before(async () => {
       client = await MongoClient.connect(conf.databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
       db = await client.db(conf.databaseName);
       await db.dropDatabase();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
   
-  after((done) => {
-    new Promise(async (resolve) => {
+  after(async () => {
       await client.close();
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  beforeEach((done) => {
-    new Promise(async (resolve) => {
+  beforeEach(async () => {
       db = await client.db(conf.databaseName);
-      resolve();
-    })
-      .then(() => {
-        done()
-      })
   });
 
-  afterEach((done) => {
-      // runs after each test in this block
-      new Promise(async (resolve) => {
+  afterEach(async () => {
         fixture.tearDown();
         await db.dropDatabase()
-        resolve();
-      })
-        .then(() => {
-          done()
-        })
   });
 
-  it('prevents small order exploits', (done) => {
-    new Promise(async (resolve) => {
-
+  it('prevents small order exploits', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -99,7 +72,7 @@ describe('Market', function() {
 
       // verify market is setup for the test
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'SWAP.HIVE', balance: '500'});
-      await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TEST', balance: '10'});
+      await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TEST', balance: '10.00000000'});
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '497.02561900'});
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TEST', balance: '400.00000000'});
 
@@ -112,7 +85,7 @@ describe('Market', function() {
       });
 
       console.log(balances);
-      assert.equal(balances[0].balance, '100');
+      assert.equal(balances[0].balance, '100.00000000');
       assert.equal(balances[0].symbol, 'TEST');
       assert.equal(balances[0].account, 'market');
 
@@ -182,18 +155,9 @@ describe('Market', function() {
       console.log(JSON.parse(transactionsBlock3[3].logs).errors);
       assert.equal(JSON.parse(transactionsBlock3[1].logs).errors[0], 'order cannot be placed as it cannot be filled');
       assert.equal(JSON.parse(transactionsBlock3[3].logs).errors[0], 'the order cannot be filled');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('market sells to multiple buyers', (done) => {
-    new Promise(async (resolve) => {
-
+  it('market sells to multiple buyers', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -378,18 +342,9 @@ describe('Market', function() {
 
       assert.equal(metric.symbol, 'TKN');
       assert.equal(metric.volume, 84.14);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('market buys from multiple sellers', (done) => {
-    new Promise(async (resolve) => {
-
+  it('market buys from multiple sellers', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -574,18 +529,9 @@ describe('Market', function() {
 
       assert.equal(metric.symbol, 'TKN');
       assert.equal(metric.volume, 119.140316);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('does not market buy dust amounts', (done) => {
-    new Promise(async (resolve) => {
-
+  it('does not market buy dust amounts', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -630,18 +576,9 @@ describe('Market', function() {
       assert.equal(sellOrders[0].account, 'vitalik');
       assert.equal(sellOrders[0].symbol, 'TKN');
       assert.equal(sellOrders[0].quantity, 100);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('market buys from one seller', (done) => {
-    new Promise(async (resolve) => {
-
+  it('market buys from one seller', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -668,7 +605,7 @@ describe('Market', function() {
       await fixture.sendBlock(block);
 
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'SWAP.HIVE', balance: '433.38900000'});
-      await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '23.4'});
+      await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '23.40000000'});
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TKN', balance: '100.000'});
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TKN', balance: '23.456'});
 
@@ -772,18 +709,9 @@ describe('Market', function() {
 
       assert.equal(metric.symbol, 'TKN');
       assert.equal(metric.volume, 27.4);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('market sells to one buyer', (done) => {
-    new Promise(async (resolve) => {
-
+  it('market sells to one buyer', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -914,18 +842,9 @@ describe('Market', function() {
 
       assert.equal(metric.symbol, 'TKN');
       assert.equal(metric.volume, 14.04);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('creates a buy order', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('creates a buy order', async () => {
       await fixture.setUp();
 
       
@@ -975,18 +894,9 @@ describe('Market', function() {
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, '0.00000001');
       assert.equal(sellOrders[0].quantity, 876.988);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('creates buy orders with expirations', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('creates buy orders with expirations', async () => {
       await fixture.setUp();
 
       
@@ -1061,18 +971,9 @@ describe('Market', function() {
 
       assert.equal(accountBalances.length, 1);
       assert.equal(accountBalances[0].balance, '123.456');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('generates error when trying to create a buy order with wrong parameters', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('generates error when trying to create a buy order with wrong parameters', async () => {
       await fixture.setUp();
 
       
@@ -1098,18 +999,9 @@ describe('Market', function() {
       const block1 = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = block1.transactions;
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'order cannot be placed as it cannot be filled');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('creates sell orders with expirations', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('creates sell orders with expirations', async () => {
       await fixture.setUp();
 
       
@@ -1166,18 +1058,9 @@ describe('Market', function() {
       assert.equal(sellOrders[2].quantity, 3);
       assert.equal(sellOrders[2].timestamp, 1527811200);
       assert.equal(sellOrders[2].expiration, 1527811200 + 2592000);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('creates a sell order', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('creates a sell order', async () => {
       await fixture.setUp();
 
       
@@ -1232,18 +1115,9 @@ describe('Market', function() {
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, '0.00000001');
       assert.equal(sellOrders[0].quantity, 100.276);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('generates error when trying to create a sell order with wrong parameters', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('generates error when trying to create a sell order with wrong parameters', async () => {
       await fixture.setUp();
 
       
@@ -1270,18 +1144,9 @@ describe('Market', function() {
       const transactionsBlock1 = block1.transactions;
 
       assert.equal(JSON.parse(transactionsBlock1[5].logs).errors[0], 'order cannot be placed as it cannot be filled');
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('cancels a buy order', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('cancels a buy order', async () => {
       await fixture.setUp();
 
       
@@ -1365,18 +1230,9 @@ describe('Market', function() {
       });
 
       assert.equal(res, null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('cancels a sell order', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('cancels a sell order', async () => {
       await fixture.setUp();
 
       
@@ -1454,18 +1310,9 @@ describe('Market', function() {
       });
 
       assert.equal(res, null);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('buys from the market from one seller', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('buys from the market from one seller', async () => {
       await fixture.setUp();
 
       
@@ -1521,18 +1368,9 @@ describe('Market', function() {
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, 0.234);
       assert.equal(sellOrders[0].quantity, 90);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('buys from the market from several sellers', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('buys from the market from several sellers', async () => {
       await fixture.setUp();
 
       
@@ -1569,18 +1407,9 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'TKN.TEST', balance: '97.000'});
       await tableAsserts.assertUserBalances({ account: 'dan', symbol: 'TKN.TEST', balance: '295.000'});
       await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: 'TKN.TEST', balance: '10.000'});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('buys from the market partially', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('buys from the market partially', async () => {
       await fixture.setUp();
 
       
@@ -1645,18 +1474,9 @@ describe('Market', function() {
       assert.equal(buyOrders[0].price, 3);
       assert.equal(buyOrders[0].quantity, 5);
       assert.equal(buyOrders[0].tokensLocked, 22);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('sells on the market to one buyer', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('sells on the market to one buyer', async () => {
       await fixture.setUp();
 
       
@@ -1715,18 +1535,9 @@ describe('Market', function() {
       assert.equal(buyOrders[0].symbol, 'TKN.TEST');
       assert.equal(buyOrders[0].price, 0.234);
       assert.equal(buyOrders[0].quantity, 90);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('sells on the market to several buyers', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('sells on the market to several buyers', async () => {
       await fixture.setUp();
 
       
@@ -1767,18 +1578,9 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TKN.TEST', balance: '2.000'});
       await tableAsserts.assertUserBalances({ account: 'dan', symbol: 'TKN.TEST', balance: '5.000'});
       await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: 'TKN.TEST', balance: '490.000'});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('fills a buy order from different sellers', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('fills a buy order from different sellers', async () => {
       await fixture.setUp();
 
       
@@ -1819,18 +1621,9 @@ describe('Market', function() {
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'TKN.TEST', balance: '198.000'});
       await tableAsserts.assertUserBalances({ account: 'dan', symbol: 'TKN.TEST', balance: '295.000'});
       await tableAsserts.assertUserBalances({ account: 'harpagon', symbol: 'TKN.TEST', balance: '10.000'});
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('creates a trade history', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('creates a trade history', async () => {
       await fixture.setUp();
 
       
@@ -2014,18 +1807,9 @@ describe('Market', function() {
       assert.equal(trades[1].sellTxId, 'TXID12426');
 
       assert.equal(trades.length, 2);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('maintains the different metrics', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('maintains the different metrics', async () => {
       await fixture.setUp();
 
       
@@ -2181,18 +1965,9 @@ describe('Market', function() {
       assert.equal(metric.lastPrice, 3);
       assert.equal(metric.highestBid, 3);
       assert.equal(metric.lowestAsk, 4);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('removes an expired sell order', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('removes an expired sell order', async () => {
       await fixture.setUp();
 
       
@@ -2270,18 +2045,9 @@ describe('Market', function() {
       assert.equal(buyOrders[0].symbol, 'TKN.TEST');
       assert.equal(buyOrders[0].price, 0.234);
       assert.equal(buyOrders[0].quantity, 100);
-      
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('removes an expired buy order', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('removes an expired buy order', async () => {
       await fixture.setUp();
 
       
@@ -2359,18 +2125,9 @@ describe('Market', function() {
       assert.equal(sellOrders[0].symbol, 'TKN.TEST');
       assert.equal(sellOrders[0].price, 0.234);
       assert.equal(sellOrders[0].quantity, 10);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('removes dust sell orders', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('removes dust sell orders', async () => {
       await fixture.setUp();
 
       
@@ -2464,18 +2221,9 @@ describe('Market', function() {
       });
 
       assert.equal(sellOrders.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('removes dust buy orders', (done) => {
-    new Promise(async (resolve) => {
-      
+  it('removes dust buy orders', async () => {
       await fixture.setUp();
 
       
@@ -2573,18 +2321,9 @@ describe('Market', function() {
       });
 
       assert.equal(buyOrders.length, 0);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('initialization of market order limits', (done) => {
-    new Promise(async (resolve) => {
-
+  it('initialization of market order limits', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2659,18 +2398,9 @@ describe('Market', function() {
 
       assert.strictEqual(buyOrders.length, 17)
       assert.strictEqual(sellOrders.length, 15)
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('prevent creation of more than allowed orders', (done) => {
-    new Promise(async (resolve) => {
-
+  it('prevent creation of more than allowed orders', async () => {
       await fixture.setUp();
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2779,23 +2509,14 @@ describe('Market', function() {
 
       assert.strictEqual(buyOrders.length, 100);
       assert.strictEqual(sellOrders.length, 100);
-
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 
-  it('ticks and removes blacklisted orders', (done) => {
-    new Promise(async (resolve) => {
-
+  it('ticks and removes blacklisted orders', async () => {
       await fixture.setUp();
 
       if (TICK_TEST_ENABLED !== true) {
         console.log("Tick test disabled; skipping");
-        resolve();
+        return;
       }
 
       let refBlockNumber = fixture.getNextRefBlockNumber();
@@ -2850,11 +2571,5 @@ describe('Market', function() {
       });
 
       assert.equal(sellOrders.length, 0);
-      resolve();
-    })
-      .then(() => {
-        fixture.tearDown();
-        done();
-      });
   });
 });
