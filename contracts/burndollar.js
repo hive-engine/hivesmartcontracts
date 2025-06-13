@@ -209,7 +209,7 @@ actions.updateParams = async (payload) => {
     params.dTokenToIssuer = dTokenToIssuer;
   }
   if (burnToken && typeof burnToken === 'string') {
-    const findToken = api.db.findOneInTable('tokens', 'tokens', { symbol: burnToken });
+    const findToken = await api.db.findOneInTable('tokens', 'tokens', { symbol: burnToken });
 
     if (findToken) {
       params.burnToken = burnToken;
