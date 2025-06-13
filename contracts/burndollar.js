@@ -262,7 +262,7 @@ actions.createTokenD = async (payload) => {
 
           await api.executeSmartContract('tokens', 'create', newToken);
 
-          const tokenCreated = verifyTokenCreation(dSymbol);
+          const tokenCreated = await verifyTokenCreation(dSymbol);
 
           if (!api.assert(tokenCreated, 'Token creation failed')) {
             return false;
