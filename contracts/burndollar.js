@@ -18,9 +18,9 @@ const verifyTokenCreation = async (symbolFind) => {
   return true;
 };
 
-const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
-  const finalAmount = amount || beedParams.burnUsageFee;
-  const finalSymbol = symbolFind || beedParams.burnToken;
+const verifyTokenBalance = async (account, burnUsage, burnToken, amount, symbolFind) => {
+  const finalAmount = amount || burnUsage;
+  const finalSymbol = symbolFind || burnToken;
   const findTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: finalSymbol });
 
   if (findTokenBalance && api.BigNumber(findTokenBalance.balance).gte(finalAmount)) {
@@ -360,8 +360,8 @@ actions.convert = async (payload) => {
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
     && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
-      const hasEnoughUtilityToken = await verifyTokenBalance(api.sender, contractParams);
-      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams, qtyAsBigNum, symbol);
+      const hasEnoughUtilityToken = await verifyTokenBalance(api.sender, contractParams.burnUsageFee, contractParams.burnToken);
+      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams.burnUsageFee, contractParams.burnToken, qtyAsBigNum, symbol);
       const hasEnoughStablePool = await findMarketPools(symbol, 'stable');
       const hasEnoughMarketPool = await findMarketPools(symbol, 'market');
 
