@@ -335,6 +335,10 @@ actions.updateBurnPair = async (payload) => {
                 to: 'null', symbol: params.burnToken, quantity: updateParamsFee, isSignedWithActiveKey,
               });
             }
+
+            api.emit('updated params', {
+              symbol, burnRouting, feePercentage,
+            });
           }
         }
       }
@@ -413,9 +417,9 @@ actions.convert = async (payload) => {
           if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.minAmountConvertible), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
-          const isBurnSuccesss = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
+          const isBurnSuccesss = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if (!api.assert(isBurnSuccesss, 'error on token burn')) {
+          if (api.assert(isBurnSuccesss, 'error on token burn')) {
             return false;
           }
 
@@ -424,7 +428,6 @@ actions.convert = async (payload) => {
           });
 
           const keyname = parentPairParams.parentSymbol;
-          const childName = parentPairParams.symbol;
 
           api.emit('Converted token to dollar token', {
             symbol: parentPairParams.symbol, fee, feeRouting: parentPairParams.burnRouting, parentSymbol: keyname, precision: parentPairParams.precision, childIssued: xxxdToIssue, parentPriceInUSD: calcResultParentPool.parentPrice,
