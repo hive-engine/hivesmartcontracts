@@ -200,7 +200,7 @@ const verifyRoundHandler = async (witnessAccount, data) => {
                   signatures: lastProposedRound.signatures,
                 },
               };
-              log.info('sending json');
+              console.log('sending json');
               await hiveClient.sendCustomJSON(json);
               lastVerifiedRoundNumber = round;
             }
@@ -262,7 +262,7 @@ const proposeRound = async (witness, round, retry = 0) => {
         }
       }
     } else {
-      console.log(`stopped proposing round ${round.round} as it is not the current round anymore`);
+      log.info(`stopped proposing round ${round.round} as it is not the current round anymore`);
     }
   } catch (error) {
     log.warn(`Error posting to ${witness} / round ${round.round} / ${error}`);
@@ -309,7 +309,7 @@ const manageRoundProposition = async () => {
     }
 
     // get the schedule for the lastBlockRound
-    console.log(`currentRound: ${currentRound}, currentWitness: ${currentWitness}, lastBlockRound: ${lastBlockRound}, lastProposedRound: ${lastProposedRound}`);
+    console.log(`currentRound: ${currentRound}, currentWitness: ${currentWitness}, lastBlockRound: ${lastBlockRound}, lastProposedRound: ${JSON.stringify(lastProposedRound)}`);
 
     // get the witness participating in this round
     const schedules = await find('witnesses', 'schedules', { round: currentRound });
@@ -323,31 +323,31 @@ const manageRoundProposition = async () => {
       log.info('Witness not in current schedule');
       return;
     }
-    if (lastProposedRound !== null) {
-      // Already handling current round. Expected condition.
-      return;
-    }
     if (currentWitness !== WITNESS_ACCOUNT) {
       log.info('Not the current witness');
       return;
     }
-    if (currentRound <= lastProposedRoundNumber) {
-      // Waiting for current round to resolve, expected behavior.
+    if (lastProposedRound !== null) {
+      // Already handling current round.
       // If we are close to the deadline, submit partial round
-      if (currentRound === lastProposedRoundNumber
-          && blockNumberWitnessChange - latestBlockInfo.blockNumber <= 10
-          && lastProposedRound.signatures.length > 0) {
-        const json = {
-          contractName: 'witnesses',
-          contractAction: 'proposeRound',
-          contractPayload: {
-            roundHash: lastProposedRound.roundHash,
-            signatures: lastProposedRound.signatures,
-          },
-        };
-        console.log('Near block change time, sending current signatures');
-        await hiveClient.sendCustomJSON(json);
-        lastVerifiedRoundNumber = lastProposedRound.round;
+      if (currentRound === lastProposedRoundNumber) {
+        if (blockNumberWitnessChange - latestBlockInfo.blockNumber <= 10
+            && lastProposedRound.signatures.length > 0) {
+          const json = {
+            contractName: 'witnesses',
+            contractAction: 'proposeRound',
+            contractPayload: {
+              roundHash: lastProposedRound.roundHash,
+              signatures: lastProposedRound.signatures,
+            },
+          };
+          console.log('Near block change time, sending current signatures');
+          await hiveClient.sendCustomJSON(json);
+          lastVerifiedRoundNumber = currentRound;
+        }
+      } else if (currentRound < lastProposedRoundNumber) {
+        log.error('Unexpected condition, last proposed round is larger than current round');
+        return;
       }
       return;
     }
@@ -456,7 +456,6 @@ const proposeRoundHandler = async (args, callback) => {
           callback(null, roundPayload);
           console.log('verified round', round);
         } else {
-          // TODO: handle dispute
           callback({
             code: 404,
             message: 'round hash different',
