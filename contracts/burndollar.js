@@ -9,6 +9,7 @@ const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
+
 const verifyTokenCreation = async (symbolFind) => {
   const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
 
@@ -158,6 +159,7 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
   if (!isTokenTransferVerified(res3, api.sender, 'null', beedParams.burnToken, beedParams.burnUsageFee, 'transfer')) {
     return false;
   }
+  return true;
 };
 // end utility functions
 
@@ -261,7 +263,7 @@ actions.createTokenD = async (payload) => {
 
           await api.executeSmartContract('tokens', 'create', newToken);
 
-          const tokenCreated = verifyTokenCreation(dSymbol);
+          const tokenCreated = await verifyTokenCreation(dSymbol);
 
           if (!api.assert(tokenCreated, 'Token creation failed')) {
             return false;
@@ -412,9 +414,9 @@ actions.convert = async (payload) => {
           if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.minAmountConvertible), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
-          const burnResults = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
+          const isBurnSuccess = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if (!api.assert(burnResults, 'error on token burn')) {
+          if (!api.assert(isBurnSuccess, 'error on token burn')) {
             return false;
           }
 
