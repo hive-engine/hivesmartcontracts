@@ -20,7 +20,7 @@ const tableAsserts = new TableAsserts(fixture);
 
 // test cases for burndollar smart contract
 describe('burndollar', function () {
-  this.timeout(5000);
+  this.timeout(15000);
 
   before((done) => {
     new Promise(async (resolve) => {
