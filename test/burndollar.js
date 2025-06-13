@@ -616,8 +616,8 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "2000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "50", "isSignedWithActiveKey": true }'));
       //48-50 Market pool USD value
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'removeLiquidity', '{ "tokenPair": "URQTWO:URQTWO.D", "sharesOut": "95", "isSignedWithActiveKey": true }'));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO:SWAP.HBD", "baseQuantity": "1000", "quoteQuantity": "1000", "maxDeviation": "0", "isSignedWithActiveKey": true }')); 
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'removeLiquidity', '{ "tokenPair": "URQTWO:URQTWO.D", "sharesOut": "99", "isSignedWithActiveKey": true }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO:SWAP.HBD", "baseQuantity": "500", "quoteQuantity": "500",  "isSignedWithActiveKey": true }')); 
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "50", "isSignedWithActiveKey": true }')); 
       //51-56 drew not token issuer
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'beedollar', 'convert', '{ "quantity": "2000.0", "isSignedWithActiveKey": true }'));
@@ -638,6 +638,15 @@ describe('burndollar', function () {
       await fixture.sendBlock(block);
       const latestBlock = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = latestBlock.transactions;;
+
+           let res2 = await fixture.database.find({
+        contract: 'marketpools',
+        table: 'pools',
+        query: {
+        }
+      });
+
+    let token = res2
 
     console.log(" ")
     console.log(" 26 ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
