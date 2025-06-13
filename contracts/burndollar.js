@@ -277,7 +277,7 @@ actions.createTokenD = async (payload) => {
 
           await api.db.insert('burnpair', burnPairParams);
 
-          // issue 1000 XXX.D token to token issuer, issuer must create a market pools in order for conversions to occur(see actions.convert code)
+          // issue a number XXX.D token to token issuer, issuer must create a market pools in order for conversions to occur(see actions.convert code)
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: dSymbol, quantity: params.dTokenToIssuer,
           });
@@ -306,7 +306,7 @@ actions.updateBurnPair = async (payload) => {
 
   const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
 
-  if (api.isValidAccountName(finalRouting), 'account for burn routing must exist') {
+  if (api.assert(api.isValidAccountName(finalRouting), 'account for burn routing must exist')) {
     if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string', 'symbol must be string')
     && api.assert(finalRouting && typeof finalRouting === 'string', 'finalRouting must be string or null')
