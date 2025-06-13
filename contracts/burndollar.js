@@ -15,6 +15,7 @@ const verifyTokenCreation = async (symbolFind) => {
   if (!createD) {
     return false;
   }
+  return true;
 };
 
 const verifyTokenBalance = async (account, beedParams, amount, symbolFind) => {
