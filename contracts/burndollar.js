@@ -140,7 +140,7 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
-    if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, fee || amount, 'transfer')) {
+    if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, fee, 'transfer')) {
       return false;
     }
   }
