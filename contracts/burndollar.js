@@ -9,7 +9,6 @@ const stablePairArray = ['SWAP.HBD', 'SWAP.USDT', 'SWAP.DAI', 'SWAP.USDC'];
 
 // begin utility functions
 const countDecimals = value => api.BigNumber(value).dp();
-
 const verifyTokenCreation = async (symbolFind) => {
   const createD = await api.db.findOneInTable('tokens', 'tokens', { symbol: symbolFind });
 
@@ -235,7 +234,7 @@ actions.createTokenD = async (payload) => {
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
    && api.assert(authorizedCreation, 'you must have enough BEED tokens cover the creation fees')
-   && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx-D token')
+   && api.assert(symbol && typeof symbol === 'string' && symbol.length <= 8 && symbol.length > 0 && !symbol.includes('.D'), 'symbol must be string of length 8 or less to create a xxx.D token')
   ) {
     const tokenParent = await api.db.findOneInTable('tokens', 'tokens', { symbol });
     const finalRouting = burnRouting === undefined ? 'null' : burnRouting;
@@ -249,8 +248,7 @@ actions.createTokenD = async (payload) => {
         let dSymbol = '';
         dSymbol = `${symbol}.D`;
         const tokenDExists = await api.db.findOneInTable('tokens', 'tokens', { symbol: dSymbol });
-        if (api.assert(api.isValidAccountName(finalRouting), 'account for burn routing must exist')
-       && api.assert(tokenDExists === null, 'D token must not already exist')
+        if (api.assert(tokenDExists === null, 'D token must not already exist')
        && api.assert((tokenParent.precision > 0) && (Number.isInteger(tokenParent.precision)), 'invalid precision')
         ) {
           finalName = `${symbol} stablecoin`;
@@ -263,7 +261,7 @@ actions.createTokenD = async (payload) => {
 
           await api.executeSmartContract('tokens', 'create', newToken);
 
-          const tokenCreated = await verifyTokenCreation(dSymbol);
+          const tokenCreated = verifyTokenCreation(dSymbol);
 
           if (!api.assert(tokenCreated, 'Token creation failed')) {
             return false;
@@ -414,9 +412,9 @@ actions.convert = async (payload) => {
           if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.minAmountConvertible), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
-          const isBurnSuccess = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
+          const isBurnSuccesss = burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if (!api.assert(isBurnSuccess, 'error on token burn')) {
+          if (!api.assert(isBurnSuccesss, 'error on token burn')) {
             return false;
           }
 
