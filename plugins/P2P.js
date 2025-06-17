@@ -63,9 +63,9 @@ const hiveClient = {
     try {
       if (lastProposedRound && sendingToSidechain === false) {
         sendingToSidechain = true;
-        log.info('START sending block proposition');
+        console.log('START sending block proposition');
         await this.client.broadcast.json(transaction, this.signingKey);
-        log.info('DONE sending block proposition');
+        console.log('DONE sending block proposition');
         if (json.contractAction === 'proposeRound') {
           lastProposedRound = null;
         }
@@ -167,7 +167,7 @@ const getReqId = () => {
 const verifyRoundHandler = async (witnessAccount, data) => {
   log.info(witnessAccount, data);
   if (lastProposedRound !== null) {
-    log.info('verification round received from', witnessAccount);
+    console.log('verification round received from', witnessAccount);
     const {
       round,
       roundHash,
@@ -186,24 +186,6 @@ const verifyRoundHandler = async (witnessAccount, data) => {
           if (checkSignature(roundHash, signature, signingKey, true)) {
             // check if we reached the consensus
             lastProposedRound.signatures.push([witnessAccount, signature]);
-
-            // if all the signatures have been gathered
-            if (lastProposedRound.signatures.length
-              >= lastProposedRound.witnessSignaturesRequired) {
-              // send round to sidechain
-              const json = {
-                contractName: 'witnesses',
-                contractAction: 'proposeRound',
-                contractPayload: {
-                  round,
-                  roundHash,
-                  signatures: lastProposedRound.signatures,
-                },
-              };
-              console.log('sending json');
-              await hiveClient.sendCustomJSON(json);
-              lastVerifiedRoundNumber = round;
-            }
           } else {
             log.warn(`invalid signature, round ${round}, witness ${witness.account}`);
           }
@@ -255,14 +237,14 @@ const proposeRound = async (witness, round, retry = 0) => {
           if (retry < 3) {
             // Allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
             setTimeout(() => {
-              log.info(`propose round: retry ${retry + 1}`);
+              console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
             }, 8000 * (retry + 1));
           }
         }
       }
     } else {
-      log.info(`stopped proposing round ${round.round} as it is not the current round anymore`);
+      console.log(`stopped proposing round ${round.round} as it is not the current round anymore`);
     }
   } catch (error) {
     log.warn(`Error posting to ${witness} / round ${round.round} / ${error}`);
@@ -331,8 +313,10 @@ const manageRoundProposition = async () => {
       // Already handling current round.
       // If we are close to the deadline, submit partial round
       if (currentRound === lastProposedRoundNumber) {
-        if (blockNumberWitnessChange - latestBlockInfo.blockNumber <= 10
-            && lastProposedRound.signatures.length > 0) {
+        const nearDeadline = blockNumberWitnessChange - latestBlockInfo.blockNumber <= 10
+            && lastProposedRound.signatures.length > 0;
+        const enoughSignatures = lastProposedRound.signatures.length >= lastProposedRound.witnessSignaturesRequired;
+        if (nearDeadline || enoughSignatures) {
           const json = {
             contractName: 'witnesses',
             contractAction: 'proposeRound',
@@ -341,7 +325,7 @@ const manageRoundProposition = async () => {
               signatures: lastProposedRound.signatures,
             },
           };
-          console.log('Near block change time, sending current signatures');
+          console.log(`Sending signatures. Enough signaturess: ${enoughSignatures}, Near deadline: ${nearDeadline}`);
           await hiveClient.sendCustomJSON(json);
           lastVerifiedRoundNumber = currentRound;
         }
@@ -397,7 +381,7 @@ const proposeRoundHandler = async (args, callback) => {
     }, null);
     return;
   }
-  log.info('round hash proposition received', args.round.account, args.round);
+  console.log('round hash proposition received', args.round.account, args.round);
 
   const {
     round,
