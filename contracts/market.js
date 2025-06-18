@@ -871,7 +871,9 @@ actions.buy = async (payload) => {
   } = payload;
 
   const finalAccount = (account === undefined || api.sender !== 'null') ? api.sender : account;
-  const finalTxId = (txId === undefined || api.sender !== 'null') ? api.transactionId : txId;
+  //const finalTxId = (txId === undefined || api.sender !== 'null') ? api.transactionId : txId;
+	// temporary!!!
+  const finalTxId = undefined;
 
   // ignore any actions coming from blacklisted accounts
   if (ACCOUNT_BLACKLIST[finalAccount] === 1) {
@@ -883,7 +885,6 @@ actions.buy = async (payload) => {
     && api.assert(price && typeof price === 'string' && !api.BigNumber(price).isNaN()
       && symbol && typeof symbol === 'string' && symbol !== HIVE_PEGGED_SYMBOL
       && quantity && typeof quantity === 'string' && !api.BigNumber(quantity).isNaN()
-      && finalTxId && typeof finalTxId === 'string' && finalTxId.length > 0
       && (expiration === undefined || (expiration && Number.isInteger(expiration) && expiration > 0)), 'invalid params')
   ) {
     // check if sender has already more orders open than allowed
