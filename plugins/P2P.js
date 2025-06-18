@@ -336,6 +336,11 @@ const manageRoundProposition = async () => {
       return;
     }
 
+    if (currentRound === lastProposedRoundNumber) {
+      // Already finished with current round
+      return;
+    }
+
     // handle round propositions
     const block = await database.getBlockInfo(lastBlockRound);
 
