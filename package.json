@@ -1,6 +1,6 @@
 {
   "name": "hivesmartcontracts",
-  "version": "ivm-1.1.1",
+  "version": "ivm-1.1.2",
   "description": "",
   "main": "app.js",
   "scripts": {
