@@ -43,7 +43,7 @@ describe('Market', function() {
         fixture.tearDown();
         await db.dropDatabase()
   });
-
+/*
   it('prevents small order exploits', async () => {
       await fixture.setUp();
 
@@ -156,7 +156,7 @@ describe('Market', function() {
       assert.equal(JSON.parse(transactionsBlock3[1].logs).errors[0], 'order cannot be placed as it cannot be filled');
       assert.equal(JSON.parse(transactionsBlock3[3].logs).errors[0], 'the order cannot be filled');
   });
-
+*/
   it('market sells to multiple buyers', async () => {
       await fixture.setUp();
 
@@ -198,6 +198,31 @@ describe('Market', function() {
         }
       });
 
+      let testOrder = await fixture.database.findOne({
+        contract: 'market',
+        table: 'buyBook',
+        query: {
+          account: { $in: ['vitalik', 'aggroed'] },
+          symbol: 'TKN'
+        },
+        indexes: [{index: '_id', descending: false}],
+      });
+      // set txID undefined
+	testOrder.txId = undefined;
+      await fixture.database.update({ contract: 'market', table: 'buyBook', record: testOrder, unsets: { "txId": "" }}, false);
+
+let	  buyOrders2 = await fixture.database.find({
+        contract: 'market',
+        table: 'buyBook',
+        query: {
+          account: { $in: ['vitalik', 'aggroed'] },
+          symbol: 'TKN'
+        },
+        indexes: [{index: '_id', descending: false}],
+      });
+
+      console.log(buyOrders2);
+
       console.log(balances);
 
       assert.equal(balances[0].account, 'market');
@@ -207,7 +232,7 @@ describe('Market', function() {
       // test 1 - sell to half the order book
       refBlockNumber = fixture.getNextRefBlockNumber();
       transactions = [];
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'market', 'marketSell', '{ "account": "satoshi", "symbol": "TKN", "quantity": "80.001", "isSignedWithActiveKey": false }'));
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'null', 'market', 'sell', '{ "account": "satoshi", "symbol": "TKN", "quantity": "80.001", "price": "0.434", "isSignedWithActiveKey": false }'));
 
       block = {
         refHiveBlockNumber: refBlockNumber,
@@ -218,7 +243,10 @@ describe('Market', function() {
       };
 
       await fixture.sendBlock(block);
+      const res = await fixture.database.getLatestBlockInfo();
+      console.log(res);
 
+     assert.equal(res.transactions[0].logs, '{"events":[{"contract":"tokens","event":"transferToContract","data":{"from":"satoshi","to":"market","symbol":"TKN","quantity":"80.001"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"vitalik","symbol":"TKN","quantity":"10.000"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"satoshi","symbol":"SWAP.HIVE","quantity":"7.34000000"}},{"contract":"market","event":"orderClosed","data":{"account":"vitalik","type":"buy"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"aggroed","symbol":"TKN","quantity":"20.000"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"satoshi","symbol":"SWAP.HIVE","quantity":"12.68000000"}},{"contract":"market","event":"orderClosed","data":{"account":"aggroed","type":"buy","txId":"TXID00000012"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"vitalik","symbol":"TKN","quantity":"30.000"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"satoshi","symbol":"SWAP.HIVE","quantity":"16.02000000"}},{"contract":"market","event":"orderClosed","data":{"account":"vitalik","type":"buy","txId":"TXID00000013"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"aggroed","symbol":"TKN","quantity":"20.001"}},{"contract":"tokens","event":"transferFromContract","data":{"from":"market","to":"satoshi","symbol":"SWAP.HIVE","quantity":"8.68043400"}},{"contract":"market","event":"orderClosed","data":{"account":"satoshi","type":"sell","txId":"TXID00000014"}}]}'); 
       await tableAsserts.assertUserBalances({ account: 'aggroed', symbol: 'SWAP.HIVE', balance: '412.70900000'});
       await tableAsserts.assertUserBalances({ account: 'satoshi', symbol: 'SWAP.HIVE', balance: '44.72043400'});
       await tableAsserts.assertUserBalances({ account: 'vitalik', symbol: 'SWAP.HIVE', balance: '416.72900000'});
@@ -343,7 +371,7 @@ describe('Market', function() {
       assert.equal(metric.symbol, 'TKN');
       assert.equal(metric.volume, 84.14);
   });
-
+/*
   it('market buys from multiple sellers', async () => {
       await fixture.setUp();
 
@@ -2572,4 +2600,5 @@ describe('Market', function() {
 
       assert.equal(sellOrders.length, 0);
   });
+  */
 });

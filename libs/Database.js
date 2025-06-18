@@ -882,6 +882,9 @@ class Database {
         }
 
         if (unsets) {
+		console.log("unsetting");
+		console.log(record);
+		console.log(unsets);
           await tableInDb.updateOne({ _id: record._id }, { $set: EJSON.deserialize(record), $unset: EJSON.deserialize(unsets) }, { upsert: true, session: this.session }); // eslint-disable-line
         } else {
           await tableInDb.updateOne({ _id: record._id }, { $set: EJSON.deserialize(record) }, { upsert: true, session: this.session }); // eslint-disable-line
