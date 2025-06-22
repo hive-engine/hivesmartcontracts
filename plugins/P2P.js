@@ -258,6 +258,7 @@ const proposeRound = async (witness, round, retry = 0) => {
 };
 
 const manageRoundProposition = async () => {
+  let roundPropositionHandlerIntervalMs = 3000;
   // ensure node is not too far behind (say 10 minutes)
   const latestBlockInfo = await database.getLatestBlockInfo();
   const latestBlockTime = new Date(`${latestBlockInfo.timestamp}.000Z`).getTime();
@@ -327,7 +328,12 @@ const manageRoundProposition = async () => {
           };
           console.log(`Sending signatures. Enough signaturess: ${enoughSignatures}, Near deadline: ${nearDeadline}`);
           await hiveClient.sendCustomJSON(json);
-          lastVerifiedRoundNumber = currentRound;
+          if (enoughSignatures) {
+            lastVerifiedRoundNumber = currentRound;
+          } else {
+            // Delay next handler to after the schedule change (10 blocks ~ 30 seconds + 3s buffer)
+            roundPropositionHandlerIntervalMs = 33000;
+          }
         }
       } else if (currentRound < lastProposedRoundNumber) {
         log.error('Unexpected condition, last proposed round is larger than current round');
@@ -336,7 +342,7 @@ const manageRoundProposition = async () => {
       return;
     }
 
-    if (currentRound === lastProposedRoundNumber) {
+    if (currentRound === lastProposedRoundNumber && lastVerifiedRoundNumber === currentRound) {
       // Already finished with current round
       return;
     }
@@ -374,7 +380,7 @@ const manageRoundProposition = async () => {
   } finally {
     manageRoundPropositionTimeoutHandler = setTimeout(() => {
       manageRoundProposition();
-    }, 3000);
+    }, roundPropositionHandlerIntervalMs);
   }
 };
 
