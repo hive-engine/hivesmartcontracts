@@ -741,7 +741,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO.D:SWAP.HBD", "baseQuantity": "300", "quoteQuantity": "300", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'marketpools', 'addLiquidity', '{ "tokenPair": "URQTWO:SWAP.USDT", "baseQuantity": "1000", "quoteQuantity": "1000", "isSignedWithActiveKey": true }'));
       //35 convert
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "4000", "isSignedWithActiveKey": true }'));
+        transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "4000", "isSignedWithActiveKey": true }'));
         
       let block = {
           refHiveBlockNumber: refBlockNumber,
@@ -760,15 +760,15 @@ describe('burndollar', function () {
         table: 'balances',
         query: {
           account: 'whale',
-        symbol: 'URQTWO',
+          symbol: 'URQTWO',
+    
         }
       });
 
     let token = res2
 
     console.log(" ")
-    console.log( '\u001b[' + 93 + 'm' + 'Test: it converts XXX to XXX.D' + '\u001b[0m')
-        console.log(" 35 ⚪",JSON.parse(transactionsBlock1[35].logs).events[0])
+    console.log( '\u001b[' + 93 + 'm' + 'Test: it converts XXX to XXX.D' + '\u001b[0m')   
     console.log(token)
     
     assert.equal(token.account, 'whale');
@@ -797,7 +797,8 @@ describe('burndollar', function () {
       table: 'balances',
       query: {
         account: 'drewlongshot',
-      symbol: 'URQTWO.D',
+        symbol: 'URQTWO.D'
+  
       }
     });
 

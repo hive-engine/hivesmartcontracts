@@ -128,19 +128,29 @@ const calcParentPool = async (name, pool, tokenPriceUSD, precision) => {
 };
 
 const isTokenTransferVerified = (result, from, to, symbol, quantity, eventStr) => {
-  if (result.errors === undefined
-  && result.events && result.events.find(el => (el.contract === 'tokens' || el.contract === 'burndollar') && el.event === eventStr
-    && el.data.from === from && el.data.to === to && el.data.quantity === quantity && el.data.symbol === symbol) !== undefined) {
+  const normalize = val => (val && typeof val === 'object' && 'toString' in val) ? val.toString() : String(val);
+
+  if (!result?.errors && result.events?.some(el =>
+    ['tokens', 'burndollar'].includes(el.contract) &&
+    el.event === eventStr &&
+    el.data.from === from &&
+    el.data.to === to &&
+    el.data.symbol === symbol &&
+    normalize(el.data.quantity) === normalize(quantity)
+  )) {
     return true;
   }
+
   return false;
 };
 
 const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, isSignedWithActiveKey) => {
   if (api.BigNumber(fee).gt(0)) {
+    // transfer the parent symbol to routing account
     const res = await api.executeSmartContract('tokens', 'transfer', {
       to: toAccount, symbol: burnSymbol, quantity: fee, isSignedWithActiveKey,
     });
+
     if (!isTokenTransferVerified(res, api.sender, toAccount, burnSymbol, fee, 'transfer')) {
       return false;
     }
@@ -149,6 +159,8 @@ const burnParentTokens = async (amount, fee, burnSymbol, toAccount, beedParams, 
   const res2 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: burnSymbol, quantity: amount, isSignedWithActiveKey,
   });
+
+  // burn the correcct amount of the utility token
   const res3 = await api.executeSmartContract('tokens', 'transfer', {
     to: 'null', symbol: beedParams.burnToken, quantity: beedParams.burnUsageFee, isSignedWithActiveKey,
   });
@@ -419,7 +431,7 @@ actions.convert = async (payload) => {
           }
           const isBurnSuccess = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if (!api.assert(isBurnSuccess, 'error on token burn')) {
+          if (!api.assert(isBurnSuccess, 'error on token burn ')) {
             return false;
           }
 
