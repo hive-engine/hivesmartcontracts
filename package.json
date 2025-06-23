@@ -7,7 +7,7 @@
     "start": "node --max-old-space-size=8192 app.js",
     "lint": "eslint .gitignore .",
     "lintfix": "eslint .gitignore . --fix",
-    "minify:files": "for file in contracts/*.js; do if expr \"$file\" : '.*_minify\\.js$' >/dev/null; then continue; fi; filename=$(basename \"$file\" .js); terser \"$file\" --keep-fnames -c -o \"contracts/${filename}_minify.js\"; done",
+    "minify:files": "node scripts/minify.js",
     "test": "npm run minify:files; ./node_modules/mocha/bin/_mocha --forbid-only --recursive --exit",
     "test0": "./node_modules/mocha/bin/_mocha ./test/hivesmartcontracts.js --exit",
     "test1": "./node_modules/mocha/bin/_mocha ./test/nft.js --exit",
