@@ -11,7 +11,7 @@ const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
 const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js')
-const bdContractPayload = setupContractPayload('burndollar', './contracts/burndollar_minify.js');
+const bdContractPayload = setupContractPayload('burndollar', './contracts/burndollar.js');
 const beeContractPayload = setupContractPayload('beedollar', './contracts/beedollar_minify.js');
 const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
 
@@ -646,9 +646,17 @@ describe('burndollar', function () {
         }
       });
 
-    let token = res2
+      let res1 = await fixture.database.find({
+        contract: 'tokens',
+        table: 'balances',
+        query: {
+        }
+      });
+
+    let token = res1
 
     console.log(" ")
+    console.log(token)
     console.log(" 26 ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
     console.log(" 28 ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0])
     console.log(" 31 ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
