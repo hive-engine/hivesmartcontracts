@@ -18,9 +18,9 @@ const verifyTokenCreation = async (symbolFind) => {
   return true;
 };
 
-const verifyTokenBalance = async (account, burnUsage, burnToken, amount, symbolFind) => {
-  const finalAmount = amount || burnUsage;
-  const finalSymbol = symbolFind || burnToken;
+const verifyTokenBalance = async (account, amount, symbolFind) => {
+  const finalAmount = amount;
+  const finalSymbol = symbolFind;
   const findTokenBalance = await api.db.findOneInTable('tokens', 'balances', { account, symbol: finalSymbol });
 
   if (findTokenBalance && api.BigNumber(findTokenBalance.balance).gte(finalAmount)) {
@@ -277,7 +277,7 @@ actions.createTokenD = async (payload) => {
 
           await api.db.insert('burnpair', burnPairParams);
 
-          // issue a number XXX.D token to token issuer, issuer must create a market pools in order for conversions to occur(see actions.convert code)
+          // issue a number of XXX.D token to token issuer, issuer must create a market pool in order for conversions to occur(see actions.convert code)
           await api.executeSmartContract('tokens', 'issue', {
             to: api.sender, symbol: dSymbol, quantity: params.dTokenToIssuer,
           });
@@ -360,8 +360,8 @@ actions.convert = async (payload) => {
     if (api.assert(parentPairParams, 'parent symbol must have a child .D token')
     && api.assert(countDecimals(quantity) <= parentPairParams.precision, 'symbol precision mismatch')
     && api.assert(qtyAsBigNum.gte(contractParams.minAmountConvertible), 'amount to convert must be >= 1')) {
-      const hasEnoughUtilityToken = await verifyTokenBalance(api.sender, contractParams.burnUsageFee, contractParams.burnToken);
-      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, contractParams.burnUsageFee, contractParams.burnToken, qtyAsBigNum, symbol);
+      const hasEnoughUtilityToken = await verifyTokenBalance(api.sender);
+      const hasEnoughParentBalance = await verifyTokenBalance(api.sender, qtyAsBigNum, symbol);
       const hasEnoughStablePool = await findMarketPools(symbol, 'stable');
       const hasEnoughMarketPool = await findMarketPools(symbol, 'market');
 
@@ -417,9 +417,9 @@ actions.convert = async (payload) => {
           if (!api.assert(api.BigNumber(xxxdToIssue).gt(contractParams.minAmountConvertible), `resulting token issuance is too small; token price is ${calcResultParentPool.parentPrice}`)) {
             return false;
           }
-          const isBurnSuccesss = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
+          const isBurnSuccess = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if (api.assert(isBurnSuccesss, 'error on token burn')) {
+          if (api.assert(isBurnSuccess, 'error on token burn')) {
             return false;
           }
 
