@@ -419,7 +419,7 @@ actions.convert = async (payload) => {
           }
           const isBurnSuccess = await burnParentTokens(finalQty, fee, parentPairParams.parentSymbol, parentPairParams.burnRouting, contractParams, isSignedWithActiveKey);
 
-          if (api.assert(isBurnSuccess, 'error on token burn')) {
+          if (!api.assert(isBurnSuccess, 'error on token burn')) {
             return false;
           }
 
