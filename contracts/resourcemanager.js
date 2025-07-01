@@ -38,7 +38,8 @@ actions.updateParams = async (payload) => {
     multiTransactionFee,
     burnSymbol,
     denyMaxTx,
-    allowlistBurnFee
+    allowlistBurnFee,
+    checkDeclaredFee
   } = payload;
 
   const params = await api.db.findOne('params', {});
@@ -77,6 +78,10 @@ actions.updateParams = async (payload) => {
       return;
     }
     params.allowlistBurnFee = allowlistBurnFee;
+  }
+
+  if (typeof checkDeclaredFee === 'boolean') {
+    params.checkDeclaredFee = checkDeclaredFee;
   }
 
   await api.db.update('params', params);
@@ -214,6 +219,13 @@ actions.burnFee = async (payload) => {
       api.assert(payload.userActionCount <= 20, 'max transaction limit per block reached.');
     }
     return;
+  }
+
+  // only accept burn fee if explicitly opted in in payload as he__burnFee
+  if (burnParams.checkDeclaredFee) {
+    if (!api.assert(typeof payload.payload.he__burnFee === 'string' && api.BigNumber(burnParams.multiTransactionFee).eq(payload.payload.he__burnFee), 'Must declare matching multiTransaction fee in he__burnFee field')) {
+      return;
+    }
   }
 
   // if code is here burn BEED for multi transaction use
