@@ -184,6 +184,43 @@ describe('resourcemanager', function () {
     await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.79900000' });
   });
 
+
+  it('checks declared fee if parameter set', async () => {
+    await fixture.setUp();
+
+    await initializeResourceManager();
+
+    let refBlockNumber = resourceManagerForkBlock;
+    transactions = [];
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'resourcemanager', 'updateParams', '{ "checkDeclaredFee": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true }'));
+    transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drew', 'market', 'sell', '{ "symbol": "BEED", "quantity": "0.1", "price": "1", "isSignedWithActiveKey": true, "he__burnFee": "0.001" }'));
+
+    let block = {
+      refHiveBlockNumber: refBlockNumber,
+      refHiveBlockId: 'ABCD1',
+      prevRefHiveBlockId: 'ABCD2',
+      timestamp: '2018-06-01T00:00:00',
+      transactions,
+    };
+    await fixture.sendBlock(block);
+
+    const res = await fixture.database.getLatestBlockInfo();
+
+    const logs1 = JSON.parse(res.transactions[1].logs);
+    const logs3 = JSON.parse(res.transactions[3].logs);
+
+    assert.ok(!logs1.errors || logs1.errors.length === 0, 'First transaction should be free and succeed');
+    assertError(res.transactions[2], 'Must declare matching multiTransaction fee in he__burnFee field');
+    assert.ok(!logs3.errors || logs3.errors.length === 0 || logs3.events.length > 1, 'Second transaction should succeed but incur burn');
+
+    assert.ok(logs3.events && logs3.events.length > 1 && logs3.events[1].contract === 'resourcemanager'
+      && logs3.events[1].event === 'burnFee' && logs3.events[1].data.to === 'null' && logs3.events[1].data.fee === '0.001', 'Burn not protocolled');
+
+    await tableAsserts.assertUserBalances({ account: 'drew', symbol: 'BEED', balance: '0.79900000' });
+  });
+
   it('multiple token transfers pay no fees', async () => {
     await fixture.setUp();
 
