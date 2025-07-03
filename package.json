@@ -7,7 +7,6 @@
     "start": "node --max-old-space-size=8192 app.js",
     "lint": "eslint .gitignore .",
     "lintfix": "eslint .gitignore . --fix",
-    "minify:files": "node scripts/minify.js",
     "test": "npm run minify:files; ./node_modules/mocha/bin/_mocha --forbid-only --recursive --exit",
     "test0": "./node_modules/mocha/bin/_mocha ./test/hivesmartcontracts.js --exit",
     "test1": "./node_modules/mocha/bin/_mocha ./test/nft.js --exit",
