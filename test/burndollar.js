@@ -10,7 +10,7 @@ const { Fixture, conf } = require('../libs/util/testing/Fixture');
 const { TableAsserts } = require('../libs/util/testing/TableAsserts');
 const { assertError } = require('../libs/util/testing/Asserts');
 
-const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js')
+const tknContractPayload = setupContractPayload('tokens', './contracts/tokens_minify.js');
 const bdContractPayload = setupContractPayload('burndollar', './contracts/burndollar_minify.js');
 const beeContractPayload = setupContractPayload('beedollar', './contracts/beedollar_minify.js');
 const mpContractPayload = setupContractPayload('marketpools', './contracts/marketpools_minify.js');
@@ -30,7 +30,7 @@ describe('burndollar', function () {
       resolve();
     })
       .then(() => {
-        done()
+        done();
       })
   });
   
@@ -40,7 +40,7 @@ describe('burndollar', function () {
       resolve();
     })
       .then(() => {
-        done()
+        done();
       })
   });
 
@@ -50,7 +50,7 @@ describe('burndollar', function () {
       resolve();
     })
       .then(() => {
-        done()
+        done();
       })
   });
 
@@ -58,11 +58,11 @@ describe('burndollar', function () {
     // runs after each test in this block
     new Promise(async (resolve) => {
       fixture.tearDown();
-      await db.dropDatabase()
+      await db.dropDatabase();
       resolve();
     })
       .then(() => {
-        done()
+        done();
       })
   });
 
@@ -99,9 +99,9 @@ describe('burndollar', function () {
         query: {}
       });
 
-      console.log(" ")
-      console.log( '\u001b[' + 93 + 'm' + 'Test: updates parameters on the fee charges in the burndollar contract' + '\u001b[0m')
-      console.log(params)
+      console.log(" ");
+      console.log( '\u001b[' + 93 + 'm' + 'Test: updates parameters on the fee charges in the burndollar contract' + '\u001b[0m');
+      console.log(params);
       assert.equal(params.issueDTokenFee, '1200');
       assert.equal(params.updateParamsFee, '200');
       assert.equal(params.burnUsageFee, '2');
@@ -146,9 +146,9 @@ describe('burndollar', function () {
         query: {}
       });
 
-      console.log(" ")
-      console.log( '\u001b[' + 93 + 'm' + 'Test: fails to update parameters on the burndollar contract' + '\u001b[0m')
-      console.log(params)
+      console.log(" ");
+      console.log( '\u001b[' + 93 + 'm' + 'Test: fails to update parameters on the burndollar contract' + '\u001b[0m');
+      console.log(params);
 
       assert.equal(params.issueDTokenFee, '1000');
       assert.equal(params.updateParamsFee, '100');
@@ -174,7 +174,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(bdContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'deploy', JSON.stringify(beeContractPayload)));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(beeContractPayload)));
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 1
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); 
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'contract', 'update', JSON.stringify(mpContractPayload))); // update 2
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "HBD Pegged", "symbol": "SWAP.HBD", "precision": 8, "maxSupply": "1000000000000" }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), CONSTANTS.HIVE_ENGINE_ACCOUNT, 'tokens', 'issue', '{ "symbol": "SWAP.HBD", "to": "drewlongshot", "quantity": "1000", "isSignedWithActiveKey": true }'));
@@ -226,16 +226,16 @@ describe('burndollar', function () {
       const latestBlock = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = latestBlock.transactions;;
 
-      console.log(" ")
-      console.log( '\u001b[' + 93 + 'm' + 'Test: generates errors when trying to issue D tokens with wrong parameters' + '\u001b[0m') 
-      console.log("26  ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
-      console.log("28  ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0])
-      console.log("29  ⚪",JSON.parse(transactionsBlock1[29].logs).errors[0])
-      console.log("30  ⚪",JSON.parse(transactionsBlock1[30].logs).errors[0])
-      console.log("31  ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
-      console.log("32  ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0])
-      console.log("33  ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0])
-      console.log("36  ⚪",JSON.parse(transactionsBlock1[36].logs).errors[0])
+      console.log(" ");
+      console.log( '\u001b[' + 93 + 'm' + 'Test: generates errors when trying to issue D tokens with wrong parameters' + '\u001b[0m') ;
+      console.log("26  ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0]);
+      console.log("28  ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0]);
+      console.log("29  ⚪",JSON.parse(transactionsBlock1[29].logs).errors[0]);
+      console.log("30  ⚪",JSON.parse(transactionsBlock1[30].logs).errors[0]);
+      console.log("31  ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0]);
+      console.log("32  ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0]);
+      console.log("33  ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0]);
+      console.log("36  ⚪",JSON.parse(transactionsBlock1[36].logs).errors[0]);
 
       assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'you must have enough BEED tokens cover the creation fees');
       assert.equal(JSON.parse(transactionsBlock1[28].logs).errors[0], 'you must use a custom_json signed with your active key');
@@ -309,11 +309,11 @@ describe('burndollar', function () {
         query: {account:'null', symbol:'BEE'}
       });
 
-      let token = res2
+      let token = res2;
 
-     console.log(" ")
-     console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D token' + '\u001b[0m')
-     console.log (token)
+     console.log(" ");
+     console.log( '\u001b[' + 93 + 'm' + 'Test: creates a D token' + '\u001b[0m');
+     console.log (token);
      assert.equal(token.symbol, 'BEE');
      assert.equal(token.balance, '2100.00000000');
 
@@ -323,8 +323,8 @@ describe('burndollar', function () {
       query: {account:'null', symbol: 'BEED'}
     });
 
-     token = res2
-     console.log(token)
+     token = res2;
+     console.log(token);
      assert.equal(token.symbol, 'BEED');
      assert.equal(token.balance, '1000.0000');
 
@@ -334,9 +334,9 @@ describe('burndollar', function () {
       query: {symbol: 'URQTWO'}
     });
     
-    token = res2
+    token = res2;
 
-    console.log(token)
+    console.log(token);
     assert.equal(token.symbol, 'URQTWO');
     assert.equal(token.issuer, 'drewlongshot');
     assert.equal(token.name, 'token');
@@ -349,14 +349,14 @@ describe('burndollar', function () {
       query: {symbol: 'URQTWO.D'}
     });
     
-    token = res2
+    token = res2;
 
-    console.log(token)
+    console.log(token);
     assert.equal(token.symbol, 'URQTWO.D');
     assert.equal(token.issuer, 'null');
     assert.equal(token.name, 'URQTWO stablecoin');
     assert.equal(token.precision, 3);
-    assert.equal(token.supply, '1000.000')
+    assert.equal(token.supply, '1000.000');
 
     res2 = await fixture.database.findOne({
       contract: 'burndollar',
@@ -364,14 +364,14 @@ describe('burndollar', function () {
       query: {}
     });
     
-    token = res2
+    token = res2;
 
-    console.log(token)
+    console.log(token);
     assert.equal(token.symbol, 'URQTWO.D');
     assert.equal(token.issuer, 'drewlongshot');
-    assert.equal(token.parentSymbol,'URQTWO')
-    assert.equal(token.burnRouting, 'null')
-    assert.equal(token.feePercentage,'.5')
+    assert.equal(token.parentSymbol,'URQTWO');
+    assert.equal(token.burnRouting, 'null');
+    assert.equal(token.feePercentage,'.5');
 
       resolve();
   })
@@ -441,12 +441,12 @@ describe('burndollar', function () {
       query: {}
     });
     
-    token = res2
-    console.log(" ")
-    console.log( '\u001b[' + 93 + 'm' + 'Test: updates the params for the D token and charges 100 BEED' + '\u001b[0m')
-    console.log(token)
-    assert.equal(token.burnRouting, 'whale')
-    assert.equal(token.feePercentage, '.7')
+    token = res2;
+    console.log(" ");
+    console.log( '\u001b[' + 93 + 'm' + 'Test: updates the params for the D token and charges 100 BEED' + '\u001b[0m');
+    console.log(token);
+    assert.equal(token.burnRouting, 'whale');
+    assert.equal(token.feePercentage, '.7');
 
     res2 = await fixture.database.findOne({
       contract: 'tokens',
@@ -454,9 +454,9 @@ describe('burndollar', function () {
       query: {account: 'drewlongshot', symbol: 'BEED'}
     });
     
-    token = res2
-    console.log(token)
-    assert.equal(token.balance, '880.0000')
+    token = res2;
+    console.log(token);
+    assert.equal(token.balance, '880.0000');
 
       resolve();
   })
@@ -525,13 +525,13 @@ describe('burndollar', function () {
       const latestBlock = await fixture.database.getLatestBlockInfo();
       const transactionsBlock1 = latestBlock.transactions;;
 
-     console.log(" ")
-     console.log( '\u001b[' + 93 + 'm' + 'Test: Fails to update the params for the D token' + '\u001b[0m')
-     console.log("  ⚪ ",JSON.parse(transactionsBlock1[27].logs).errors[0])
-     console.log("  ⚪ ",JSON.parse(transactionsBlock1[29].logs).errors[0])
-     console.log("  ⚪ ",JSON.parse(transactionsBlock1[30].logs).errors[0])
-     console.log("  ⚪ ",JSON.parse(transactionsBlock1[31].logs).errors[0])
-     console.log("  ⚪ ",JSON.parse(transactionsBlock1[32].logs).errors[0])
+     console.log(" ");
+     console.log( '\u001b[' + 93 + 'm' + 'Test: Fails to update the params for the D token' + '\u001b[0m');
+     console.log("  ⚪ ",JSON.parse(transactionsBlock1[27].logs).errors[0]);
+     console.log("  ⚪ ",JSON.parse(transactionsBlock1[29].logs).errors[0]);
+     console.log("  ⚪ ",JSON.parse(transactionsBlock1[30].logs).errors[0]);
+     console.log("  ⚪ ",JSON.parse(transactionsBlock1[31].logs).errors[0]);
+     console.log("  ⚪ ",JSON.parse(transactionsBlock1[32].logs).errors[0]);
 
      assert.equal(JSON.parse(transactionsBlock1[27].logs).errors[0], 'you must use a custom_json signed with your active key');
      assert.equal(JSON.parse(transactionsBlock1[29].logs).errors[0], 'symbol must be string');
@@ -583,7 +583,7 @@ describe('burndollar', function () {
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'create', '{ "isSignedWithActiveKey": true,  "name": "token", "symbol": "URQTWO", "precision": 3, "maxSupply": "20000", "isSignedWithActiveKey": true  }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'issue', '{ "symbol": "URQTWO", "name": "token", "quantity": "2000", "to": "drewlongshot", "isSignedWithActiveKey": true }'));
       // trans 26 active key
-      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "20", "isSignedWithActiveKey": false }')) 
+      transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'convert', '{"symbol": "URQTWO", "quantity" : "20", "isSignedWithActiveKey": false }')); 
       // trans 27-30 not enough BEED
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'tokens', 'transfer', '{ "symbol": "BEED", "to": "aggroed", "quantity": "1200", "isSignedWithActiveKey": true }'));
       transactions.push(new Transaction(refBlockNumber, fixture.getNextTxId(), 'drewlongshot', 'burndollar', 'createTokenD', '{"symbol": "URQTWO", "name": "token", "feePercentage": ".5", "maxSupply": "20000", "isSignedWithActiveKey": true }'));
@@ -653,24 +653,22 @@ describe('burndollar', function () {
         }
       });
 
-    let token = res1
-
-    console.log(" ")
-    console.log( '\u001b[' + 93 + 'm' + 'Test: fails to convert token XXX to XXX.D' + '\u001b[0m')
-    console.log(" 26 ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0])
-    console.log(" 28 ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0])
-    console.log(" 31 ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0])
-    console.log(" 32 ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0])
-    console.log(" 33 ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0])
-    console.log(" 34 ⚪",JSON.parse(transactionsBlock1[34].logs).errors[0])
-    console.log(" 35 ⚪",JSON.parse(transactionsBlock1[35].logs).errors[0])
-    console.log(" 37 ⚪",JSON.parse(transactionsBlock1[37].logs).errors[0])
-    console.log(" 39 ⚪",JSON.parse(transactionsBlock1[39].logs).errors[0])
-    console.log(" 40 ⚪",JSON.parse(transactionsBlock1[40].logs).errors[0])
-    console.log(" 42 ⚪",JSON.parse(transactionsBlock1[42].logs).errors[0])
-    console.log(" 47 ⚪",JSON.parse(transactionsBlock1[47].logs).errors[0])
-    console.log(" 50 ⚪",JSON.parse(transactionsBlock1[50].logs).errors[0])
-    console.log(" 56 ⚪",JSON.parse(transactionsBlock1[56].logs).errors[0])
+    console.log(" ");
+    console.log( '\u001b[' + 93 + 'm' + 'Test: fails to convert token XXX to XXX.D' + '\u001b[0m');
+    console.log(" 26 ⚪",JSON.parse(transactionsBlock1[26].logs).errors[0]);
+    console.log(" 28 ⚪",JSON.parse(transactionsBlock1[28].logs).errors[0]);
+    console.log(" 31 ⚪",JSON.parse(transactionsBlock1[31].logs).errors[0]);
+    console.log(" 32 ⚪",JSON.parse(transactionsBlock1[32].logs).errors[0]);
+    console.log(" 33 ⚪",JSON.parse(transactionsBlock1[33].logs).errors[0]);
+    console.log(" 34 ⚪",JSON.parse(transactionsBlock1[34].logs).errors[0]);
+    console.log(" 35 ⚪",JSON.parse(transactionsBlock1[35].logs).errors[0]);
+    console.log(" 37 ⚪",JSON.parse(transactionsBlock1[37].logs).errors[0]);
+    console.log(" 39 ⚪",JSON.parse(transactionsBlock1[39].logs).errors[0]);
+    console.log(" 40 ⚪",JSON.parse(transactionsBlock1[40].logs).errors[0]);
+    console.log(" 42 ⚪",JSON.parse(transactionsBlock1[42].logs).errors[0]);
+    console.log(" 47 ⚪",JSON.parse(transactionsBlock1[47].logs).errors[0]);
+    console.log(" 50 ⚪",JSON.parse(transactionsBlock1[50].logs).errors[0]);
+    console.log(" 56 ⚪",JSON.parse(transactionsBlock1[56].logs).errors[0]);
 
 
     assert.equal(JSON.parse(transactionsBlock1[26].logs).errors[0], 'you must use a custom_json signed with your active key');
@@ -682,11 +680,11 @@ describe('burndollar', function () {
     assert.equal(JSON.parse(transactionsBlock1[35].logs).errors[0], 'symbol precision mismatch');
     assert.equal(JSON.parse(transactionsBlock1[37].logs).errors[0], 'not enough utility tokens');
     assert.equal(JSON.parse(transactionsBlock1[39].logs).errors[0], 'not enough token balance');
-    assert.equal(JSON.parse(transactionsBlock1[40].logs).errors[0], 'token must be in pool with a stable coin')
-    assert.equal(JSON.parse(transactionsBlock1[42].logs).errors[0], 'token must be in pool with xxx.d token')
-    assert.equal(JSON.parse(transactionsBlock1[47].logs).errors[0], 'stable token pool USD value must be at least 500')
-    assert.equal(JSON.parse(transactionsBlock1[50].logs).errors[0], 'parent token and XXX.D token pool USD value must be at least 500')
-    assert.equal(JSON.parse(transactionsBlock1[56].logs).errors[0], 'You must be the token issuer in order to issue D token')
+    assert.equal(JSON.parse(transactionsBlock1[40].logs).errors[0], 'token must be in pool with a stable coin');
+    assert.equal(JSON.parse(transactionsBlock1[42].logs).errors[0], 'token must be in pool with xxx.d token');
+    assert.equal(JSON.parse(transactionsBlock1[47].logs).errors[0], 'stable token pool USD value must be at least 500');
+    assert.equal(JSON.parse(transactionsBlock1[50].logs).errors[0], 'parent token and XXX.D token pool USD value must be at least 500');
+    assert.equal(JSON.parse(transactionsBlock1[56].logs).errors[0], 'You must be the token issuer in order to issue D token');
 
     resolve();
   })
@@ -753,8 +751,6 @@ describe('burndollar', function () {
       };
 
       await fixture.sendBlock(block);
-      const latestBlock = await fixture.database.getLatestBlockInfo();
-      const transactionsBlock1 = latestBlock.transactions
 
      let res2 = await fixture.database.findOne({
         contract: 'tokens',
@@ -766,11 +762,11 @@ describe('burndollar', function () {
         }
       });
 
-    let token = res2
+    let token = res2;
 
-    console.log(" ")
-    console.log( '\u001b[' + 93 + 'm' + 'Test: it converts XXX to XXX.D' + '\u001b[0m')   
-    console.log(token)
+    console.log(" ");
+    console.log( '\u001b[' + 93 + 'm' + 'Test: it converts XXX to XXX.D' + '\u001b[0m');
+    console.log(token);
     
     assert.equal(token.account, 'whale');
     assert.equal(token.symbol, 'URQTWO');
@@ -785,8 +781,8 @@ describe('burndollar', function () {
       }
     });
 
-    token = res2
-    console.log (token)
+    token = res2;
+    console.log (token);
 
     //the reminder of the burn goes to null
     assert.equal(token.account, 'null');
@@ -803,8 +799,8 @@ describe('burndollar', function () {
       }
     });
 
-    token = res2
-    console.log (token)
+    token = res2;
+    console.log (token);
 
     assert.equal(token.account, 'drewlongshot');
     assert.equal(token.symbol, 'URQTWO.D');
@@ -819,8 +815,8 @@ describe('burndollar', function () {
       }
     });
 
-    token = res2
-    console.log (token)
+    token = res2;
+    console.log (token);
 
     assert.equal(token.account, 'null');
     assert.equal(token.symbol, 'BEED');
@@ -833,4 +829,4 @@ describe('burndollar', function () {
         done();
       });
  });
-})
+});
