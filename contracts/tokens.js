@@ -553,7 +553,7 @@ actions.transfer = async (payload) => {
   const {
     to, symbol, isSignedWithActiveKey,
   } = payload;
- let quantity = payload.quantity;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(to && typeof to === 'string'
