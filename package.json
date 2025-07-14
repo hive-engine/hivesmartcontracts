@@ -31,6 +31,7 @@
     "test19": "./node_modules/mocha/bin/_mocha ./test/hivepegged.js --exit",
     "test20": "./node_modules/mocha/bin/_mocha ./test/nftairdrops.js --exit",
     "test21": "./node_modules/mocha/bin/_mocha ./test/beedollar.js --exit",
+    "test22": "./node_modules/mocha/bin/_mocha ./test/burndollar.js --exit",
     "test23": "./node_modules/mocha/bin/_mocha ./test/resourcemanager.js --exit"
   },
   "engines": {
