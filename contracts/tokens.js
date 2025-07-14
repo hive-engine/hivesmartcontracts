@@ -440,7 +440,7 @@ actions.issue = async (payload) => {
     to, symbol, isSignedWithActiveKey,
     callingContractInfo,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
@@ -503,7 +503,7 @@ actions.issueToContract = async (payload) => {
     to, symbol, isSignedWithActiveKey,
     callingContractInfo,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
@@ -609,7 +609,7 @@ actions.transferToContract = async (payload) => {
   const {
     from, to, symbol, isSignedWithActiveKey,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   const finalFrom = (from === undefined || api.sender !== 'null') ? api.sender : from;
 
@@ -659,7 +659,7 @@ actions.transferFromContract = async (payload) => {
     const {
       from, to, symbol, type,
     } = payload;
-    let { quantity } = payload;
+    let quantity = payload.quantity;
     const types = ['user', 'contract'];
 
     if (api.assert(to && typeof to === 'string'
@@ -887,7 +887,7 @@ actions.stake = async (payload) => {
     to,
     isSignedWithActiveKey,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -935,7 +935,7 @@ actions.stakeFromContract = async (payload) => {
     to,
     callingContractInfo,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   // can only be called from a contract
   if (callingContractInfo
@@ -1060,7 +1060,7 @@ const startUnstake = async (account, token, quantity) => {
 
 actions.unstake = async (payload) => {
   const { symbol, isSignedWithActiveKey } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1201,7 +1201,7 @@ actions.delegate = async (payload) => {
     to,
     isSignedWithActiveKey,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1379,7 +1379,7 @@ actions.undelegate = async (payload) => {
     from,
     isSignedWithActiveKey,
   } = payload;
-  let { quantity } = payload;
+  let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
