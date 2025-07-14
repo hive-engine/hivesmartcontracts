@@ -553,7 +553,7 @@ actions.transfer = async (payload) => {
   const {
     to, symbol, isSignedWithActiveKey,
   } = payload;
-  const { quantity } = payload;
+ let quantity = payload.quantity;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(to && typeof to === 'string'
@@ -624,7 +624,7 @@ actions.transferToContract = async (payload) => {
         const token = await api.db.findOne('tokens', { symbol });
 
         // the symbol must exist
-        // then we need to check that the quantity is correct.
+        // then we need to check that the quantity is correct
         if (api.assert(token !== null, 'symbol does not exist')
           && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
           && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
