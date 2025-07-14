@@ -51,6 +51,7 @@ const VERIFIED_ISSUERS = [
   'mining',
   'tokenfunds',
   'beedollar',
+  'burndollar',
 ];
 
 const calculateBalance = (balance, quantity, precision, add) => (add
@@ -336,7 +337,7 @@ actions.transferOwnership = async (payload) => {
           token.issuer = finalTo;
           await api.db.update('tokens', token);
           api.emit('transferOwnership', {
-              from: api.sender, to: finalTo, symbol
+            from: api.sender, to: finalTo, symbol,
           });
         }
       }
@@ -354,8 +355,7 @@ actions.create = async (payload) => {
   const params = await api.db.findOne('params', {});
   const { tokenCreationFee, heAccounts } = params;
 
-  const fromVerifiedContract = (api.sender === 'hive-engine'
-      && callingContractInfo
+  const fromVerifiedContract = (callingContractInfo
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
 
   // get api.sender's UTILITY_TOKEN_SYMBOL balance
@@ -390,7 +390,7 @@ actions.create = async (payload) => {
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('SWAP') === -1, 'invalid symbol: not allowed to use SWAP')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('ETH') === -1, 'invalid symbol: not allowed to use ETH')
       && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('BSC') === -1, 'invalid symbol: not allowed to use BSC')
-      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1, 'invalid symbol: usage of "." is restricted')
+      && api.assert(heAccounts[api.sender] === 1 || symbol.indexOf('.') === -1 || (callingContractInfo && callingContractInfo.name === 'burndollar'), 'invalid symbol: usage of "." is restricted')
       && api.assert(api.validator.isAlphanumeric(api.validator.blacklist(name, ' ')) && name.length > 0 && name.length <= 50, 'invalid name: letters, numbers, whitespaces only, max length of 50')
       && api.assert(url === undefined || url.length <= 255, 'invalid url: max length of 255')
       && api.assert((precision >= 0 && precision <= 8) && (Number.isInteger(precision)), 'invalid precision')
@@ -440,11 +440,12 @@ actions.issue = async (payload) => {
     to, symbol, isSignedWithActiveKey,
     callingContractInfo,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1)
-      || (callingContractInfo && callingContractInfo.name === 'beedollar');
+      || (callingContractInfo && callingContractInfo.name === 'beedollar')
+      || (callingContractInfo && callingContractInfo.name === 'burndollar');
 
   if (fromVerifiedContract
     || (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
@@ -502,7 +503,7 @@ actions.issueToContract = async (payload) => {
     to, symbol, isSignedWithActiveKey,
     callingContractInfo,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   const fromVerifiedContract = (api.sender === 'null'
       && VERIFIED_ISSUERS.indexOf(callingContractInfo.name) !== -1);
@@ -552,7 +553,7 @@ actions.transfer = async (payload) => {
   const {
     to, symbol, isSignedWithActiveKey,
   } = payload;
-  let quantity = payload.quantity;
+  const { quantity } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(to && typeof to === 'string'
@@ -573,7 +574,7 @@ actions.transfer = async (payload) => {
         if (api.assert(token !== null, 'symbol does not exist')
           && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
           && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
-          //quantity = api.BigNumber(quantity).toFixed(token.precision);
+          // quantity = api.BigNumber(quantity).toFixed(token.precision);
           if (await subBalance(api.sender, token, quantity, 'balances')) {
             const res = await addBalance(finalTo, token, quantity, 'balances');
 
@@ -608,7 +609,7 @@ actions.transferToContract = async (payload) => {
   const {
     from, to, symbol, isSignedWithActiveKey,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   const finalFrom = (from === undefined || api.sender !== 'null') ? api.sender : from;
 
@@ -658,7 +659,7 @@ actions.transferFromContract = async (payload) => {
     const {
       from, to, symbol, type,
     } = payload;
-    let quantity = payload.quantity;
+    let { quantity } = payload;
     const types = ['user', 'contract'];
 
     if (api.assert(to && typeof to === 'string'
@@ -886,7 +887,7 @@ actions.stake = async (payload) => {
     to,
     isSignedWithActiveKey,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -934,7 +935,7 @@ actions.stakeFromContract = async (payload) => {
     to,
     callingContractInfo,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   // can only be called from a contract
   if (callingContractInfo
@@ -1059,7 +1060,7 @@ const startUnstake = async (account, token, quantity) => {
 
 actions.unstake = async (payload) => {
   const { symbol, isSignedWithActiveKey } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1200,7 +1201,7 @@ actions.delegate = async (payload) => {
     to,
     isSignedWithActiveKey,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
@@ -1378,7 +1379,7 @@ actions.undelegate = async (payload) => {
     from,
     isSignedWithActiveKey,
   } = payload;
-  let quantity = payload.quantity;
+  let { quantity } = payload;
 
   if (api.assert(isSignedWithActiveKey === true, 'you must use a custom_json signed with your active key')
     && api.assert(symbol && typeof symbol === 'string'
