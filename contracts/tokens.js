@@ -624,7 +624,7 @@ actions.transferToContract = async (payload) => {
         const token = await api.db.findOne('tokens', { symbol });
 
         // the symbol must exist
-        // then we need to check that the quantity is correct
+        // then we need to check that the quantity is correct.
         if (api.assert(token !== null, 'symbol does not exist')
           && api.assert(countDecimals(quantity) <= token.precision, 'symbol precision mismatch')
           && api.assert(api.BigNumber(quantity).gt(0), 'must transfer positive quantity')) {
