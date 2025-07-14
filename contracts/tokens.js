@@ -337,7 +337,7 @@ actions.transferOwnership = async (payload) => {
           token.issuer = finalTo;
           await api.db.update('tokens', token);
           api.emit('transferOwnership', {
-             from: api.sender, to: finalTo, symbol,
+              from: api.sender, to: finalTo, symbol,
           });
         }
       }
