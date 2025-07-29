@@ -145,7 +145,7 @@ async function producePendingTransactions(
             }
 
             await addBlock(newBlock);
-          } else if (mainBlock.refHiveBlockNumber === newBlock.refHiveBlockNumber) {
+          } else if (mainBlock?.refHiveBlockNumber === newBlock.refHiveBlockNumber) {
             throw new Error(`Block mismatch with api \nMain: ${JSON.stringify(mainBlock, null, 2)}, \nThis: ${JSON.stringify(newBlock, null, 2)}`);
           }
         } catch (e) {
