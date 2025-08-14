@@ -1163,7 +1163,7 @@ describe('witnesses', function () {
       witnesses = res;
 
       assert.equal(witnesses[0].account, "dan");
-      assert.equal(witnesses[0].approvalWeight.$numberDecimal, '100.25001');
+      assert.equal(witnesses[0].approvalWeight.$numberDecimal, '100.00001');
 
       assert.equal(witnesses[1].account, "vitalik");
       assert.equal(witnesses[1].approvalWeight.$numberDecimal, "100.00001");
@@ -1183,7 +1183,7 @@ describe('witnesses', function () {
 
       assert.equal(accounts[1].account, "ned");
       assert.equal(accounts[1].approvals, 1);
-      assert.equal(accounts[1].approvalWeight, "0.25000");
+      assert.equal(accounts[1].approvalWeight, "0.00000");
 
       res = await fixture.database.find({
         contract: 'witnesses',
@@ -1213,8 +1213,8 @@ describe('witnesses', function () {
       params = res;
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
-      assert.equal(params[0].totalApprovalWeight, "200.25002");
-      assert.equal(params[0].totalEnabledApprovalWeight, "100.25001");
+      assert.equal(params[0].totalApprovalWeight, "200.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.00001");
 
       // test recalculate approvals, clear current weights
       let wit = await fixture.database.findOne({ contract: 'witnesses', table: 'witnesses', query: { 'account': 'dan' }});
@@ -1261,7 +1261,7 @@ describe('witnesses', function () {
       witnesses = res;
 
       assert.equal(witnesses[0].account, "dan");
-      assert.equal(witnesses[0].approvalWeight.$numberDecimal, '100.25001');
+      assert.equal(witnesses[0].approvalWeight.$numberDecimal, '100.00001');
 
       assert.equal(witnesses[1].account, "vitalik");
       assert.equal(witnesses[1].approvalWeight.$numberDecimal, "100.00001");
@@ -1276,8 +1276,8 @@ describe('witnesses', function () {
       params = res;
 
       assert.equal(params[0].numberOfApprovedWitnesses, 2);
-      assert.equal(params[0].totalApprovalWeight, "200.25002");
-      assert.equal(params[0].totalEnabledApprovalWeight, "100.25001");
+      assert.equal(params[0].totalApprovalWeight, "200.00002");
+      assert.equal(params[0].totalEnabledApprovalWeight, "100.00001");
   });
 
   it('schedules witnesses', async () => {

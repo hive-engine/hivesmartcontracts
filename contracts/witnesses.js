@@ -223,8 +223,10 @@ const updateWitnessRank = async (witness, approvalWeight) => {
 actions.updateWitnessesApprovals = async (payload) => {
   const { account, callingContractInfo } = payload;
 
-  if (callingContractInfo === undefined) return;
-  if (callingContractInfo.name !== 'tokens') return;
+  if (api.sender !== api.owner) {
+    if (callingContractInfo === undefined) return;
+    if (callingContractInfo.name !== 'tokens') return;
+  }
 
   const acct = await api.db.findOne('accounts', { account });
   if (acct !== null) {
