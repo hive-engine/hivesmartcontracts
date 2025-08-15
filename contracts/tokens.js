@@ -774,18 +774,18 @@ const processUnstake = async (unstake) => {
           token.totalStaked = calculateBalance(
             token.totalStaked, nextTokensToRelease, token.precision, false,
           );
-
-          // update witnesses rank
-          if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
-            await api.executeSmartContract('witnesses', 'updateWitnessesApprovals', { account });
-          }
           await api.executeSmartContract('mining', 'handleStakeChange',
             { account, symbol, quantity: api.BigNumber(nextTokensToRelease).negated() });
-          await api.executeSmartContract('tokenfunds', 'updateProposalApprovals', { account, token });
         }
 
         await api.db.update('balances', balance);
         await api.db.update('tokens', token);
+
+        // update witnesses rank
+        if (symbol === "'${CONSTANTS.GOVERNANCE_TOKEN_SYMBOL}$'") {
+          await api.executeSmartContract('witnesses', 'updateWitnessesApprovals', { account });
+        }
+        await api.executeSmartContract('tokenfunds', 'updateProposalApprovals', { account, token });
 
         api.emit('unstake', { account, symbol, quantity: tokensToRelease });
       }
