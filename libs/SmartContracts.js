@@ -734,7 +734,7 @@ class SmartContracts {
         };
         let getApiProp = (k) => {
           const v = _sscglobal_api.getSync(k, { copy: true });
-          return typeof v !== 'undefined' ? v : null;
+          return typeof v !== 'undefined' ? v : undefined;
         };
         let getDbProp = (k) => {
           const v = _sscglobal_db.getSync(k, { copy: true });
