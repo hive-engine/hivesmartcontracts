@@ -14,8 +14,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
-        node-version: [18.x, 20.x, 22.x]
-        mongodb-version: ['4.4', '5.0', '6.0', '7.0']
+        node-version: [18.x, 20.x, 22.x, 24.x]
+        mongodb-version: ['4.4', '5.0', '6.0', '7.0', '8.0']
 
     steps:
       - name: Git checkout
