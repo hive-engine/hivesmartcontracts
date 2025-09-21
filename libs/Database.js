@@ -694,8 +694,8 @@ class Database {
               sort.push(['_id', 'asc']);
             }
 
-            // Add numeric collation for balance sorting (works regardless of indexes)
-            const collation = ind.some(idx => idx.index === 'balance')
+            // Add numeric collation for balance/stake sorting (both are numeric strings)
+            const collation = ind.some(idx => idx.index === 'balance' || idx.index === 'stake')
               ? { locale: "en_US", numericOrdering: true }
               : undefined;
 
