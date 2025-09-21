@@ -256,7 +256,8 @@ function contractsRPC() {
           limit,
           offset,
           indexes,
-          project
+          project,
+          sort
         } = args;
 
         if (contract && typeof contract === 'string'
@@ -264,7 +265,27 @@ function contractsRPC() {
           && query && typeof query === 'object') {
           const lim = limit || config.rpcConfig.maxLimit;
           const off = offset || 0;
-          const ind = indexes || [];
+          let ind = indexes || [];
+
+          // Handle sort parameter
+          if (sort && typeof sort === 'object' && sort.field && typeof sort.field === 'string' && sort.order && typeof sort.order === 'string') {
+            if (sort.order !== 'asc' && sort.order !== 'desc') {
+              callback({
+                code: 400,
+                message: 'invalid sort order: must be "asc" or "desc"',
+              }, null);
+              return;
+            }
+            // Add sort index to the beginning of indexes array
+            ind = [{ index: sort.field, descending: sort.order === 'desc' }, ...ind];
+          } else if (sort !== undefined) {
+            callback({
+              code: 400,
+              message: 'invalid sort parameter: must be an object with "field" and "order" properties',
+            }, null);
+            return;
+          }
+
           const prj = project || {};
           if (lim > config.rpcConfig.maxLimit) {
             callback({

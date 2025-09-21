@@ -684,20 +684,28 @@ class Database {
                 }
               });
             } else {
-              // This can happen when creating a table and using find with index all in the same transaction
-              // and should be rare in production. Otherwise, contract code is asking for an index that does
-              // not exist.
-              log.info(`Index ${JSON.stringify(ind)} not available for ${finalTableName}`); // eslint-disable-line no-console
+              // Build sort array even when indexes don't exist
+              ind.forEach((el) => {
+                sort.push([el.index === '$loki' ? '_id' : el.index, el.descending === true ? 'desc' : 'asc']);
+              });
+              log.info(`Index ${JSON.stringify(ind)} not available for ${finalTableName}, using collation for numeric sorting`); // eslint-disable-line no-console
             }
             if (sort.findIndex(el => el[0] === '_id') < 0) {
               sort.push(['_id', 'asc']);
             }
+
+            // Add numeric collation for balance sorting (works regardless of indexes)
+            const collation = ind.some(idx => idx.index === 'balance')
+              ? { locale: "en_US", numericOrdering: true }
+              : undefined;
+
             result = await tableData.find(EJSON.deserialize(query), {
               limit: lim,
               skip: off,
               sort,
               session: this.session,
               projection: prj,
+              ...(collation && { collation }),
             }).toArray();
 
             result = EJSON.serialize(result);
