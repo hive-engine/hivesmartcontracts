@@ -256,7 +256,8 @@ function contractsRPC() {
           limit,
           offset,
           indexes,
-          project
+          project,
+          sort
         } = args;
 
         if (contract && typeof contract === 'string'
@@ -264,7 +265,49 @@ function contractsRPC() {
           && query && typeof query === 'object') {
           const lim = limit || config.rpcConfig.maxLimit;
           const off = offset || 0;
-          const ind = indexes || [];
+          let ind = indexes || [];
+
+          // Handle sort parameter
+          if (sort && typeof sort === 'object' && sort.field && typeof sort.field === 'string' && sort.order && typeof sort.order === 'string') {
+            if (sort.order !== 'asc' && sort.order !== 'desc') {
+              callback({
+                code: 400,
+                message: 'invalid sort order: must be "asc" or "desc"',
+              }, null);
+              return;
+            }
+            // Validate the requested sort field against allowed indexed fields
+            const allowedSortFields = (() => {
+              // Per-table allowlist of sort fields known to be indexed
+              // Add tokens.balances: balance and stake
+              if (contract === 'tokens' && table === 'balances') {
+                return new Set(['balance', 'stake', 'account', '_id']);
+              }
+              // Default allow only _id unless the field is explicitly provided in indexes param
+              return new Set(['_id']);
+            })();
+
+            const sortField = sort.field;
+            const providedIndexes = Array.isArray(indexes) ? indexes : [];
+            const includedInIndexesParam = providedIndexes.some(ix => ix && typeof ix === 'object' && ix.index === sortField);
+
+            if (!allowedSortFields.has(sortField) && !includedInIndexesParam) {
+              callback({
+                code: 400,
+                message: `invalid sort field: ${sortField} is not allowed for ${contract}.${table}`,
+              }, null);
+              return;
+            }
+            // Add sort index to the beginning of indexes array
+            ind = [{ index: sort.field, descending: sort.order === 'desc' }, ...ind];
+          } else if (sort !== undefined) {
+            callback({
+              code: 400,
+              message: 'invalid sort parameter: must be an object with "field" and "order" properties',
+            }, null);
+            return;
+          }
+
           const prj = project || {};
           if (lim > config.rpcConfig.maxLimit) {
             callback({

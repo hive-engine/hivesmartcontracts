@@ -42,6 +42,12 @@ looping (though with transactions there is less risk of data corruption). Anothe
  that you may need to clear node processes after a stop if the process does not terminate on its own. 
 Otherwise it will interfere with logging.
 
+#### Database Sorting (No Index Required)
+
+Balance sorting now uses MongoDB's built-in numeric collation (`numericOrdering: true`), which treats balance strings as numbers without requiring database indexes.
+
+**No additional setup needed** - sorting works out of the box with proper numeric ordering.
+
 Also, with isolated-vm on node 20 and later, you will need to pass in --no-node-snapshot to node:
 
 E.g.
