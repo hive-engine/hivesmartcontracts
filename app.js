@@ -127,7 +127,16 @@ const unloadPlugin = async (plugin) => {
   const plg = getPlugin(plugin);
   if (plg) {
     logger.info(`unloading plugin ${plugin.PLUGIN_NAME}`);
-    res = await send(plg, { action: 'stop' });
+    // res = await send(plg, { action: 'stop' });
+    // Add timeout to prevent hanging if plugin doesn't respond
+    const timeout = new Promise((resolve) => setTimeout(() => {
+      logger.error(`[${plugin.PLUGIN_NAME}] stop request timed out`);
+      resolve(null);
+    }, 2000));
+
+    const sendPromise = send(plg, { action: 'stop' });
+    res = await Promise.race([sendPromise, timeout]);
+
     plg.cp.kill('SIGINT');
   }
   return res;
@@ -162,8 +171,18 @@ const saveConfig = (lastBlockParsed) => {
 const stopApp = async (signal = 0) => {
   const lastBlockParsed = await stop();
   saveConfig(lastBlockParsed);
-  // calling process.exit() won't inform parent process of signal
-  process.kill(process.pid, signal);
+
+  if (signal && signal !== 0) {
+    // We received a signal (SIGINT/SIGTERM). 
+    // To let the parent know we died of this signal, we need to remove our listeners
+    // and re-send the signal to ourselves. This triggers the default handler (termination).
+    process.removeAllListeners('SIGINT');
+    process.removeAllListeners('SIGTERM');
+    process.kill(process.pid, signal);
+  } else {
+    // Normal exit or no specific signal passed
+    process.exit(0);
+  }
 };
 
 // graceful app closing
