@@ -132,7 +132,7 @@ const unloadPlugin = async (plugin) => {
     const timeout = new Promise((resolve) => setTimeout(() => {
       logger.error(`[${plugin.PLUGIN_NAME}] stop request timed out`);
       resolve(null);
-    }, 2000));
+    }, 6000));
 
     const sendPromise = send(plg, { action: 'stop' });
     res = await Promise.race([sendPromise, timeout]);
