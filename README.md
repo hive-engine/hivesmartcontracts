@@ -49,6 +49,14 @@ E.g.
 pm2 start app.js --no-treekill --kill-timeout 10000 --no-autorestart --node-args="--no-node-snapshot"
 ```
 
+### RPC health check / auto-restart
+
+The RPC plugin now exposes a lightweight `GET /health` endpoint and the master process can probe it to
+restart the JsonRPCServer if it becomes unresponsive. Configure it via `rpcConfig.healthCheck` in
+`config.json` (see `config.example.json` for defaults). You can also enable escalation to restart the
+entire node after repeated RPC restarts, and optional RPC monitoring logs for slow requests or large
+batches.
+
 ### DB Backup and Restore
 
 Backup current state (track current hive blpck in config)
