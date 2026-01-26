@@ -350,6 +350,29 @@ const init = async (conf, callback) => {
   serverRPC.use(cors({ methods: ['POST'] }));
   serverRPC.use(bodyParser.urlencoded({ extended: true }));
   serverRPC.use(bodyParser.json());
+  const monitoringConfig = config.rpcConfig?.monitoring || {};
+  const logSlowRequests = monitoringConfig.logSlowRequests === true;
+  const slowRequestMs = Number.isFinite(monitoringConfig.slowRequestMs) ? monitoringConfig.slowRequestMs : 0;
+  const logBatchSizes = monitoringConfig.logBatchSizes === true;
+  const logBatchMinSize = Number.isFinite(monitoringConfig.logBatchMinSize) ? monitoringConfig.logBatchMinSize : 2;
+  if (logSlowRequests || logBatchSizes) {
+    serverRPC.use((req, res, next) => {
+      const start = Date.now();
+      const batchSize = Array.isArray(req.body) ? req.body.length : 0;
+      res.on('finish', () => {
+        if (logSlowRequests && slowRequestMs > 0) {
+          const duration = Date.now() - start;
+          if (duration >= slowRequestMs) {
+            console.warn(`RPC slow request ${req.method} ${req.originalUrl} ${duration}ms status=${res.statusCode}`);
+          }
+        }
+        if (logBatchSizes && batchSize >= logBatchMinSize) {
+          console.warn(`RPC batch request ${req.method} ${req.originalUrl} size=${batchSize} status=${res.statusCode}`);
+        }
+      });
+      next();
+    });
+  }
   serverRPC.set('trust proxy', true);
   serverRPC.set('trust proxy', 'loopback');
   if (config.rpcConfig.logRequests) {
@@ -363,6 +386,9 @@ const init = async (conf, callback) => {
   serverRPC.use((err, _req, res, _next) => {
     console.error(err);
     res.status(500).json({ error: 'Error processing requests' });
+  });
+  serverRPC.get('/health', (_req, res) => {
+    res.json({ status: 'ok', timestamp: Date.now() });
   });
   serverRPC.get('/', async (_, res) => {
     try {

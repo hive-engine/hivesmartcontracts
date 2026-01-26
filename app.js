@@ -1,5 +1,6 @@
 require('dotenv').config();
 const fs = require('fs-extra');
+const http = require('http');
 const program = require('commander');
 const { fork } = require('child_process');
 const { createLogger, format, transports } = require('winston');
@@ -42,6 +43,25 @@ const plugins = {};
 
 const jobs = new Map();
 let currentJobId = 0;
+let requestedPlugins = [];
+
+const defaultRpcHealthCheck = {
+  enabled: true,
+  intervalMs: 15000,
+  timeoutMs: 2000,
+  failuresBeforeRestart: 3,
+  restartDelayMs: 5000,
+  stopTimeoutMs: 5000,
+  killAfterMs: 10000,
+  escalateAfter: 0,
+  escalationWindowMs: 600000,
+  escalationSignal: 'SIGTERM',
+};
+
+const getRpcHealthConfig = () => ({
+  ...defaultRpcHealthCheck,
+  ...(conf.rpcConfig?.healthCheck || {}),
+});
 
 // send an IPC message to a plugin with a promise in return
 const send = (plugin, message) => {
@@ -61,6 +81,35 @@ const send = (plugin, message) => {
     jobs.set(currentJobId, {
       message: newMessage,
       resolve,
+    });
+  });
+};
+
+const sendWithTimeout = (plugin, message, timeoutMs) => {
+  const newMessage = {
+    ...message,
+    to: plugin.name,
+    from: 'MASTER',
+    type: 'request',
+  };
+  currentJobId += 1;
+  if (currentJobId > Number.MAX_SAFE_INTEGER) {
+    currentJobId = 1;
+  }
+  const jobId = currentJobId;
+  newMessage.jobId = jobId;
+  plugin.cp.send(newMessage);
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      jobs.delete(jobId);
+      resolve({ timeout: true });
+    }, timeoutMs);
+    jobs.set(jobId, {
+      message: newMessage,
+      resolve: (payload) => {
+        clearTimeout(timeout);
+        resolve(payload);
+      },
     });
   });
 };
@@ -101,8 +150,137 @@ const getPlugin = (plugin) => {
   return null;
 };
 
+const isPluginRunning = (plugin) => {
+  const plg = getPlugin(plugin);
+  return Boolean(plg && plg.cp && plg.cp.exitCode === null);
+};
+
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+let rpcHealthTimer = null;
+let rpcHealthFailures = 0;
+let rpcHealthProbeInFlight = false;
+let rpcRestartInProgress = false;
+const rpcRestartHistory = [];
+
+const shouldEscalateRestart = (cfg) => {
+  if (!cfg.escalateAfter || cfg.escalateAfter <= 0) return false;
+  const now = Date.now();
+  const windowMs = cfg.escalationWindowMs || defaultRpcHealthCheck.escalationWindowMs;
+  rpcRestartHistory.push(now);
+  while (rpcRestartHistory.length && now - rpcRestartHistory[0] > windowMs) {
+    rpcRestartHistory.shift();
+  }
+  return rpcRestartHistory.length >= cfg.escalateAfter;
+};
+
+const probeRpcHealth = (cfg) => new Promise((resolve) => {
+  const req = http.get({
+    hostname: '127.0.0.1',
+    port: conf.rpcNodePort,
+    path: '/health',
+    timeout: cfg.timeoutMs,
+  }, (res) => {
+    res.resume();
+    resolve(res.statusCode === 200);
+  });
+
+  req.on('timeout', () => {
+    req.destroy(new Error('health check timeout'));
+  });
+  req.on('error', () => {
+    resolve(false);
+  });
+});
+
+const unloadPlugin = async (plugin, options = {}) => {
+  let res = null;
+  const plg = getPlugin(plugin);
+  if (plg) {
+    logger.info(`unloading plugin ${plugin.PLUGIN_NAME}`);
+    if (options.timeoutMs) {
+      res = await sendWithTimeout(plg, { action: 'stop' }, options.timeoutMs);
+    } else {
+      res = await send(plg, { action: 'stop' });
+    }
+    plg.cp.kill('SIGINT');
+    if (options.killAfterMs) {
+      const killTimer = setTimeout(() => {
+        if (plg.cp.exitCode === null) {
+          plg.cp.kill('SIGKILL');
+        }
+      }, options.killAfterMs);
+      if (killTimer.unref) killTimer.unref();
+    }
+  }
+  return res;
+};
+
+const restartJsonRpc = async (reason) => {
+  if (rpcRestartInProgress || shuttingDown) return;
+  if (!requestedPlugins.includes(jsonRPCServer.PLUGIN_NAME)) return;
+  const cfg = getRpcHealthConfig();
+  if (shouldEscalateRestart(cfg)) {
+    logger.error(`[${jsonRPCServer.PLUGIN_NAME}] escalation threshold reached; signaling ${cfg.escalationSignal}`);
+    stopRpcHealthCheck();
+    process.kill(process.pid, cfg.escalationSignal || 'SIGTERM');
+    return;
+  }
+  rpcRestartInProgress = true;
+  logger.warn(`[${jsonRPCServer.PLUGIN_NAME}] restarting (${reason})`);
+  try {
+    await unloadPlugin(jsonRPCServer, {
+      timeoutMs: cfg.stopTimeoutMs,
+      killAfterMs: cfg.killAfterMs,
+    });
+  } catch (error) {
+    logger.error(`[${jsonRPCServer.PLUGIN_NAME}] restart unload error: ${error}`);
+  }
+  rpcHealthFailures = 0;
+  await delay(cfg.restartDelayMs);
+  try {
+    await loadPlugin(jsonRPCServer, requestedPlugins);
+  } catch (error) {
+    logger.error(`[${jsonRPCServer.PLUGIN_NAME}] restart load error: ${error}`);
+  }
+  rpcRestartInProgress = false;
+};
+
+const startRpcHealthCheck = () => {
+  const cfg = getRpcHealthConfig();
+  if (!cfg.enabled || !requestedPlugins.includes(jsonRPCServer.PLUGIN_NAME)) return;
+  if (rpcHealthTimer) clearInterval(rpcHealthTimer);
+  rpcHealthTimer = setInterval(async () => {
+    if (rpcHealthProbeInFlight || rpcRestartInProgress || shuttingDown) return;
+    if (!isPluginRunning(jsonRPCServer)) return;
+    rpcHealthProbeInFlight = true;
+    try {
+      const ok = await probeRpcHealth(cfg);
+      if (!ok) {
+        rpcHealthFailures += 1;
+        logger.warn(`[${jsonRPCServer.PLUGIN_NAME}] health check failed (${rpcHealthFailures}/${cfg.failuresBeforeRestart})`);
+        if (rpcHealthFailures >= cfg.failuresBeforeRestart) {
+          await restartJsonRpc('health check failure threshold reached');
+        }
+      } else if (rpcHealthFailures > 0) {
+        rpcHealthFailures = 0;
+      }
+    } finally {
+      rpcHealthProbeInFlight = false;
+    }
+  }, cfg.intervalMs);
+  if (rpcHealthTimer.unref) rpcHealthTimer.unref();
+};
+
+const stopRpcHealthCheck = () => {
+  if (rpcHealthTimer) {
+    clearInterval(rpcHealthTimer);
+    rpcHealthTimer = null;
+  }
+};
+
 const loadPlugin = (newPlugin, requestedPlugins) => {
-  if (requestedPlugins.indexOf(newPlugin.PLUGIN_NAME) === -1) {
+  if (Array.isArray(requestedPlugins) && requestedPlugins.indexOf(newPlugin.PLUGIN_NAME) === -1) {
     return { payload: null };
   }
   const plugin = {};
@@ -120,17 +298,6 @@ const loadPlugin = (newPlugin, requestedPlugins) => {
   plugins[newPlugin.PLUGIN_NAME] = plugin;
 
   return send(plugin, { action: 'init', payload: conf });
-};
-
-const unloadPlugin = async (plugin) => {
-  let res = null;
-  const plg = getPlugin(plugin);
-  if (plg) {
-    logger.info(`unloading plugin ${plugin.PLUGIN_NAME}`);
-    res = await send(plg, { action: 'stop' });
-    plg.cp.kill('SIGINT');
-  }
-  return res;
 };
 
 const stop = async () => {
@@ -160,6 +327,7 @@ const saveConfig = (lastBlockParsed) => {
 };
 
 const stopApp = async (signal = 0) => {
+  stopRpcHealthCheck();
   const lastBlockParsed = await stop();
   saveConfig(lastBlockParsed);
   // calling process.exit() won't inform parent process of signal
@@ -241,11 +409,11 @@ program
   .option('-p, --plugins <plugins>', 'which plugins to run. (Available plugins: Blockchain,Streamer,P2P,JsonRPCServer,LightNode', 'Blockchain,Streamer,P2P,JsonRPCServer,LightNode')
   .parse(process.argv);
 
-const requestedPlugins = program.plugins.split(',');
+requestedPlugins = program.plugins.split(',');
 if (program.replay !== undefined) {
   replayBlocksLog();
 } else {
-  start(requestedPlugins);
+  start(requestedPlugins).then(() => startRpcHealthCheck());
 }
 
 process.on('SIGTERM', () => {

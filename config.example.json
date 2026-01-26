@@ -31,6 +31,24 @@
         "disabledMethods" : {
             "blockchain" : ["getBlockRangeInfo"],
             "contracts" : []
+        },
+        "healthCheck" : {
+            "enabled" : true,
+            "intervalMs" : 15000,
+            "timeoutMs" : 2000,
+            "failuresBeforeRestart" : 3,
+            "restartDelayMs" : 5000,
+            "stopTimeoutMs" : 5000,
+            "killAfterMs" : 10000,
+            "escalateAfter" : 0,
+            "escalationWindowMs" : 600000,
+            "escalationSignal" : "SIGTERM"
+        },
+        "monitoring" : {
+            "logSlowRequests" : false,
+            "slowRequestMs" : 2000,
+            "logBatchSizes" : false,
+            "logBatchMinSize" : 2
         }
     },
     "rpcWebsockets" : {
