@@ -44,6 +44,7 @@ const inFlightRequests = {};
 const pendingRequests = [];
 const totalRequests = {};
 const totalTime = {};
+let streamNodeOrder = [];
 let lookaheadStartIndex = 0;
 let lookaheadStartBlock = currentHiveBlock;
 let blockLookaheadBuffer = null; // initialized by init()
@@ -387,6 +388,19 @@ const doClientGetBlock = async (client, blockNumber) => {
   return res;
 }
 
+const getOrderedStreamNodes = (streamNodes, preferredNode) => {
+  const preferredIndex = streamNodes.indexOf(preferredNode);
+
+  if (preferredIndex === -1) {
+    return [...streamNodes];
+  }
+
+  return [
+    ...streamNodes.slice(preferredIndex),
+    ...streamNodes.slice(0, preferredIndex),
+  ];
+};
+
 const throttledGetBlockFromNode = async (blockNumber, node) => {
   if (inFlightRequests[node] < maxQps) {
     totalInFlightRequests += 1;
@@ -413,7 +427,7 @@ const throttledGetBlockFromNode = async (blockNumber, node) => {
 };
 
 const throttledGetBlock = async (blockNumber) => {
-  const nodes = Object.keys(clients);
+  const nodes = streamNodeOrder.length > 0 ? streamNodeOrder : Object.keys(clients);
   nodes.forEach((n) => {
     if (inFlightRequests[n] === undefined) {
       inFlightRequests[n] = 0;
@@ -510,11 +524,22 @@ const streamBlocks = async (reject) => {
 };
 
 const initHiveClient = (streamNodes, node) => {
+  streamNodeOrder = [...streamNodes];
+
   if (!clients) {
     clients = {};
-    streamNodes.forEach((n) => {
-      clients[n] = new dhive.Client(n);
-    });
+  }
+
+  streamNodes.forEach((n) => {
+    if (!clients[n]) {
+      // Keep the existing scheduler, but let each request fail over across
+      // the full configured node list instead of hanging on a single RPC.
+      clients[n] = new dhive.Client(getOrderedStreamNodes(streamNodes, n));
+    }
+  });
+
+  if (!clients[node]) {
+    clients[node] = new dhive.Client(getOrderedStreamNodes(streamNodes, node));
   }
   client = clients[node];
 };
