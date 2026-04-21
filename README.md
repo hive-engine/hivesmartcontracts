@@ -49,6 +49,12 @@ E.g.
 pm2 start app.js --no-treekill --kill-timeout 10000 --no-autorestart --node-args="--no-node-snapshot"
 ```
 
+If upgrading from older node, note that you may have to rebuild isolated-vm, e.g.
+
+```
+npm rebuild isolated-vm --force
+```
+
 ### DB Backup and Restore
 
 Backup current state (track current hive blpck in config)
