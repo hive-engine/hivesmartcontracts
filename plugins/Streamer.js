@@ -26,6 +26,8 @@ let antiForkBufferMaxSize = 2;
 let maxQps = 1;
 let lookaheadBufferSize = 5;
 let useBlockApi = false;
+let nodeFailureThreshold = 2;
+let nodeCooldownMs = 30000;
 // End Streamer config
 
 let currentHiveBlock = 0;
@@ -44,6 +46,9 @@ const inFlightRequests = {};
 const pendingRequests = [];
 const totalRequests = {};
 const totalTime = {};
+const nodeFailureCount = {};
+const nodeCooldownUntil = {};
+let streamNodeOrder = [];
 let lookaheadStartIndex = 0;
 let lookaheadStartBlock = currentHiveBlock;
 let blockLookaheadBuffer = null; // initialized by init()
@@ -387,6 +392,50 @@ const doClientGetBlock = async (client, blockNumber) => {
   return res;
 }
 
+const getOrderedStreamNodes = (streamNodes, preferredNode) => {
+  const preferredIndex = streamNodes.indexOf(preferredNode);
+
+  if (preferredIndex === -1) {
+    return [...streamNodes];
+  }
+
+  return [
+    ...streamNodes.slice(preferredIndex),
+    ...streamNodes.slice(0, preferredIndex),
+  ];
+};
+
+const isNodeCoolingDown = node => nodeCooldownUntil[node] && nodeCooldownUntil[node] > Date.now();
+
+const markNodeSuccess = (node) => {
+  nodeFailureCount[node] = 0;
+  if (nodeCooldownUntil[node] && nodeCooldownUntil[node] <= Date.now()) {
+    delete nodeCooldownUntil[node];
+  }
+};
+
+const markNodeFailure = (node, reason) => {
+  nodeFailureCount[node] = (nodeFailureCount[node] || 0) + 1;
+
+  if (nodeFailureCount[node] >= nodeFailureThreshold) {
+    nodeCooldownUntil[node] = Date.now() + nodeCooldownMs;
+    nodeFailureCount[node] = 0;
+    log.warn(`Cooling down node ${node} for ${nodeCooldownMs} ms after repeated failures (${reason})`);
+  }
+};
+
+const promoteNode = (node) => {
+  if (!streamNodeOrder.includes(node)) {
+    return;
+  }
+
+  streamNodeOrder = [node, ...streamNodeOrder.filter(n => n !== node)];
+
+  if (clients && clients[node]) {
+    client = clients[node];
+  }
+};
+
 const throttledGetBlockFromNode = async (blockNumber, node) => {
   if (inFlightRequests[node] < maxQps) {
     totalInFlightRequests += 1;
@@ -394,12 +443,20 @@ const throttledGetBlockFromNode = async (blockNumber, node) => {
     let res = null;
     const timeStart = Date.now();
     try {
-      res = await doClientGetBlock(clients[node], blockNumber);
-      totalRequests[node] += 1;
-      totalTime[node] += Date.now() - timeStart;
+      const hiveClient = clients[node];
+      res = await doClientGetBlock(hiveClient, blockNumber);
+      const activeNode = hiveClient.currentAddress || node;
+      markNodeSuccess(activeNode);
+      if (activeNode !== node) {
+        markNodeFailure(node, `request failed over to ${activeNode}`);
+        promoteNode(activeNode);
+      }
+      totalRequests[activeNode] += 1;
+      totalTime[activeNode] += Date.now() - timeStart;
     } catch (err) {
       log.error(`Error fetching block ${blockNumber} on node ${node}, took ${Date.now() - timeStart} ms`);
       log.error(err);
+      markNodeFailure(node, err.code || err.message);
     }
 
     inFlightRequests[node] -= 1;
@@ -413,19 +470,22 @@ const throttledGetBlockFromNode = async (blockNumber, node) => {
 };
 
 const throttledGetBlock = async (blockNumber) => {
-  const nodes = Object.keys(clients);
+  const nodes = streamNodeOrder.length > 0 ? streamNodeOrder : Object.keys(clients);
   nodes.forEach((n) => {
     if (inFlightRequests[n] === undefined) {
       inFlightRequests[n] = 0;
       totalRequests[n] = 0;
       totalTime[n] = 0;
+      nodeFailureCount[n] = 0;
       capacity += maxQps;
     }
   });
+  const activeNodes = nodes.filter(n => !isNodeCoolingDown(n));
+  const eligibleNodes = activeNodes.length > 0 ? activeNodes : nodes;
   if (totalInFlightRequests < capacity) {
     // select node in order
-    for (let i = 0; i < nodes.length; i += 1) {
-      const node = nodes[i];
+    for (let i = 0; i < eligibleNodes.length; i += 1) {
+      const node = eligibleNodes[i];
       if (inFlightRequests[node] < maxQps) {
         return throttledGetBlockFromNode(blockNumber, node);
       }
@@ -510,11 +570,22 @@ const streamBlocks = async (reject) => {
 };
 
 const initHiveClient = (streamNodes, node) => {
+  streamNodeOrder = [...streamNodes];
+
   if (!clients) {
     clients = {};
-    streamNodes.forEach((n) => {
-      clients[n] = new dhive.Client(n);
-    });
+  }
+
+  streamNodes.forEach((n) => {
+    if (!clients[n]) {
+      // Keep the existing scheduler, but let each request fail over across
+      // the full configured node list instead of hanging on a single RPC.
+      clients[n] = new dhive.Client(getOrderedStreamNodes(streamNodes, n));
+    }
+  });
+
+  if (!clients[node]) {
+    clients[node] = new dhive.Client(getOrderedStreamNodes(streamNodes, node));
   }
   client = clients[node];
 };
@@ -562,6 +633,8 @@ const init = async (conf) => {
     maxQps = streamerConfig.maxQps; // eslint-disable-line prefer-destructuring
     lookaheadBufferSize = streamerConfig.lookaheadBufferSize; // eslint-disable-line prefer-destructuring
     useBlockApi = streamerConfig.useBlockApi; // eslint-disable-line prefer-destructuring
+    nodeFailureThreshold = streamerConfig.nodeFailureThreshold || nodeFailureThreshold; // eslint-disable-line prefer-destructuring
+    nodeCooldownMs = streamerConfig.nodeCooldownMs || nodeCooldownMs; // eslint-disable-line prefer-destructuring
   }
   buffer = new Queue(antiForkBufferMaxSize);
   blockLookaheadBuffer = Array(lookaheadBufferSize);
