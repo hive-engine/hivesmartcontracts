@@ -152,6 +152,7 @@ class Database {
       this.chain = await this.database.createCollection('chain', { session: this.session });
 
       await this.database.createCollection('transactions', { session: this.session });
+      await this.database.collection('transactions').createIndex({ blockNumber: 1 });
       await this.database.createCollection('contracts', { session: this.session });
     } else {
       this.chain = coll;
