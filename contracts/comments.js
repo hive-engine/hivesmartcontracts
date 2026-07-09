@@ -165,7 +165,7 @@ async function payOutBeneficiaries(rewardPool, token, post, authorBenePortion) {
     }
   }
   if (!beneficiaries || beneficiaries.length === 0) {
-    return api.BigNumber(0);
+    return totalBenePay;
   }
   for (let i = 0; i < beneficiaries.length; i += 1) {
     const beneficiary = beneficiaries[i];
