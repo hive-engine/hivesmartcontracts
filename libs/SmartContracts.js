@@ -11,12 +11,16 @@ const log = require('loglevel');
 const validator = require('validator');
 const seedrandom = require('seedrandom');
 const { CONSTANTS } = require('../libs/Constants');
+const config = require('../config.json');
 
 const RESERVED_CONTRACT_NAMES = ['contract', 'blockProduction', 'null'];
 const RESERVED_ACTIONS = ['createSSC'];
 
 const JSVMs = [];
-const MAXJSVMs = 5;
+const configuredMAXJSVMs = Number(config.maxJSVMs);
+const MAXJSVMs = Number.isInteger(configuredMAXJSVMs) && configuredMAXJSVMs > 0
+  ? configuredMAXJSVMs
+  : 5;
 
 const maybeDeref = (y) => typeof y === 'object' && y !== null && y.deref ? y.deref() : y;
 function deepDeref(x) {
