@@ -137,7 +137,14 @@ class Database {
 
   async init(databaseURL, databaseName, lightNode = false, blocksToKeep = 864000) {
     // init the database
-    this.client = await MongoClient.connect(databaseURL, { useNewUrlParser: true, useUnifiedTopology: true });
+    const databasePool = config.databasePool && typeof config.databasePool === 'object'
+      ? config.databasePool
+      : {};
+    this.client = await MongoClient.connect(databaseURL, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      ...databasePool,
+    });
     this.database = await this.client.db(databaseName);
     this.lightNode = lightNode;
     this.blocksToKeep = blocksToKeep; // this only applies if lightNode is true

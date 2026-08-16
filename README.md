@@ -42,6 +42,26 @@ looping (though with transactions there is less risk of data corruption). Anothe
  that you may need to clear node processes after a stop if the process does not terminate on its own. 
 Otherwise it will interfere with logging.
 
+### Optional performance settings
+
+The following optional settings can be added to `config.json`:
+
+```json
+{
+  "maxJSVMs": 5,
+  "databasePool": {
+    "maxPoolSize": 20,
+    "minPoolSize": 2,
+    "maxIdleTimeMS": 30000,
+    "waitQueueTimeoutMS": 10000
+  }
+}
+```
+
+`maxJSVMs` controls the maximum number of JavaScript VM isolates available for contract execution. It must be a positive integer; when omitted or invalid, it defaults to `5`.
+
+`databasePool` controls the MongoDB connection pool when unified topology is enabled. `maxPoolSize` and `minPoolSize` control the connection count, `maxIdleTimeMS` closes idle connections, and `waitQueueTimeoutMS` limits how long an operation waits for an available connection. When `databasePool` is omitted, the MongoDB driver's defaults are preserved. Witness nodes generally need fewer connections, while public RPC nodes may benefit from a larger pool.
+
 Also, with isolated-vm on node 20 and later, you will need to pass in --no-node-snapshot to node:
 
 E.g.

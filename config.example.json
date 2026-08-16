@@ -4,6 +4,8 @@
     "p2pPort": 5001,
     "databaseURL": "mongodb://127.0.0.1:27017",
     "databaseName": "hsc",
+    "maxJSVMs": 5,
+    "databasePool": {},
     "blocksLogFilePath": "./blocks.log",
     "javascriptVMTimeout": 10000,
     "streamNodes": [
