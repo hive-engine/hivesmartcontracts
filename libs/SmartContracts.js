@@ -17,6 +17,7 @@ const RESERVED_CONTRACT_NAMES = ['contract', 'blockProduction', 'null'];
 const RESERVED_ACTIONS = ['createSSC'];
 
 const JSVMs = [];
+let jsVMsWarmed = false;
 const configuredMAXJSVMs = Number(config.maxJSVMs);
 const MAXJSVMs = Number.isInteger(configuredMAXJSVMs) && configuredMAXJSVMs > 0
   ? configuredMAXJSVMs
@@ -590,9 +591,27 @@ class SmartContracts {
     return null;
   }
 
+  static warmJSVMs(jsVMTimeout) {
+    // Allocate the configured pool on first use, not during process startup.
+    if (!jsVMsWarmed) {
+      while (JSVMs.length < MAXJSVMs) {
+        const isolate = new ivm.Isolate({ memoryLimit: 128 });
+        const context = isolate.createContextSync();
+        JSVMs.push({
+          timeout: jsVMTimeout,
+          context,
+          isolate,
+          inUse: false,
+        });
+      }
+      jsVMsWarmed = true;
+    }
+  }
+
   // run the contractCode in a VM with the vmState as a state for the VM
   static async runContractCode(vmState, contractCode, jsVMTimeout) {
     // run the code in the VM
+    SmartContracts.warmJSVMs(jsVMTimeout);
     const vm = SmartContracts.getJSVM(jsVMTimeout);
     let contractError = null
     if (vm !== null) {
