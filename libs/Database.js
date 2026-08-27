@@ -189,18 +189,18 @@ class Database {
 
   async addTransactions(block) {
     const transactionsTable = this.database.collection('transactions');
-    const { transactions } = block;
-    const nbTransactions = transactions.length;
-
-    for (let index = 0; index < nbTransactions; index += 1) {
-      const transaction = transactions[index];
-      const transactionToSave = {
+    const transactionDocuments = block.transactions.map((transaction, index) => ({
         _id: transaction.transactionId,
         blockNumber: block.blockNumber,
         index,
-      };
+      }));
 
-      await transactionsTable.insertOne(transactionToSave, { session: this.session }); // eslint-disable-line no-await-in-loop
+    if (transactionDocuments.length > 0) {
+      await transactionsTable.insertMany(transactionDocuments, {
+        // Preserve the transaction index order within the block.
+        ordered: true,
+        session: this.session,
+      });
     }
   }
 
