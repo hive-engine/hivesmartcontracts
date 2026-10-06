@@ -62,6 +62,8 @@ The following optional settings can be added to `config.json`:
 
 `databasePool` controls the MongoDB connection pool when unified topology is enabled. `maxPoolSize` and `minPoolSize` control the connection count, `maxIdleTimeMS` closes idle connections, and `waitQueueTimeoutMS` limits how long an operation waits for an available connection. When `databasePool` is omitted, the MongoDB driver's defaults are preserved. Witness nodes generally need fewer connections, while public RPC nodes may benefit from a larger pool.
 
+The optional `streamerConfig` settings control block fetching. `adaptiveQps` increases fetch concurrency when all configured Hive RPC nodes have been healthy, while reducing it after recent failures; `adaptiveQpsMax` caps the healthy-node QPS. `dynamicLookaheadBuffer` changes the prefetch buffer from 5 blocks when synced, to 20 while catching up, and up to `dynamicLookaheadBufferMaxSize` when far behind. Both features are disabled by default, so the existing `maxQps` and `lookaheadBufferSize` behavior is unchanged unless explicitly enabled.
+
 Also, with isolated-vm on node 20 and later, you will need to pass in --no-node-snapshot to node:
 
 E.g.

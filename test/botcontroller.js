@@ -90,7 +90,9 @@ const assertMarketFields = (market, fields) => {
 
 // botcontroller
 describe('botcontroller', function() {
-  this.timeout(10000);
+  // This suite processes synthetic blocks synchronously; 20 seconds gives slower
+  // MongoDB/CI combinations enough room without masking a genuinely stuck test.
+  this.timeout(20000);
 
   before((done) => {
     new Promise(async (resolve) => {

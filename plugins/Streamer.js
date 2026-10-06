@@ -28,6 +28,10 @@ let lookaheadBufferSize = 5;
 let useBlockApi = false;
 let nodeFailureThreshold = 2;
 let nodeCooldownMs = 30000;
+let adaptiveQps = false;
+let adaptiveQpsMax = 2;
+let dynamicLookaheadBuffer = false;
+let dynamicLookaheadBufferMaxSize = 50;
 // End Streamer config
 
 let currentHiveBlock = 0;
@@ -41,6 +45,7 @@ let lastBlockSentToBlockchain = 0;
 
 // For block prefetch mechanism
 let capacity = 0;
+let currentQps = maxQps;
 let totalInFlightRequests = 0;
 const inFlightRequests = {};
 const pendingRequests = [];
@@ -48,6 +53,7 @@ const totalRequests = {};
 const totalTime = {};
 const nodeFailureCount = {};
 const nodeCooldownUntil = {};
+const nodeLastFailureAt = {};
 let streamNodeOrder = [];
 let lookaheadStartIndex = 0;
 let lookaheadStartBlock = currentHiveBlock;
@@ -416,12 +422,63 @@ const markNodeSuccess = (node) => {
 
 const markNodeFailure = (node, reason) => {
   nodeFailureCount[node] = (nodeFailureCount[node] || 0) + 1;
+  nodeLastFailureAt[node] = Date.now();
 
   if (nodeFailureCount[node] >= nodeFailureThreshold) {
     nodeCooldownUntil[node] = Date.now() + nodeCooldownMs;
     nodeFailureCount[node] = 0;
     log.warn(`Cooling down node ${node} for ${nodeCooldownMs} ms after repeated failures (${reason})`);
   }
+};
+
+const updateQps = (nodes) => {
+  let nextQps = maxQps;
+  if (adaptiveQps) {
+    const failureWindowStart = Date.now() - 5 * 60 * 1000;
+    const failingNodes = nodes.filter((node) => nodeLastFailureAt[node]
+      && nodeLastFailureAt[node] >= failureWindowStart).length;
+
+    if (failingNodes === 0) {
+      nextQps = Math.min(maxQps * 2, adaptiveQpsMax);
+    } else if (failingNodes > 1) {
+      nextQps = Math.max(1, Math.floor(maxQps / 2));
+    }
+  }
+
+  if (nextQps !== currentQps) {
+    currentQps = nextQps;
+    log.warn(`Streamer QPS changed to ${currentQps}`);
+  }
+  capacity = currentQps * nodes.length;
+};
+
+const updateLookaheadBufferSize = () => {
+  if (!dynamicLookaheadBuffer || hiveHeadBlockNumber === 0) return;
+
+  const syncLag = Math.max(0, hiveHeadBlockNumber - currentHiveBlock);
+  let nextSize = lookaheadBufferSize;
+  if (syncLag <= 100) {
+    nextSize = Math.min(5, dynamicLookaheadBufferMaxSize);
+  } else if (syncLag <= 10000) {
+    nextSize = Math.min(20, dynamicLookaheadBufferMaxSize);
+  } else {
+    nextSize = dynamicLookaheadBufferMaxSize;
+  }
+
+  if (nextSize === lookaheadBufferSize) return;
+
+  const previousSize = lookaheadBufferSize;
+  const previousBuffer = blockLookaheadBuffer;
+  const nextBuffer = Array(nextSize);
+  const retainedEntries = Math.min(previousSize, nextSize);
+  for (let i = 0; i < retainedEntries; i += 1) {
+    const previousIndex = (lookaheadStartIndex + i) % previousSize;
+    nextBuffer[i] = previousBuffer[previousIndex];
+  }
+  blockLookaheadBuffer = nextBuffer;
+  lookaheadBufferSize = nextSize;
+  lookaheadStartIndex = 0;
+  log.info(`Streamer lookahead buffer changed to ${nextSize} (sync lag ${syncLag})`);
 };
 
 const promoteNode = (node) => {
@@ -437,7 +494,7 @@ const promoteNode = (node) => {
 };
 
 const throttledGetBlockFromNode = async (blockNumber, node) => {
-  if (inFlightRequests[node] < maxQps) {
+  if (inFlightRequests[node] < currentQps) {
     totalInFlightRequests += 1;
     inFlightRequests[node] += 1;
     let res = null;
@@ -477,16 +534,16 @@ const throttledGetBlock = async (blockNumber) => {
       totalRequests[n] = 0;
       totalTime[n] = 0;
       nodeFailureCount[n] = 0;
-      capacity += maxQps;
     }
   });
+  updateQps(nodes);
   const activeNodes = nodes.filter(n => !isNodeCoolingDown(n));
   const eligibleNodes = activeNodes.length > 0 ? activeNodes : nodes;
   if (totalInFlightRequests < capacity) {
     // select node in order
     for (let i = 0; i < eligibleNodes.length; i += 1) {
       const node = eligibleNodes[i];
-      if (inFlightRequests[node] < maxQps) {
+      if (inFlightRequests[node] < currentQps) {
         return throttledGetBlockFromNode(blockNumber, node);
       }
     }
@@ -497,6 +554,7 @@ const throttledGetBlock = async (blockNumber) => {
 
 
 const getBlock = async (blockNumber) => {
+  updateLookaheadBufferSize();
   // schedule lookahead block fetch
   let scanIndex = lookaheadStartIndex;
   for (let i = 0; i < lookaheadBufferSize; i += 1) {
@@ -635,7 +693,14 @@ const init = async (conf) => {
     useBlockApi = streamerConfig.useBlockApi; // eslint-disable-line prefer-destructuring
     nodeFailureThreshold = streamerConfig.nodeFailureThreshold || nodeFailureThreshold; // eslint-disable-line prefer-destructuring
     nodeCooldownMs = streamerConfig.nodeCooldownMs || nodeCooldownMs; // eslint-disable-line prefer-destructuring
+    adaptiveQps = streamerConfig.adaptiveQps || adaptiveQps; // eslint-disable-line prefer-destructuring
+    adaptiveQpsMax = streamerConfig.adaptiveQpsMax || maxQps * 2; // eslint-disable-line prefer-destructuring
+    dynamicLookaheadBuffer = streamerConfig.dynamicLookaheadBuffer || dynamicLookaheadBuffer; // eslint-disable-line prefer-destructuring
+    dynamicLookaheadBufferMaxSize = streamerConfig.dynamicLookaheadBufferMaxSize || dynamicLookaheadBufferMaxSize; // eslint-disable-line prefer-destructuring
   }
+  currentQps = maxQps;
+  adaptiveQpsMax = Math.max(maxQps, adaptiveQpsMax);
+  dynamicLookaheadBufferMaxSize = Math.max(lookaheadBufferSize, dynamicLookaheadBufferMaxSize);
   buffer = new Queue(antiForkBufferMaxSize);
   blockLookaheadBuffer = Array(lookaheadBufferSize);
   const finalConf = conf;

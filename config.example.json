@@ -44,6 +44,10 @@
         "antiForkBufferMaxSize": 2,
         "maxQps": 1,
         "lookaheadBufferSize": 5,
-        "useBlockApi": false
+        "useBlockApi": false,
+        "adaptiveQps": false,
+        "adaptiveQpsMax": 2,
+        "dynamicLookaheadBuffer": false,
+        "dynamicLookaheadBufferMaxSize": 50
     }
 }
