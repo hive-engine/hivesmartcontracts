@@ -14,6 +14,11 @@ const net = require('net');
 const { Queue } = require('../libs/Queue');
 const { IPC } = require('../libs/IPC');
 const { Database } = require('../libs/Database');
+const {
+  MAX_PROPOSE_ROUND_RETRIES,
+  getRetryDelay,
+  isRetryableTimeoutError,
+} = require('../libs/util/p2pRetry');
 
 const PLUGIN_NAME = 'P2P';
 const PLUGIN_PATH = require.resolve(__filename);
@@ -234,12 +239,12 @@ const proposeRound = async (witness, round, retry = 0) => {
         if (currentRound === round.round
           && (response.data.error.message === 'current round is lower'
             || response.data.error.message === 'current witness is different')) {
-          if (retry < 3) {
-            // Allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
+          if (retry < MAX_PROPOSE_ROUND_RETRIES) {
+            // Three retries take at most 59 seconds; four 10-second requests keep this under 2 minutes.
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
-            }, 8000 * (retry + 1));
+            }, getRetryDelay(retry));
           }
         }
       }
@@ -248,11 +253,13 @@ const proposeRound = async (witness, round, retry = 0) => {
     }
   } catch (error) {
     log.warn(`Error posting to ${witness} / round ${round.round} / ${error}`);
-    if (currentRound === round.round && error.toString().indexOf('ETIMEDOUT') > -1 && retry < 3) {
+    if (currentRound === round.round
+      && isRetryableTimeoutError(error)
+      && retry < MAX_PROPOSE_ROUND_RETRIES) {
       setTimeout(() => {
         console.log(`propose round: retry ${retry + 1}`);
         proposeRound(witness, round, retry + 1);
-      }, 0);
+      }, getRetryDelay(retry));
     }
   }
 };
