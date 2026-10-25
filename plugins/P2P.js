@@ -19,6 +19,7 @@ const {
   getRetryDelay,
   isRetryableTimeoutError,
 } = require('../libs/util/p2pRetry');
+const { calculateRoundHash: calculateBlockRangeHash } = require('../libs/util/roundHash');
 
 const PLUGIN_NAME = 'P2P';
 const PLUGIN_PATH = require.resolve(__filename);
@@ -34,6 +35,7 @@ let lastBlockRound = 0;
 let lastProposedRoundNumber = 0;
 let lastProposedRound = null;
 let lastVerifiedRoundNumber = 0;
+let roundHashConcurrency = 1;
 let SIGNING_KEY = null;
 let WITNESS_ACCOUNT = null;
 
@@ -87,20 +89,12 @@ const hiveClient = {
 };
 
 async function calculateRoundHash(startBlockRound, endBlockRound) {
-  let blockNum = startBlockRound;
-  let calculatedRoundHash = '';
-  // calculate round hash
-  while (blockNum <= endBlockRound) {
-    // get the block from the current node
-    const blockFromNode = await database.getBlockInfo(blockNum);
-    if (blockFromNode !== null) {
-      calculatedRoundHash = SHA256(`${calculatedRoundHash}${blockFromNode.hash}`).toString(enchex);
-    } else {
-      return null;
-    }
-    blockNum += 1;
-  }
-  return calculatedRoundHash;
+  return calculateBlockRangeHash(
+    startBlockRound,
+    endBlockRound,
+    (blockNumber) => database.getBlockInfo(blockNumber),
+    roundHashConcurrency,
+  );
 }
 
 const find = async (contract, table, query, limit = 1000, offset = 0, indexes = []) => {
@@ -240,7 +234,7 @@ const proposeRound = async (witness, round, retry = 0) => {
           && (response.data.error.message === 'current round is lower'
             || response.data.error.message === 'current witness is different')) {
           if (retry < MAX_PROPOSE_ROUND_RETRIES) {
-            // Three retries take at most 59 seconds; four 10-second requests keep this under 2 minutes.
+            // Worst case is under 99 seconds including four 10-second requests.
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
@@ -504,7 +498,13 @@ const init = async (conf, callback) => {
     witnessEnabled,
     databaseURL,
     databaseName,
+    p2pConfig,
   } = conf;
+
+  roundHashConcurrency = Number.isSafeInteger(p2pConfig && p2pConfig.roundHashConcurrency)
+    && p2pConfig.roundHashConcurrency > 0
+    ? p2pConfig.roundHashConcurrency
+    : 1;
 
   if (witnessEnabled === false
     || process.env.ACTIVE_SIGNING_KEY === null

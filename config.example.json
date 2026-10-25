@@ -14,6 +14,9 @@
         "https://hived.emre.sh",
         "https://api.openhive.network"
     ],
+    "p2pConfig": {
+        "roundHashConcurrency": 1
+    },
     "startHiveBlock": 41967000,
     "genesisHiveBlock": 41967000,
     "witnessEnabled": true,
