@@ -64,6 +64,8 @@ The following optional settings can be added to `config.json`:
 
 The optional `streamerConfig` settings control block fetching. `adaptiveQps` increases fetch concurrency when all configured Hive RPC nodes have been healthy, while reducing it after recent failures; `adaptiveQpsMax` caps the healthy-node QPS. `dynamicLookaheadBuffer` changes the prefetch buffer from 5 blocks when synced, to 20 while catching up, and up to `dynamicLookaheadBufferMaxSize` when far behind. Both features are disabled by default, so the existing `maxQps` and `lookaheadBufferSize` behavior is unchanged unless explicitly enabled.
 
+Lite nodes can opt into `lightNode.adaptiveCleanup`. When enabled, periodic pruning is skipped while the streamer reports lag above `cleanupLagThreshold` (default `1000` blocks), then runs once synced enough or after `maxConsecutiveCleanupSkips` (default `3`) skips. If the streamer lag is unavailable, cleanup runs rather than being deferred. `lastVerifiedBlockCacheTTL` controls how long `cleanupLightNode` reuses the witnesses' `lastVerifiedBlockNumber` (default `900000` ms); the cached value can only cause cleanup to retain extra local data because the verified height advances monotonically. Adaptive cleanup is disabled by default. When active, the initial startup cleanup is deferred until the streamer is running so it can make the lag-aware decision.
+
 Also, with isolated-vm on node 20 and later, you will need to pass in --no-node-snapshot to node:
 
 E.g.

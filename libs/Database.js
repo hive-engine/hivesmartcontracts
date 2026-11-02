@@ -9,6 +9,8 @@ const { EJSON } = require('bson');
 const config = require('../config.json');
 const { CONSTANTS } = require('../libs/Constants');
 
+const DEFAULT_LAST_VERIFIED_BLOCK_CACHE_TTL = 900000;
+
 // Change this to turn on hash logging.
 const enableHashLogging = false;
 
@@ -74,6 +76,8 @@ class Database {
     this.objectCache = {};
     this.lightNode = false;
     this.blocksToKeep = 864000; // this only applies if lightNode is true
+    this.cachedLastVerifiedBlockNumber = null;
+    this.lastVerifiedBlockNumberFetchedAt = null;
   }
 
   startSession() {
@@ -1138,14 +1142,28 @@ class Database {
    * by witnesses <= lastVerifiedBlockNumber - blocksToKeep
    * @returns {Promise<void>}
    */
-  async cleanupLightNode() {
+  async cleanupLightNode(lastVerifiedBlockCacheTTL = DEFAULT_LAST_VERIFIED_BLOCK_CACHE_TTL) {
     if (!this.lightNode) {
       return;
     }
-    const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
-    if (params && params.lastVerifiedBlockNumber) {
+    const cacheTTL = Number.isFinite(lastVerifiedBlockCacheTTL) && lastVerifiedBlockCacheTTL >= 0
+      ? lastVerifiedBlockCacheTTL
+      : DEFAULT_LAST_VERIFIED_BLOCK_CACHE_TTL;
+    const now = Date.now();
+    const cacheAge = now - this.lastVerifiedBlockNumberFetchedAt;
+    const cacheValid = this.lastVerifiedBlockNumberFetchedAt !== null
+      && cacheAge >= 0
+      && cacheAge < cacheTTL;
+
+    if (!cacheValid) {
+      const params = await this.findOne({ contract: 'witnesses', table: 'params', query: {} });
+      this.cachedLastVerifiedBlockNumber = params ? params.lastVerifiedBlockNumber : null;
+      this.lastVerifiedBlockNumberFetchedAt = now;
+    }
+
+    if (this.cachedLastVerifiedBlockNumber) {
       log.info('cleaning up light node blocks and transactions');
-      const cleanupUntilBlock = params.lastVerifiedBlockNumber - 1 - this.blocksToKeep;
+      const cleanupUntilBlock = this.cachedLastVerifiedBlockNumber - 1 - this.blocksToKeep;
       await this.cleanupBlocks(cleanupUntilBlock);
       await this.cleanupTransactions(cleanupUntilBlock);
     }

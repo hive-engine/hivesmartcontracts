@@ -2,6 +2,7 @@ const PLUGIN_NAME = 'Streamer';
 
 const PLUGIN_ACTIONS = {
   GET_CURRENT_BLOCK: 'getCurrentBlock',
+  GET_SYNC_LAG: 'getSyncLag',
 };
 
 module.exports.PLUGIN_NAME = PLUGIN_NAME;

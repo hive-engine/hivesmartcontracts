@@ -61,6 +61,11 @@ let blockLookaheadBuffer = null; // initialized by init()
 
 const getCurrentBlock = () => currentHiveBlock;
 
+const getSyncLag = () => {
+  if (hiveHeadBlockNumber <= 0 || currentHiveBlock <= 0) return null;
+  return Math.max(0, hiveHeadBlockNumber - currentHiveBlock);
+};
+
 const stop = () => {
   stopStream = true;
   if (blockStreamerHandler) clearTimeout(blockStreamerHandler);
@@ -740,6 +745,9 @@ ipc.onReceiveMessage((message) => {
       break;
     case PLUGIN_ACTIONS.GET_CURRENT_BLOCK:
       ipc.reply(message, getCurrentBlock());
+      break;
+    case PLUGIN_ACTIONS.GET_SYNC_LAG:
+      ipc.reply(message, getSyncLag());
       break;
     default:
       ipc.reply(message);

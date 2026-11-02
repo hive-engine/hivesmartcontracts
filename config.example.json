@@ -22,7 +22,11 @@
     "lightNode": {
         "enabled": false,
         "blocksToKeep": 864000,
-        "cleanupInterval": 600000
+        "cleanupInterval": 600000,
+        "adaptiveCleanup": false,
+        "cleanupLagThreshold": 1000,
+        "maxConsecutiveCleanupSkips": 3,
+        "lastVerifiedBlockCacheTTL": 900000
     },
     "rpcConfig" : {
         "maxLimit" : 1000,

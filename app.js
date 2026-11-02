@@ -119,7 +119,10 @@ const loadPlugin = (newPlugin, requestedPlugins) => {
 
   plugins[newPlugin.PLUGIN_NAME] = plugin;
 
-  return send(plugin, { action: 'init', payload: conf });
+  const pluginConfig = newPlugin.PLUGIN_NAME === lightNodePlugin.PLUGIN_NAME
+    ? { ...conf, streamerEnabled: requestedPlugins.indexOf(streamer.PLUGIN_NAME) !== -1 }
+    : conf;
+  return send(plugin, { action: 'init', payload: pluginConfig });
 };
 
 const unloadPlugin = async (plugin) => {
@@ -195,7 +198,7 @@ const gracefulShutdown = () => {
   }
 };
 
-const initLightNode = async () => {
+const initLightNode = async (requestedPlugins) => {
   const {
     databaseURL,
     databaseName,
@@ -219,13 +222,19 @@ const initLightNode = async () => {
   }
   console.log('Initializing light node - this may take a while..');
 
-  // cleanup old blocks / transactions for light nodes
-  await database.cleanupLightNode();
+  const adaptiveCleanupWillRun = lightNode.adaptiveCleanup === true
+    && requestedPlugins.indexOf(streamer.PLUGIN_NAME) !== -1
+    && requestedPlugins.indexOf(lightNodePlugin.PLUGIN_NAME) !== -1;
+
+  // Defer cleanup until the streamer can report catch-up lag when adaptive cleanup is enabled.
+  if (!adaptiveCleanupWillRun) {
+    await database.cleanupLightNode(lightNode.lastVerifiedBlockCacheTTL);
+  }
 };
 
 // start streaming the Hive blockchain and produce the sidechain blocks accordingly
 const start = async (requestedPlugins) => {
-  await initLightNode();
+  await initLightNode(requestedPlugins);
 
   let res = await loadPlugin(blockchain, requestedPlugins);
   if (res && res.payload === null) {
