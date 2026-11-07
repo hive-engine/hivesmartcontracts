@@ -14,6 +14,12 @@ const net = require('net');
 const { Queue } = require('../libs/Queue');
 const { IPC } = require('../libs/IPC');
 const { Database } = require('../libs/Database');
+const {
+  MAX_PROPOSE_ROUND_RETRIES,
+  getRetryDelay,
+  isRetryableTimeoutError,
+} = require('../libs/util/p2pRetry');
+const { calculateRoundHash: calculateBlockRangeHash } = require('../libs/util/roundHash');
 
 const PLUGIN_NAME = 'P2P';
 const PLUGIN_PATH = require.resolve(__filename);
@@ -29,6 +35,7 @@ let lastBlockRound = 0;
 let lastProposedRoundNumber = 0;
 let lastProposedRound = null;
 let lastVerifiedRoundNumber = 0;
+let roundHashConcurrency = 1;
 let SIGNING_KEY = null;
 let WITNESS_ACCOUNT = null;
 
@@ -82,20 +89,12 @@ const hiveClient = {
 };
 
 async function calculateRoundHash(startBlockRound, endBlockRound) {
-  let blockNum = startBlockRound;
-  let calculatedRoundHash = '';
-  // calculate round hash
-  while (blockNum <= endBlockRound) {
-    // get the block from the current node
-    const blockFromNode = await database.getBlockInfo(blockNum);
-    if (blockFromNode !== null) {
-      calculatedRoundHash = SHA256(`${calculatedRoundHash}${blockFromNode.hash}`).toString(enchex);
-    } else {
-      return null;
-    }
-    blockNum += 1;
-  }
-  return calculatedRoundHash;
+  return calculateBlockRangeHash(
+    startBlockRound,
+    endBlockRound,
+    (blockNumber) => database.getBlockInfo(blockNumber),
+    roundHashConcurrency,
+  );
 }
 
 const find = async (contract, table, query, limit = 1000, offset = 0, indexes = []) => {
@@ -234,12 +233,12 @@ const proposeRound = async (witness, round, retry = 0) => {
         if (currentRound === round.round
           && (response.data.error.message === 'current round is lower'
             || response.data.error.message === 'current witness is different')) {
-          if (retry < 3) {
-            // Allows for up to 45 seconds to respond. Round time is 40 blocks = 2 min
+          if (retry < MAX_PROPOSE_ROUND_RETRIES) {
+            // Worst case is under 99 seconds including four 10-second requests.
             setTimeout(() => {
               console.log(`propose round: retry ${retry + 1}`);
               proposeRound(witness, round, retry + 1);
-            }, 8000 * (retry + 1));
+            }, getRetryDelay(retry));
           }
         }
       }
@@ -248,11 +247,13 @@ const proposeRound = async (witness, round, retry = 0) => {
     }
   } catch (error) {
     log.warn(`Error posting to ${witness} / round ${round.round} / ${error}`);
-    if (currentRound === round.round && error.toString().indexOf('ETIMEDOUT') > -1 && retry < 3) {
+    if (currentRound === round.round
+      && isRetryableTimeoutError(error)
+      && retry < MAX_PROPOSE_ROUND_RETRIES) {
       setTimeout(() => {
         console.log(`propose round: retry ${retry + 1}`);
         proposeRound(witness, round, retry + 1);
-      }, 0);
+      }, getRetryDelay(retry));
     }
   }
 };
@@ -497,7 +498,13 @@ const init = async (conf, callback) => {
     witnessEnabled,
     databaseURL,
     databaseName,
+    p2pConfig,
   } = conf;
+
+  roundHashConcurrency = Number.isSafeInteger(p2pConfig && p2pConfig.roundHashConcurrency)
+    && p2pConfig.roundHashConcurrency > 0
+    ? p2pConfig.roundHashConcurrency
+    : 1;
 
   if (witnessEnabled === false
     || process.env.ACTIVE_SIGNING_KEY === null

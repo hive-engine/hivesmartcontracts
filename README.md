@@ -66,6 +66,8 @@ The optional `streamerConfig` settings control block fetching. `adaptiveQps` inc
 
 Lite nodes can opt into `lightNode.adaptiveCleanup`. When enabled, periodic pruning is skipped while the streamer reports lag above `cleanupLagThreshold` (default `1000` blocks), then runs once synced enough or after `maxConsecutiveCleanupSkips` (default `3`) skips. If the streamer lag is unavailable, cleanup runs rather than being deferred. `lastVerifiedBlockCacheTTL` controls how long `cleanupLightNode` reuses the witnesses' `lastVerifiedBlockNumber` (default `900000` ms); the cached value can only cause cleanup to retain extra local data because the verified height advances monotonically. Adaptive cleanup is disabled by default. When active, the initial startup cleanup is deferred until the streamer is running so it can make the lag-aware decision.
 
+Witnesses can tune round-hash block reads with `p2pConfig.roundHashConcurrency` (default `1`, suggested starting value `5`). Blocks are fetched concurrently up to this limit, but the round hash is still calculated in block-number order. Increasing the limit can add MongoDB read pressure, so choose it deliberately. To compare sequential and concurrent results against historical blocks in the configured database, run `node scripts/verify-round-hash-concurrency.js --concurrency=5 <start:end> [<start:end> ...]`.
+
 Also, with isolated-vm on node 20 and later, you will need to pass in --no-node-snapshot to node:
 
 E.g.
